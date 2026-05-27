@@ -1,4 +1,5 @@
 # <type>: [feat|fix|docs|style|refactor|perf|test|build|ci|chore]
 # <scope>: module or component name
+# type(scope): Small Msg
 
-# Explain *what* and *why* (not *how*) in the body.
+# Explain *what* and *why* (not *how*) in the body. Long message.
