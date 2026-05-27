@@ -356,3 +356,6 @@ pip-selfcheck.json
 
 # version file
 _version.py
+
+# Sphinx Auto API
+autoapi/

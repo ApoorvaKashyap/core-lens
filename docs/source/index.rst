@@ -13,4 +13,4 @@ A Python library for querying, analysing, and visualising geospatial Earth scien
    :maxdepth: 2
    :caption: Contents:
 
-    autoapi/index
+   autoapi/index
