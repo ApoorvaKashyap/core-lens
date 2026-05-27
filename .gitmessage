@@ -1,0 +1,4 @@
+# <type>: [feat|fix|docs|style|refactor|perf|test|build|ci|chore]
+# <scope>: module or component name
+
+# Explain *what* and *why* (not *how*) in the body.
