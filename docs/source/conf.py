@@ -6,7 +6,7 @@
 # -- Project information -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
-project = "core_lens"
+project = "CoreLens"
 copyright = "2026, Apoorva Kashyap, Kislaya Shrestha"
 author = "Apoorva Kashyap, Kislaya Shrestha"
 
