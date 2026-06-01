@@ -7,7 +7,9 @@ authors = [
     { name = "Apoorva Kashyap", email = "apoorvakashyap54@gmail.com" }
 ]
 requires-python = ">=3.13"
-dependencies = []
+dependencies = [
+    "sphinx-multiversion>=0.2.4",
+]
 
 [build-system]
 requires = ["hatchling", "hatch-vcs"]

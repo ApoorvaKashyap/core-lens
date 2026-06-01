@@ -18,6 +18,7 @@ extensions = [
     "myst_parser",
     "sphinx_copybutton",
     "autoapi.extension",
+    "sphinx_multiversion",
 ]
 
 templates_path = ["_templates"]
@@ -45,6 +46,9 @@ source_suffix = {
     ".rst": "restructuredtext",
     ".md": "markdown",
 }
+
+# Multiversion Configs
+smv_branch_whitelist = r"^(main|dev|release-.*)$"
 
 # -- Options for HTML output -------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
