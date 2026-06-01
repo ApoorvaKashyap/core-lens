@@ -1,0 +1,201 @@
+"""Lazy, immutable view of a scoped entity pending materialisation."""
+
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
+import polars as pl
+
+if TYPE_CHECKING:
+    from core_lens.base.entity import BaseEntity
+    from core_lens.base.result import Result
+
+_VALID_SEASONS = {"kharif", "rabi", "zaid", "current"}
+
+
+class View:
+    """Lazy, immutable snapshot of a scoped entity pending materialisation.
+
+    A ``View`` is produced by the filter methods on :class:`~core_lens.base.entity.BaseEntity`
+    (:meth:`~BaseEntity.where`, :meth:`~BaseEntity.spatial_filter`,
+    :meth:`~BaseEntity.spatial_join`).  It records *what* to load without
+    touching any Parquet file.  Data is only read when one of the three
+    materialisation properties is accessed.
+
+    ``View`` is immutable.  Every method that would mutate state instead
+    returns a new ``View`` with the updated field, leaving the original
+    untouched.  This makes it safe to branch a view and materialise it in
+    different ways::
+
+        view = aoi.mws.where(tehsil="Pangi")
+        annual = view.between("2010-01-01", "2023-12-31").annual
+        static = view.static
+
+    Attributes:
+        keys: A ``pl.DataFrame`` containing the resolved key column(s) for
+            all entity instances that passed the spatial/attribute filters.
+            This is the in-memory index slice — no data columns, only IDs.
+        entity: Reference to the parent :class:`~core_lens.base.entity.BaseEntity`
+            that produced this view.  Used during materialisation to resolve
+            file paths and schema.
+        entity_name: Human-readable name for the entity (e.g. ``"mws"``).
+            Used to namespace joined columns and populate
+            :attr:`~core_lens.base.result.Result.entity_name`.
+        time_filter: A dict encoding the pending time constraint set by
+            :meth:`between`, or ``None`` if no time filter has been applied.
+            The materialisation step reads this dict to build predicate
+            pushdown expressions.
+        join_spec: A dict encoding a deferred :meth:`~BaseEntity.spatial_join`
+            request, or ``None``.  Evaluated during materialisation after the
+            primary scan is complete.
+    """
+
+    def __init__(
+        self,
+        keys: pl.DataFrame,
+        entity: "BaseEntity",
+        entity_name: str,
+        time_filter: dict | None = None,
+        join_spec: dict | None = None,
+    ) -> None:
+        self.keys = keys
+        self.entity = entity
+        self.entity_name = entity_name
+        self.time_filter = time_filter
+        self.join_spec = join_spec
+
+    def between(
+        self,
+        start: str | None = None,
+        end: str | None = None,
+        *,
+        season: str | None = None,
+        year: int | tuple[int, int] | None = None,
+    ) -> "View":
+        """Return a new ``View`` with a pending time filter applied.
+
+        Two mutually exclusive modes are supported:
+
+        **Date range mode** — pass ``start`` and ``end`` as ISO-8601 strings::
+
+            view.between("2010-01-01", "2023-12-31")
+
+        **Season mode** — pass ``season`` as a keyword argument.  ``year`` is
+        optional and may be a single year or an inclusive ``(from, to)`` tuple::
+
+            view.between(season="kharif")
+            view.between(season="kharif", year=2020)
+            view.between(season="kharif", year=(2018, 2023))
+            view.between(season="current")
+
+        The returned ``View`` carries the filter in :attr:`time_filter` but
+        does not execute any I/O.  The filter is applied during materialisation
+        via predicate pushdown on the Parquet scan.
+
+        Args:
+            start: Start of the date range (ISO-8601).  Required in date range
+                mode; must be ``None`` in season mode.
+            end: End of the date range (ISO-8601).  Required in date range
+                mode; must be ``None`` in season mode.
+            season: Season name — one of ``"kharif"``, ``"rabi"``,
+                ``"zaid"``, or ``"current"``.  Activates season mode.
+            year: Year or inclusive year range to restrict the season filter.
+                Only valid in season mode.  ``"current"`` season ignores this.
+
+        Returns:
+            A new :class:`View` with :attr:`time_filter` set.
+
+        Raises:
+            ValueError: If the arguments are inconsistent (e.g. mixing date
+                range and season arguments, omitting required args, or
+                supplying ``year`` with ``season="current"``).
+        """
+        if season is not None and (start is not None or end is not None):
+            raise ValueError(
+                "Date range (start/end) and season mode are mutually exclusive. "
+                "Use either positional date strings or the 'season' keyword, not both."
+            )
+
+        if season is None and year is not None:
+            raise ValueError("'year' is only valid when 'season' is also provided.")
+
+        if season is not None:
+            if season not in _VALID_SEASONS:
+                raise ValueError(
+                    f"Unknown season {season!r}. "
+                    f"Valid values: {sorted(_VALID_SEASONS)}."
+                )
+            if season == "current" and year is not None:
+                raise ValueError(
+                    "Cannot combine year with season='current'. "
+                    "The current season is always resolved to the present calendar date."
+                )
+            time_filter: dict = {"season": season}
+            if year is not None:
+                time_filter["year"] = year
+        else:
+            if start is None or end is None:
+                raise ValueError(
+                    "Both 'start' and 'end' must be provided for date range mode."
+                )
+            time_filter = {"start": start, "end": end}
+
+        return View(
+            keys=self.keys,
+            entity=self.entity,
+            entity_name=self.entity_name,
+            time_filter=time_filter,
+            join_spec=self.join_spec,
+        )
+
+    @property
+    def static(self) -> "Result":
+        """Materialise the static GeoParquet file and return a :class:`~core_lens.base.result.Result`.
+
+        The result always has ``has_geometry=True`` because the static file is
+        a GeoParquet carrying geometry for every entity instance.
+
+        Returns:
+            A :class:`~core_lens.base.result.Result` with
+            ``resolution="static"`` and ``has_geometry=True``.
+
+        Raises:
+            AttributeError: If the entity has no ``static_path`` (should not
+                happen in practice since ``static_path`` is mandatory).
+        """
+        return self._materialise("static")
+
+    @property
+    def annual(self) -> "Result":
+        """Materialise the annual Parquet file and return a :class:`~core_lens.base.result.Result`.
+
+        Returns:
+            A :class:`~core_lens.base.result.Result` with
+            ``resolution="annual"`` and ``has_geometry=False``.
+
+        Raises:
+            AttributeError: If the entity has no ``annual_path``.
+        """
+        return self._materialise("annual")
+
+    @property
+    def fortnightly(self) -> "Result":
+        """Materialise the fortnightly Parquet file and return a :class:`~core_lens.base.result.Result`.
+
+        Returns:
+            A :class:`~core_lens.base.result.Result` with
+            ``resolution="fortnightly"`` and ``has_geometry=False``.
+
+        Raises:
+            AttributeError: If the entity has no ``fortnightly_path``.
+        """
+        return self._materialise("fortnightly")
+
+    def _materialise(self, resolution: str) -> "Result":
+        # Deferred until Result is implemented.  Each concrete entity
+        # subclass may also override this to inject entity-specific scan
+        # logic before delegating upward.
+        raise NotImplementedError(
+            f"Materialisation for resolution={resolution!r} is not yet implemented. "
+            "This will be wired up when Result and the Parquet scan layer are built."
+        )
