@@ -19,6 +19,11 @@ source = "vcs"
 [tool.hatch.buuild.hooks.vcs]
 version-file = "src/core_lens/_version.py"
 
+[tool.pyright]
+extraPaths = ["src"]
+venvPath = "."
+venv = ".venv"
+
 [dependency-groups]
 core = ["polars>=1.40.1", "pydantic>=2.13.3", "pyproj>=3.7.2", "shapely>=2.1.2"]
 spatial = ["geopandas>=1.1.3"]
