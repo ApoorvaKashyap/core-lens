@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import polars as pl
+from typing_extensions import Literal
 
 from core_lens.schema.profile import SchemaProfile
 
@@ -130,7 +131,7 @@ def detect(
 
 def _read_schema(path: str, label: str) -> pl.Schema:
     try:
-        return pl.read_parquet_schema(path)
+        return pl.scan_parquet(path).schema
     except Exception as exc:
         raise SchemaDetectionError(
             f"Could not read Parquet schema from {label} file {path!r}: {exc}"
@@ -142,7 +143,7 @@ def _require_cols(schema: pl.Schema, cols: list[str], path: str) -> None:
     if missing:
         raise SchemaDetectionError(
             f"Required column(s) {missing} not found in {path!r}. "
-            f"Available columns: {list(schema.names())}."
+            + f"Available columns: {list(schema.names())}."
         )
 
 
@@ -157,7 +158,7 @@ def _infer_geometry_type(
     schema: pl.Schema,
     geometry_col: str,
     path: str,
-) -> tuple[str, str | None]:
+) -> tuple[Literal["wkb", "wkt", "latlon"], str | None]:
     dtype = schema[geometry_col]
 
     if dtype == pl.Binary:
