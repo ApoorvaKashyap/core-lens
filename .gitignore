@@ -359,3 +359,6 @@ _version.py
 
 # Sphinx Auto API
 autoapi/
+
+# Design Docs
+DESIGN_v6.md
