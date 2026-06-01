@@ -1,0 +1,172 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - "**"
+    tags:
+      - "v*"
+  pull_request:
+    branches:
+      - dev
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality:
+    name: Lockfile, lint, types, changelog, audit
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b
+        with:
+          enable-cache: true
+
+      - name: Set up Python
+        run: uv python install
+
+      - name: Install dependencies
+        run: uv sync --all-groups --locked
+
+      - name: Verify lockfile
+        run: uv lock --check
+
+      - name: Lint
+        run: uv run ruff check .
+
+      - name: Format check
+        run: uv run ruff format --check .
+
+      - name: Typecheck
+        run: uv run mypy src/core_lens
+
+      - name: Changelog check
+        if: ${{ github.event_name == 'pull_request' }}
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          changed_files="$(git diff --name-only "$BASE_SHA" "$HEAD_SHA")"
+
+          if ! printf '%s\n' "$changed_files" | grep -q '^src/'; then
+            echo "No src/ changes detected; skipping changelog requirement."
+            exit 0
+          fi
+
+          if printf '%s\n' "$changed_files" | grep -q '^CHANGELOG.md$'; then
+            echo "CHANGELOG.md updated."
+            exit 0
+          fi
+
+          echo "Source files changed without a CHANGELOG.md update."
+          exit 1
+
+      - name: Security audit
+        run: uv run pip-audit
+
+  tests:
+    name: Tests (${{ matrix.os }}, Python ${{ matrix.python-version }})
+    needs: quality
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - ubuntu-latest
+        python-version:
+          - "3.13"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b
+        with:
+          enable-cache: true
+
+      - name: Set up Python
+        run: uv python install ${{ matrix.python-version }}
+
+      - name: Install dependencies
+        run: uv sync --all-groups --locked --python ${{ matrix.python-version }}
+
+      - name: Run tests
+        run: |
+          if [ -d tests ]; then
+            uv run --python ${{ matrix.python-version }} pytest
+          else
+            echo "No tests directory found; skipping tests."
+          fi
+
+  coverage:
+    name: Coverage
+    needs: tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b
+        with:
+          enable-cache: true
+
+      - name: Set up Python
+        run: uv python install
+
+      - name: Install dependencies
+        run: uv sync --all-groups --locked
+
+      - name: Run coverage
+        run: |
+          if [ -d tests ]; then
+            uv run pytest --cov=core_lens --cov-report=term-missing --cov-report=xml
+          else
+            echo "No tests directory found; skipping coverage."
+          fi
+
+      - name: Upload coverage artifact
+        if: ${{ hashFiles('coverage.xml') != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-xml
+          path: coverage.xml
+
+  build:
+    name: Build check
+    needs: coverage
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b
+        with:
+          enable-cache: true
+
+      - name: Set up Python
+        run: uv python install
+
+      - name: Install dependencies
+        run: uv sync --group dev --locked
+
+      - name: Build package
+        run: uv build
+
+      - name: Check distribution metadata
+        run: uv run twine check dist/*
