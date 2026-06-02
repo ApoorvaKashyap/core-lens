@@ -2,15 +2,15 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING
 
 import polars as pl
+
+from core_lens.schema.profile import Resolution
 
 if TYPE_CHECKING:
     import geopandas as gpd
     from core_lens.base.entity import BaseEntity
-
-Resolution = Literal["static", "annual", "fortnightly"]
 
 _FORTNIGHTLY_ONLY_BY = {"year", "month", "year_month", "season", "season_year"}
 _VALID_BY = {None} | _FORTNIGHTLY_ONLY_BY
@@ -34,8 +34,9 @@ class Result:
         metadata: Free-form dict populated by stats methods to carry
             method parameters (e.g. ``{"method": "pearson", "p_value": 0.003}``).
             Empty on freshly materialised results.
-        resolution: One of ``"static"``, ``"annual"``, or ``"fortnightly"``.
-            Used to validate which ``aggregate`` groupings are legal.
+        resolution: A :class:`~core_lens.schema.profile.Resolution` member
+            (``STATIC``, ``ANNUAL``, or ``FORTNIGHTLY``).  Used to validate
+            which ``aggregate`` groupings are legal.
         has_geometry: ``True`` only for ``resolution="static"`` results and
             results on which :meth:`with_geometry` has been called.  When
             ``True``, :meth:`gdf` is available.
@@ -204,13 +205,13 @@ class Result:
                 f"Valid options: {sorted(v for v in _VALID_BY if v is not None)}."
             )
 
-        if self.resolution == "static":
+        if self.resolution == Resolution.STATIC:
             raise ValueError(
                 "aggregate() is not supported on static results. "
                 "Static data has one row per entity with no time dimension to collapse."
             )
 
-        if by in _FORTNIGHTLY_ONLY_BY and self.resolution != "fortnightly":
+        if by in _FORTNIGHTLY_ONLY_BY and self.resolution != Resolution.FORTNIGHTLY:
             raise ValueError(
                 f"by={by!r} requires resolution='fortnightly', "
                 f"but this result has resolution={self.resolution!r}."

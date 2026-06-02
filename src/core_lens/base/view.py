@@ -6,6 +6,8 @@ from typing import TYPE_CHECKING
 
 import polars as pl
 
+from core_lens.schema.profile import Resolution
+
 if TYPE_CHECKING:
     from core_lens.base.entity import BaseEntity
     from core_lens.base.result import Result
@@ -163,7 +165,7 @@ class View:
             AttributeError: If the entity has no ``static_path`` (should not
                 happen in practice since ``static_path`` is mandatory).
         """
-        return self._materialise("static")
+        return self._materialise(Resolution.STATIC)
 
     @property
     def annual(self) -> "Result":
@@ -176,7 +178,7 @@ class View:
         Raises:
             AttributeError: If the entity has no ``annual_path``.
         """
-        return self._materialise("annual")
+        return self._materialise(Resolution.ANNUAL)
 
     @property
     def fortnightly(self) -> "Result":
@@ -189,9 +191,9 @@ class View:
         Raises:
             AttributeError: If the entity has no ``fortnightly_path``.
         """
-        return self._materialise("fortnightly")
+        return self._materialise(Resolution.FORTNIGHTLY)
 
-    def _materialise(self, resolution: str) -> "Result":
+    def _materialise(self, resolution: Resolution) -> "Result":
         # Deferred until Result is implemented.  Each concrete entity
         # subclass may also override this to inject entity-specific scan
         # logic before delegating upward.

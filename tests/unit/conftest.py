@@ -14,7 +14,7 @@ from core_lens.aoi import AoI, _REGISTRY
 from core_lens.base.entity import BaseEntity
 from core_lens.base.result import Result
 from core_lens.base.view import View
-from core_lens.schema.profile import SchemaProfile
+from core_lens.schema.profile import Resolution, SchemaProfile
 
 
 def _make_static_parquet(path: pathlib.Path, *, extra_cols: bool = False) -> None:
@@ -237,7 +237,7 @@ def sample_result(entity_cls):
     df = pl.DataFrame({"mws_id": ["13_001", "13_002"], "ndvi_mean": [0.45, 0.50]})
     return Result(
         data=df,
-        resolution="annual",
+        resolution=Resolution.ANNUAL,
         has_geometry=False,
         key_cols=["mws_id"],
         entity_name="minimalmws",

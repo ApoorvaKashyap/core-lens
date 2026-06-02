@@ -6,11 +6,12 @@ import polars as pl
 import pytest
 
 from core_lens.base.result import Result
+from core_lens.schema.profile import Resolution
 
 
 def _make_result(
     entity,
-    resolution: str = "annual",
+    resolution: Resolution = Resolution.ANNUAL,
     has_geometry: bool = False,
     data: pl.DataFrame | None = None,
     metadata: dict | None = None,
@@ -19,7 +20,7 @@ def _make_result(
 
     Args:
         entity: A ``BaseEntity`` instance.
-        resolution: One of ``"static"``, ``"annual"``, or ``"fortnightly"``.
+        resolution: A :class:`~core_lens.schema.profile.Resolution` member.
         has_geometry: Whether the result carries a geometry column.
         data: Custom DataFrame. Defaults to a two-row NDVI frame.
         metadata: Optional metadata dict.
@@ -46,14 +47,14 @@ class TestResultConstruction:
         df = pl.DataFrame({"mws_id": ["1"], "ndvi": [0.4]})
         result = Result(
             data=df,
-            resolution="annual",
+            resolution=Resolution.ANNUAL,
             has_geometry=False,
             key_cols=["mws_id"],
             entity_name="mws",
             entity=entity,
         )
 
-        assert result.resolution == "annual"
+        assert result.resolution == Resolution.ANNUAL
         assert result.has_geometry is False
         assert result.key_cols == ["mws_id"]
         assert result.entity_name == "mws"
@@ -166,19 +167,19 @@ class TestResultAggregate:
                 "ndvi": [0.4, 0.5, 0.3],
             }
         )
-        result = _make_result(entity_cls(), resolution="fortnightly", data=df)
+        result = _make_result(entity_cls(), resolution=Resolution.FORTNIGHTLY, data=df)
         agg = result.aggregate(pl.mean("ndvi"), by="year")
 
         assert "year" in agg.df().columns
 
     def test_aggregate_on_static_raises(self, entity_cls):
-        result = _make_result(entity_cls(), resolution="static")
+        result = _make_result(entity_cls(), resolution=Resolution.STATIC)
 
         with pytest.raises(ValueError, match="not supported on static"):
             result.aggregate(pl.mean("ndvi_mean"))
 
     def test_aggregate_temporal_by_on_annual_raises(self, entity_cls):
-        result = _make_result(entity_cls(), resolution="annual")
+        result = _make_result(entity_cls(), resolution=Resolution.ANNUAL)
 
         with pytest.raises(ValueError, match="resolution='fortnightly'"):
             result.aggregate(pl.mean("ndvi_mean"), by="year")
@@ -204,7 +205,7 @@ class TestResultAggregate:
                 "ndvi": [0.4],
             }
         )
-        result = _make_result(entity_cls(), resolution="fortnightly", data=df)
+        result = _make_result(entity_cls(), resolution=Resolution.FORTNIGHTLY, data=df)
         agg = result.aggregate(pl.mean("ndvi"), by=by)
 
         assert by in agg.df().columns
@@ -213,10 +214,10 @@ class TestResultAggregate:
 class TestResultReplace:
     def test_replace_carries_forward_unchanged_fields(self, entity_cls):
         entity = entity_cls()
-        result = _make_result(entity, resolution="annual")
-        replaced = result._replace(resolution="fortnightly")
+        result = _make_result(entity, resolution=Resolution.ANNUAL)
+        replaced = result._replace(resolution=Resolution.FORTNIGHTLY)
 
-        assert replaced.resolution == "fortnightly"
+        assert replaced.resolution == Resolution.FORTNIGHTLY
         assert replaced.entity is entity
         assert replaced.key_cols == result.key_cols
         assert replaced.entity_name == result.entity_name

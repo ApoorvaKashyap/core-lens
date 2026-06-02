@@ -2,9 +2,18 @@
 
 from __future__ import annotations
 
+from enum import Enum
 from typing import Literal
 
 from pydantic import BaseModel, model_validator
+
+
+class Resolution(str, Enum):
+    """Temporal resolution of a dataset."""
+
+    STATIC = "static"
+    ANNUAL = "annual"
+    FORTNIGHTLY = "fortnightly"
 
 
 class SchemaProfile(BaseModel):
