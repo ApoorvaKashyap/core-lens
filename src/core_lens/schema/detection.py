@@ -131,7 +131,7 @@ def detect(
 
 def _read_schema(path: str, label: str) -> pl.Schema:
     try:
-        return pl.scan_parquet(path).schema
+        return pl.scan_parquet(path).collect_schema()
     except Exception as exc:
         raise SchemaDetectionError(
             f"Could not read Parquet schema from {label} file {path!r}: {exc}"
