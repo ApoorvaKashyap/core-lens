@@ -1,0 +1,110 @@
+core_lens.schema.detection
+==========================
+
+.. py:module:: core_lens.schema.detection
+
+.. autoapi-nested-parse::
+
+   Schema auto-detection from Parquet file metadata.
+
+
+
+Attributes
+----------
+
+.. autoapisummary::
+
+   core_lens.schema.detection._BBOX_PATTERNS
+   core_lens.schema.detection._TIME_COL_NAMES
+
+
+Exceptions
+----------
+
+.. autoapisummary::
+
+   core_lens.schema.detection.SchemaDetectionError
+
+
+Functions
+---------
+
+.. autoapisummary::
+
+   core_lens.schema.detection.detect
+   core_lens.schema.detection._read_schema
+   core_lens.schema.detection._require_cols
+   core_lens.schema.detection._infer_bbox_cols
+   core_lens.schema.detection._infer_geometry_type
+   core_lens.schema.detection._find_lon_companion
+   core_lens.schema.detection._infer_time_col
+
+
+Module Contents
+---------------
+
+.. py:data:: _BBOX_PATTERNS
+   :type:  list[tuple[str, str, str, str]]
+   :value: [('minx', 'miny', 'maxx', 'maxy'), ('xmin', 'ymin', 'xmax', 'ymax'), ('bbox_minx', 'bbox_miny',...
+
+
+.. py:data:: _TIME_COL_NAMES
+   :type:  set[str]
+
+.. py:exception:: SchemaDetectionError
+
+   Bases: :py:obj:`Exception`
+
+
+   Raised when the detection layer cannot produce a valid SchemaProfile.
+
+   The message identifies which file and which inference step failed so
+   entity authors have an actionable starting point.
+
+
+.. py:function:: detect(static_path: str, key_cols: list[str], geometry_col: str, annual_path: str | None = None, fortnightly_path: str | None = None) -> core_lens.schema.profile.SchemaProfile
+
+   Introspect Parquet file schemas and return a validated SchemaProfile.
+
+   Reads only Parquet footer metadata — no row data is scanned.  Intended
+   to be called once per entity at ``AoI.register()`` time and the result
+   cached on the entity instance.
+
+   Detection order for each inferred field:
+
+   * **geometry_type** — derived from the dtype of ``geometry_col``:
+     ``Binary`` → ``"wkb"``, ``String`` → ``"wkt"``, ``Float``
+     with a detected lon companion column → ``"latlon"``.
+   * **bbox_cols** — checked against a fixed set of four-column name
+     patterns.  ``None`` if no known pattern is present in the static schema.
+   * **annual_time_col** / **fortnightly_time_col** — the first column with
+     a ``Date``, ``Datetime``, or ``Int`` dtype whose name matches a known
+     set of time-column names.  Falls back to the first ``Date``/``Datetime``
+     column regardless of name.
+   * **extra_*_cols** — every remaining column after key, geometry, bbox,
+     and time columns are accounted for.
+
+   :param static_path: Path to the static GeoParquet file.
+   :param key_cols: Entity key column name(s), as declared on the entity.
+   :param geometry_col: Geometry column name, as declared on the entity.
+   :param annual_path: Path to the annual Parquet file, or ``None``.
+   :param fortnightly_path: Path to the fortnightly Parquet file, or ``None``.
+
+   :returns: A validated :class:`~core_lens.schema.profile.SchemaProfile`.
+
+   :raises SchemaDetectionError: If a required column is absent, the geometry
+       type cannot be inferred, or any other detection step fails.
+
+
+.. py:function:: _read_schema(path: str, label: str) -> polars.Schema
+
+.. py:function:: _require_cols(schema: polars.Schema, cols: list[str], path: str) -> None
+
+.. py:function:: _infer_bbox_cols(schema: polars.Schema) -> tuple[str, str, str, str] | None
+
+.. py:function:: _infer_geometry_type(schema: polars.Schema, geometry_col: str, path: str) -> tuple[Literal['wkb', 'wkt', 'latlon'], str | None]
+
+.. py:function:: _find_lon_companion(schema: polars.Schema, lat_col: str) -> str | None
+
+.. py:function:: _infer_time_col(schema: polars.Schema, path: str) -> str | None
+

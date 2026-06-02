@@ -1,0 +1,623 @@
+core_lens.base
+==============
+
+.. py:module:: core_lens.base
+
+.. autoapi-nested-parse::
+
+   Public API surface for core_lens plugin authors.
+
+   Plugin authors should import only from this package::
+
+       from core_lens.base import BaseEntity, View, Result
+
+   Internal modules (namespaces, schema helpers) are not re-exported here.
+
+
+
+Submodules
+----------
+
+.. toctree::
+   :maxdepth: 1
+
+   /autoapi/core_lens/base/entity/index
+   /autoapi/core_lens/base/namespaces/index
+   /autoapi/core_lens/base/result/index
+   /autoapi/core_lens/base/view/index
+
+
+Exceptions
+----------
+
+.. autoapisummary::
+
+   core_lens.base.EntityValidationError
+
+
+Classes
+-------
+
+.. autoapisummary::
+
+   core_lens.base.BaseEntity
+   core_lens.base.View
+   core_lens.base.Result
+
+
+Package Contents
+----------------
+
+.. py:class:: BaseEntity
+
+   Bases: :py:obj:`abc.ABC`
+
+
+   Abstract base class for every entity in the core_lens plugin system.
+
+   An entity represents a geospatial primitive (e.g. microwatershed, village,
+   district) backed by one or more Parquet/GeoParquet files.  Entities are
+   *descriptors* — they carry path and schema metadata but hold no per-row
+   state themselves.  Row-level data lives in :class:`~core_lens.base.view.View`
+   and :class:`~core_lens.base.result.Result`.
+
+   Subclasses **must** implement:
+
+   * :attr:`key_cols`      — column(s) that uniquely identify one entity instance
+   * :attr:`geometry_col`  — geometry column name in the static GeoParquet file
+   * :attr:`static_path`   — path to the static GeoParquet file (mandatory)
+   * :attr:`schema_profile` — validated :class:`~core_lens.schema.profile.SchemaProfile`
+   * :meth:`where`         — attribute-based filter returning a :class:`~core_lens.base.view.View`
+   * :meth:`spatial_filter` — geometry-based filter returning a :class:`~core_lens.base.view.View`
+   * :meth:`spatial_join`  — cross-entity spatial join returning a :class:`~core_lens.base.view.View`
+
+   Subclasses **may** override:
+
+   * :attr:`annual_path`       — path to the annual time-series Parquet file
+   * :attr:`fortnightly_path`  — path to the fortnightly time-series Parquet file
+
+   Plugin example::
+
+       from core_lens.base import BaseEntity
+
+       class ForestEntity(BaseEntity):
+           key_cols     = ["forest_patch_id"]
+           geometry_col = "geometry"
+           static_path  = "data/forest/static.geoparquet"
+           annual_path  = "data/forest/annual.parquet"
+
+       AoI.register(ForestEntity)
+
+   Validation rules enforced at :meth:`AoI.register` time:
+
+   1. ``static_path`` exists and is readable.
+   2. ``key_cols`` are present and unique in the static file.
+   3. ``geometry_col`` is present and contains valid geometries.
+   4. ``annual_path`` and ``fortnightly_path`` exist if declared.
+
+   Any failure raises :class:`~core_lens.base.entity.EntityValidationError`.
+
+
+   .. py:property:: key_cols
+      :type: list[str]
+
+      :abstractmethod:
+
+
+      Columns that uniquely identify one instance of this entity.
+
+      For built-in entities this is always a single-element list (e.g.
+      ``["mws_id"]``), but the contract allows composite keys for plugins.
+
+      :returns: A list of column name strings present in the static file.
+
+
+   .. py:property:: geometry_col
+      :type: str
+
+      :abstractmethod:
+
+
+      Name of the geometry column in the static GeoParquet file.
+
+      The column must contain a geometry type understood by GeoPandas
+      (WKB bytes, WKT string, or a native geometry column).
+
+      :returns: The column name as a string.
+
+
+   .. py:property:: static_path
+      :type: str
+
+      :abstractmethod:
+
+
+      Filesystem or cloud path to the static GeoParquet file.
+
+      This file must exist and be readable at registration time.  It is the
+      only mandatory data file — ``annual_path`` and ``fortnightly_path``
+      are optional.
+
+      :returns: A path string (local or ``s3://`` URI).
+
+
+   .. py:property:: schema_profile
+      :type: core_lens.schema.profile.SchemaProfile
+
+      :abstractmethod:
+
+
+      Validated schema descriptor for this entity's data files.
+
+      The :class:`~core_lens.schema.profile.SchemaProfile` is built once
+      (lazily) by inspecting Parquet file metadata and caching the result.
+      It captures column names, geometry encoding, and time column
+      identities so that the rest of the library can adapt to schema
+      changes at runtime without hard-coded column assumptions.
+
+      :returns: A fully-validated :class:`~core_lens.schema.profile.SchemaProfile`
+                instance.
+
+
+   .. py:property:: annual_path
+      :type: str | None
+
+
+      Path to the annual time-series Parquet file, or ``None``.
+
+      Override in subclasses that carry annual temporal data.  If declared,
+      the file must exist at :meth:`AoI.register` time or
+      :class:`EntityValidationError` is raised.
+
+      :returns: A path string, or ``None`` if the entity has no annual data.
+
+
+   .. py:property:: fortnightly_path
+      :type: str | None
+
+
+      Path to the fortnightly time-series Parquet file, or ``None``.
+
+      Override in subclasses that carry fortnightly temporal data.  If
+      declared, the file must exist at :meth:`AoI.register` time or
+      :class:`EntityValidationError` is raised.
+
+      :returns: A path string, or ``None`` if the entity has no fortnightly data.
+
+
+   .. py:method:: where(**kwargs) -> core_lens.base.view.View
+      :abstractmethod:
+
+
+      Return a lazy :class:`~core_lens.base.view.View` filtered by attributes.
+
+      Each keyword argument is interpreted as ``column=value`` applied to
+      the in-memory index or static file.  Multiple arguments are AND-ed.
+      This is the primary mechanism for non-spatial subsetting::
+
+          aoi.mws.where(tehsil="Pangi")
+          aoi.district.where(state="Himachal Pradesh")
+
+      :param \*\*kwargs: Arbitrary column–value pairs to filter on.
+
+      :returns: A lazy :class:`~core_lens.base.view.View` with resolved key pairs
+                and any pending filters recorded.
+
+
+
+   .. py:method:: spatial_filter(**kwargs) -> core_lens.base.view.View
+      :abstractmethod:
+
+
+      Return a lazy :class:`~core_lens.base.view.View` filtered by geometry.
+
+      Performs a spatial predicate (bbox intersection by default, with an
+      STRtree used for exact containment/intersection on first call) to
+      restrict the entity to instances that fall within the given geometry::
+
+          aoi.mws.spatial_filter(geometry=aoi.geometry)
+          aoi.mws.spatial_filter(bbox=(minx, miny, maxx, maxy))
+
+      :param \*\*kwargs: Geometry arguments understood by the concrete
+                         implementation (e.g. ``geometry=``, ``bbox=``).
+
+      :returns: A lazy :class:`~core_lens.base.view.View` scoped to the given
+                spatial extent.
+
+
+
+   .. py:method:: spatial_join(other: BaseEntity, agg: dict) -> core_lens.base.view.View
+      :abstractmethod:
+
+
+      Return a lazy :class:`~core_lens.base.view.View` with a cross-entity join pending.
+
+      The join is deferred and computed only at materialisation time
+      (``.static``, ``.annual``, or ``.fortnightly``).  Joined columns are
+      automatically namespaced as ``{entity_name}_{column_name}`` and cannot
+      be overridden::
+
+          aoi.mws.spatial_join(
+              aoi.forest,
+              agg={
+                  "tree_cover":     "area",
+                  "patch_count":    "count",
+                  "canopy_density": "mean",
+                  "biomass":        "sum",
+              }
+          )
+
+      :param other: The secondary :class:`BaseEntity` whose columns will be
+                    joined and aggregated onto ``self``.
+      :param agg: Mapping of ``{column: aggregation}`` specifying which columns
+                  from ``other`` to bring in and how to aggregate them.  Valid
+                  aggregation strings are ``"area"``, ``"count"``, ``"mean"``,
+                  ``"sum"``, ``"min"``, and ``"max"``.
+
+      :returns: A lazy :class:`~core_lens.base.view.View` with the join spec
+                recorded for deferred execution.
+
+
+
+.. py:exception:: EntityValidationError
+
+   Bases: :py:obj:`Exception`
+
+
+   Raised when an entity fails validation at :meth:`AoI.register` time.
+
+   The message will describe exactly which check failed (missing file, absent
+   key column, invalid geometry column, etc.) to give plugin authors
+   actionable feedback.
+
+
+.. py:class:: View(keys: polars.DataFrame, entity: core_lens.base.entity.BaseEntity, entity_name: str, time_filter: dict | None = None, join_spec: dict | None = None)
+
+   Lazy, immutable snapshot of a scoped entity pending materialisation.
+
+   A ``View`` is produced by the filter methods on :class:`~core_lens.base.entity.BaseEntity`
+   (:meth:`~BaseEntity.where`, :meth:`~BaseEntity.spatial_filter`,
+   :meth:`~BaseEntity.spatial_join`).  It records *what* to load without
+   touching any Parquet file.  Data is only read when one of the three
+   materialisation properties is accessed.
+
+   ``View`` is immutable.  Every method that would mutate state instead
+   returns a new ``View`` with the updated field, leaving the original
+   untouched.  This makes it safe to branch a view and materialise it in
+   different ways::
+
+       view = aoi.mws.where(tehsil="Pangi")
+       annual = view.between("2010-01-01", "2023-12-31").annual
+       static = view.static
+
+   .. attribute:: keys
+
+      A ``pl.DataFrame`` containing the resolved key column(s) for
+      all entity instances that passed the spatial/attribute filters.
+      This is the in-memory index slice — no data columns, only IDs.
+
+   .. attribute:: entity
+
+      Reference to the parent :class:`~core_lens.base.entity.BaseEntity`
+      that produced this view.  Used during materialisation to resolve
+      file paths and schema.
+
+   .. attribute:: entity_name
+
+      Human-readable name for the entity (e.g. ``"mws"``).
+      Used to namespace joined columns and populate
+      :attr:`~core_lens.base.result.Result.entity_name`.
+
+   .. attribute:: time_filter
+
+      A dict encoding the pending time constraint set by
+      :meth:`between`, or ``None`` if no time filter has been applied.
+      The materialisation step reads this dict to build predicate
+      pushdown expressions.
+
+   .. attribute:: join_spec
+
+      A dict encoding a deferred :meth:`~BaseEntity.spatial_join`
+      request, or ``None``.  Evaluated during materialisation after the
+      primary scan is complete.
+
+
+   .. py:attribute:: keys
+
+
+   .. py:attribute:: entity
+
+
+   .. py:attribute:: entity_name
+
+
+   .. py:attribute:: time_filter
+      :value: None
+
+
+
+   .. py:attribute:: join_spec
+      :value: None
+
+
+
+   .. py:method:: between(start: str | None = None, end: str | None = None, *, season: str | None = None, year: int | tuple[int, int] | None = None) -> View
+
+      Return a new ``View`` with a pending time filter applied.
+
+      Two mutually exclusive modes are supported:
+
+      **Date range mode** — pass ``start`` and ``end`` as ISO-8601 strings::
+
+          view.between("2010-01-01", "2023-12-31")
+
+      **Season mode** — pass ``season`` as a keyword argument.  ``year`` is
+      optional and may be a single year or an inclusive ``(from, to)`` tuple::
+
+          view.between(season="kharif")
+          view.between(season="kharif", year=2020)
+          view.between(season="kharif", year=(2018, 2023))
+          view.between(season="current")
+
+      The returned ``View`` carries the filter in :attr:`time_filter` but
+      does not execute any I/O.  The filter is applied during materialisation
+      via predicate pushdown on the Parquet scan.
+
+      :param start: Start of the date range (ISO-8601).  Required in date range
+                    mode; must be ``None`` in season mode.
+      :param end: End of the date range (ISO-8601).  Required in date range
+                  mode; must be ``None`` in season mode.
+      :param season: Season name — one of ``"kharif"``, ``"rabi"``,
+                     ``"zaid"``, or ``"current"``.  Activates season mode.
+      :param year: Year or inclusive year range to restrict the season filter.
+                   Only valid in season mode.  ``"current"`` season ignores this.
+
+      :returns: A new :class:`View` with :attr:`time_filter` set.
+
+      :raises ValueError: If the arguments are inconsistent (e.g. mixing date
+          range and season arguments, omitting required args, or
+          supplying ``year`` with ``season="current"``).
+
+
+
+   .. py:property:: static
+      :type: core_lens.base.result.Result
+
+
+      Materialise the static GeoParquet file and return a :class:`~core_lens.base.result.Result`.
+
+      The result always has ``has_geometry=True`` because the static file is
+      a GeoParquet carrying geometry for every entity instance.
+
+      :returns: A :class:`~core_lens.base.result.Result` with
+                ``resolution="static"`` and ``has_geometry=True``.
+
+      :raises AttributeError: If the entity has no ``static_path`` (should not
+          happen in practice since ``static_path`` is mandatory).
+
+
+   .. py:property:: annual
+      :type: core_lens.base.result.Result
+
+
+      Materialise the annual Parquet file and return a :class:`~core_lens.base.result.Result`.
+
+      :returns: A :class:`~core_lens.base.result.Result` with
+                ``resolution="annual"`` and ``has_geometry=False``.
+
+      :raises AttributeError: If the entity has no ``annual_path``.
+
+
+   .. py:property:: fortnightly
+      :type: core_lens.base.result.Result
+
+
+      Materialise the fortnightly Parquet file and return a :class:`~core_lens.base.result.Result`.
+
+      :returns: A :class:`~core_lens.base.result.Result` with
+                ``resolution="fortnightly"`` and ``has_geometry=False``.
+
+      :raises AttributeError: If the entity has no ``fortnightly_path``.
+
+
+   .. py:method:: _materialise(resolution: core_lens.schema.profile.Resolution) -> core_lens.base.result.Result
+      :abstractmethod:
+
+
+
+.. py:class:: Result(data: polars.DataFrame, resolution: core_lens.schema.profile.Resolution, has_geometry: bool, key_cols: list[str], entity_name: str, entity: core_lens.base.entity.BaseEntity, metadata: dict | None = None)
+
+   Concrete, immutable result of a materialised :class:`~core_lens.base.view.View`.
+
+   ``Result`` is the shared output type for every entity and every
+   materialisation path.  It wraps a ``pl.DataFrame``, carries enough
+   context to know how to re-attach geometry, and exposes compute methods
+   that always return a fresh ``Result``, keeping the chain composable::
+
+       result = aoi.mws.where(tehsil="Pangi").annual.between("2010-01-01", "2023-12-31")
+       mean_ndvi = result.aggregate(pl.mean("ndvi"), by="year")
+       mean_ndvi.plot.timeseries(x="year", y="ndvi")
+
+   .. attribute:: data
+
+      The materialised ``pl.DataFrame``.  All compute methods
+      produce a new ``Result`` whose ``data`` is the transformed frame.
+
+   .. attribute:: metadata
+
+      Free-form dict populated by stats methods to carry
+      method parameters (e.g. ``{"method": "pearson", "p_value": 0.003}``).
+      Empty on freshly materialised results.
+
+   .. attribute:: resolution
+
+      A :class:`~core_lens.schema.profile.Resolution` member
+      (``STATIC``, ``ANNUAL``, or ``FORTNIGHTLY``).  Used to validate
+      which ``aggregate`` groupings are legal.
+
+   .. attribute:: has_geometry
+
+      ``True`` only for ``resolution="static"`` results and
+      results on which :meth:`with_geometry` has been called.  When
+      ``True``, :meth:`gdf` is available.
+
+   .. attribute:: columns
+
+      Column names present in :attr:`data` at construction time.
+      Snapshots the schema so callers can introspect without touching
+      the frame.
+
+   .. attribute:: key_cols
+
+      The entity's key column(s) as carried from
+      :class:`~core_lens.base.entity.BaseEntity`.
+
+   .. attribute:: entity_name
+
+      Human-readable entity identifier (e.g. ``"mws"``).
+
+   .. attribute:: entity
+
+      Reference to the parent entity, retained so
+      :meth:`with_geometry` can locate the static file without
+      requiring callers to pass it again.
+
+
+   .. py:attribute:: data
+
+
+   .. py:attribute:: resolution
+
+
+   .. py:attribute:: has_geometry
+
+
+   .. py:attribute:: columns
+      :type:  list[str]
+
+
+   .. py:attribute:: key_cols
+
+
+   .. py:attribute:: entity_name
+
+
+   .. py:attribute:: entity
+
+
+   .. py:attribute:: metadata
+      :type:  dict
+
+
+   .. py:method:: df() -> polars.DataFrame
+
+      Return the underlying ``pl.DataFrame``.
+
+      :returns: The materialised data frame.
+
+
+
+   .. py:method:: gdf() -> geopandas.GeoDataFrame
+
+      Return the data as a ``GeoDataFrame``.
+
+      Only valid when :attr:`has_geometry` is ``True``.  Use
+      :meth:`with_geometry` first on non-static results.
+
+      :returns: A ``geopandas.GeoDataFrame`` built from :attr:`data`.
+
+      :raises TypeError: If :attr:`has_geometry` is ``False``.
+
+
+
+   .. py:method:: lazy() -> polars.LazyFrame
+
+      Return a ``pl.LazyFrame`` for arbitrary further transformations.
+
+      This is an escape hatch for operations not covered by the Result API.
+      The resulting ``LazyFrame`` is disconnected from ``Result`` — callers
+      are responsible for collecting and wrapping the output themselves.
+
+      :returns: A lazy frame backed by :attr:`data`.
+
+
+
+   .. py:method:: with_geometry() -> Result
+      :abstractmethod:
+
+
+      Return a new ``Result`` with the static geometry column joined in.
+
+      Reads only the key and geometry columns from the entity's static file
+      (no full scan), joins on :attr:`key_cols`, and returns a new
+      ``Result`` with ``has_geometry=True``.
+
+      This is the intended path for attaching coordinates to annual or
+      fortnightly results before calling :meth:`gdf` or
+      ``result.plot.choropleth()``.
+
+      :returns: A new :class:`Result` with the geometry column merged in and
+                ``has_geometry=True``.
+
+      :raises NotImplementedError: Until the Parquet scan layer is wired up.
+
+
+
+   .. py:method:: derive(name: str, expr: polars.Expr) -> Result
+
+      Return a new ``Result`` with a computed column appended.
+
+      The derived column is a regular Polars column — no special tagging.
+      It is fully chainable::
+
+          result.derive("ndwi", (pl.col("green") - pl.col("nir")) / (pl.col("green") + pl.col("nir")))
+                .derive("drought_flag", pl.when(pl.col("rainfall") < 500).then(1).otherwise(0))
+
+      :param name: Name for the new column.
+      :param expr: A Polars expression that evaluates to the column values.
+
+      :returns: A new :class:`Result` with ``name`` appended to :attr:`data`.
+
+
+
+   .. py:method:: aggregate(*exprs: polars.Expr, by: str | None = None) -> Result
+
+      Return a new ``Result`` with the data grouped and aggregated.
+
+      The ``by`` parameter controls the grouping dimension.  Not all
+      groupings are valid for every resolution — the matrix below is
+      enforced at call time:
+
+      .. list-table::
+         :header-rows: 1
+
+         * - ``by``
+           - static
+           - annual
+           - fortnightly
+         * - ``None``
+           - ❌
+           - ✅
+           - ✅
+         * - ``"year"`` / ``"month"`` / ``"year_month"`` / ``"season"`` / ``"season_year"``
+           - ❌
+           - ❌
+           - ✅
+
+      :param \*exprs: One or more Polars aggregation expressions
+                      (e.g. ``pl.mean("ndvi")``, ``pl.max("rainfall")``).
+      :param by: Grouping dimension.  ``None`` collapses all rows to one.
+                 Temporal groupings (``"year"``, ``"month"``, ``"year_month"``,
+                 ``"season"``, ``"season_year"``) require
+                 ``resolution="fortnightly"``.
+
+      :returns: A new :class:`Result` whose ``data`` is the aggregated frame.
+
+      :raises ValueError: If ``by`` is incompatible with :attr:`resolution`, or
+          if ``by`` is not a recognised grouping name.
+
+
+
+   .. py:method:: _replace(**overrides) -> Result
+
+

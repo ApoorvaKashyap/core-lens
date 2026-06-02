@@ -1,0 +1,22 @@
+core_lens.utils
+===============
+
+.. py:module:: core_lens.utils
+
+
+Attributes
+----------
+
+.. autoapisummary::
+
+   core_lens.utils.__module__
+
+
+Package Contents
+----------------
+
+.. py:data:: __module__
+   :type:  str
+   :value: 'core_lens.utils'
+
+

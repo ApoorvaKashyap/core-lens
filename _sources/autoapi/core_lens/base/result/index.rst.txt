@@ -1,0 +1,231 @@
+core_lens.base.result
+=====================
+
+.. py:module:: core_lens.base.result
+
+.. autoapi-nested-parse::
+
+   Concrete, immutable result of a materialised View.
+
+
+
+Attributes
+----------
+
+.. autoapisummary::
+
+   core_lens.base.result._FORTNIGHTLY_ONLY_BY
+   core_lens.base.result._VALID_BY
+
+
+Classes
+-------
+
+.. autoapisummary::
+
+   core_lens.base.result.Result
+
+
+Module Contents
+---------------
+
+.. py:data:: _FORTNIGHTLY_ONLY_BY
+
+.. py:data:: _VALID_BY
+
+.. py:class:: Result(data: polars.DataFrame, resolution: core_lens.schema.profile.Resolution, has_geometry: bool, key_cols: list[str], entity_name: str, entity: core_lens.base.entity.BaseEntity, metadata: dict | None = None)
+
+   Concrete, immutable result of a materialised :class:`~core_lens.base.view.View`.
+
+   ``Result`` is the shared output type for every entity and every
+   materialisation path.  It wraps a ``pl.DataFrame``, carries enough
+   context to know how to re-attach geometry, and exposes compute methods
+   that always return a fresh ``Result``, keeping the chain composable::
+
+       result = aoi.mws.where(tehsil="Pangi").annual.between("2010-01-01", "2023-12-31")
+       mean_ndvi = result.aggregate(pl.mean("ndvi"), by="year")
+       mean_ndvi.plot.timeseries(x="year", y="ndvi")
+
+   .. attribute:: data
+
+      The materialised ``pl.DataFrame``.  All compute methods
+      produce a new ``Result`` whose ``data`` is the transformed frame.
+
+   .. attribute:: metadata
+
+      Free-form dict populated by stats methods to carry
+      method parameters (e.g. ``{"method": "pearson", "p_value": 0.003}``).
+      Empty on freshly materialised results.
+
+   .. attribute:: resolution
+
+      A :class:`~core_lens.schema.profile.Resolution` member
+      (``STATIC``, ``ANNUAL``, or ``FORTNIGHTLY``).  Used to validate
+      which ``aggregate`` groupings are legal.
+
+   .. attribute:: has_geometry
+
+      ``True`` only for ``resolution="static"`` results and
+      results on which :meth:`with_geometry` has been called.  When
+      ``True``, :meth:`gdf` is available.
+
+   .. attribute:: columns
+
+      Column names present in :attr:`data` at construction time.
+      Snapshots the schema so callers can introspect without touching
+      the frame.
+
+   .. attribute:: key_cols
+
+      The entity's key column(s) as carried from
+      :class:`~core_lens.base.entity.BaseEntity`.
+
+   .. attribute:: entity_name
+
+      Human-readable entity identifier (e.g. ``"mws"``).
+
+   .. attribute:: entity
+
+      Reference to the parent entity, retained so
+      :meth:`with_geometry` can locate the static file without
+      requiring callers to pass it again.
+
+
+   .. py:attribute:: data
+
+
+   .. py:attribute:: resolution
+
+
+   .. py:attribute:: has_geometry
+
+
+   .. py:attribute:: columns
+      :type:  list[str]
+
+
+   .. py:attribute:: key_cols
+
+
+   .. py:attribute:: entity_name
+
+
+   .. py:attribute:: entity
+
+
+   .. py:attribute:: metadata
+      :type:  dict
+
+
+   .. py:method:: df() -> polars.DataFrame
+
+      Return the underlying ``pl.DataFrame``.
+
+      :returns: The materialised data frame.
+
+
+
+   .. py:method:: gdf() -> geopandas.GeoDataFrame
+
+      Return the data as a ``GeoDataFrame``.
+
+      Only valid when :attr:`has_geometry` is ``True``.  Use
+      :meth:`with_geometry` first on non-static results.
+
+      :returns: A ``geopandas.GeoDataFrame`` built from :attr:`data`.
+
+      :raises TypeError: If :attr:`has_geometry` is ``False``.
+
+
+
+   .. py:method:: lazy() -> polars.LazyFrame
+
+      Return a ``pl.LazyFrame`` for arbitrary further transformations.
+
+      This is an escape hatch for operations not covered by the Result API.
+      The resulting ``LazyFrame`` is disconnected from ``Result`` — callers
+      are responsible for collecting and wrapping the output themselves.
+
+      :returns: A lazy frame backed by :attr:`data`.
+
+
+
+   .. py:method:: with_geometry() -> Result
+      :abstractmethod:
+
+
+      Return a new ``Result`` with the static geometry column joined in.
+
+      Reads only the key and geometry columns from the entity's static file
+      (no full scan), joins on :attr:`key_cols`, and returns a new
+      ``Result`` with ``has_geometry=True``.
+
+      This is the intended path for attaching coordinates to annual or
+      fortnightly results before calling :meth:`gdf` or
+      ``result.plot.choropleth()``.
+
+      :returns: A new :class:`Result` with the geometry column merged in and
+                ``has_geometry=True``.
+
+      :raises NotImplementedError: Until the Parquet scan layer is wired up.
+
+
+
+   .. py:method:: derive(name: str, expr: polars.Expr) -> Result
+
+      Return a new ``Result`` with a computed column appended.
+
+      The derived column is a regular Polars column — no special tagging.
+      It is fully chainable::
+
+          result.derive("ndwi", (pl.col("green") - pl.col("nir")) / (pl.col("green") + pl.col("nir")))
+                .derive("drought_flag", pl.when(pl.col("rainfall") < 500).then(1).otherwise(0))
+
+      :param name: Name for the new column.
+      :param expr: A Polars expression that evaluates to the column values.
+
+      :returns: A new :class:`Result` with ``name`` appended to :attr:`data`.
+
+
+
+   .. py:method:: aggregate(*exprs: polars.Expr, by: str | None = None) -> Result
+
+      Return a new ``Result`` with the data grouped and aggregated.
+
+      The ``by`` parameter controls the grouping dimension.  Not all
+      groupings are valid for every resolution — the matrix below is
+      enforced at call time:
+
+      .. list-table::
+         :header-rows: 1
+
+         * - ``by``
+           - static
+           - annual
+           - fortnightly
+         * - ``None``
+           - ❌
+           - ✅
+           - ✅
+         * - ``"year"`` / ``"month"`` / ``"year_month"`` / ``"season"`` / ``"season_year"``
+           - ❌
+           - ❌
+           - ✅
+
+      :param \*exprs: One or more Polars aggregation expressions
+                      (e.g. ``pl.mean("ndvi")``, ``pl.max("rainfall")``).
+      :param by: Grouping dimension.  ``None`` collapses all rows to one.
+                 Temporal groupings (``"year"``, ``"month"``, ``"year_month"``,
+                 ``"season"``, ``"season_year"``) require
+                 ``resolution="fortnightly"``.
+
+      :returns: A new :class:`Result` whose ``data`` is the aggregated frame.
+
+      :raises ValueError: If ``by`` is incompatible with :attr:`resolution`, or
+          if ``by`` is not a recognised grouping name.
+
+
+
+   .. py:method:: _replace(**overrides) -> Result
+
+

@@ -1,0 +1,263 @@
+core_lens
+=========
+
+.. py:module:: core_lens
+
+
+Submodules
+----------
+
+.. toctree::
+   :maxdepth: 1
+
+   /autoapi/core_lens/__main__/index
+   /autoapi/core_lens/aoi/index
+   /autoapi/core_lens/base/index
+   /autoapi/core_lens/entities/index
+   /autoapi/core_lens/export/index
+   /autoapi/core_lens/schema/index
+   /autoapi/core_lens/utils/index
+
+
+Attributes
+----------
+
+.. autoapisummary::
+
+   core_lens.__version__
+
+
+Classes
+-------
+
+.. autoapisummary::
+
+   core_lens.AoI
+   core_lens.SeasonConfig
+
+
+Package Contents
+----------------
+
+.. py:data:: __version__
+   :value: '0.1.0'
+
+
+.. py:class:: AoI(data_root: str, *, bbox: tuple[float, float, float, float] | None = None, geometry: shapely.Geometry | None = None, seasons: SeasonConfig | None = None, **entity_kwargs: str)
+
+   Area of Interest — the primary entry point for querying geospatial data.
+
+   An ``AoI`` is two things simultaneously:
+
+   1. **A geometry** — the resolved boundary of the named administrative unit
+      (or a raw bbox / Shapely polygon), stored as :attr:`geometry`.
+   2. **A collection of scoped entities** — every registered entity
+      pre-filtered to instances that fall within :attr:`geometry`.  Accessed
+      as attributes: ``aoi.mws``, ``aoi.village``, ``aoi.forest``, etc.
+
+   ``AoI`` holds no data itself.  Entity attributes are lazy
+   :class:`~core_lens.base.view.View` objects; no Parquet I/O occurs until a
+   materialisation property (``.static``, ``.annual``, ``.fortnightly``) is
+   accessed on a View.
+
+   **Registration** must happen before any ``AoI`` is constructed::
+
+       from core_lens import AoI, MWSEntity, TehsilEntity
+
+       AoI.register(MWSEntity)
+       AoI.register(TehsilEntity)
+
+   **Initialisation** — exactly one boundary argument is required::
+
+       aoi = AoI("data/", tehsil="Pangi", district="Chamba", state="Himachal Pradesh")
+       aoi = AoI("data/", bbox=(minx, miny, maxx, maxy))
+       aoi = AoI("data/", geometry=some_shapely_polygon)
+       aoi = AoI("data/", village="Shiroor")
+       aoi = AoI("data/", mws_id="13_551")
+
+   **Entity access**::
+
+       aoi.mws        # View — all MWS within the AoI boundary
+       aoi.tehsil     # View — all tehsils within the AoI boundary
+       aoi.forest     # View — plugin entity (if registered)
+
+   .. attribute:: data_root
+
+      Resolved path to the data directory.
+
+   .. attribute:: geometry
+
+      Shapely polygon representing the AoI boundary.
+
+   .. attribute:: seasons
+
+      :class:`SeasonConfig` in effect for this AoI.
+
+
+   .. py:attribute:: data_root
+
+
+   .. py:attribute:: seasons
+      :type:  SeasonConfig
+
+
+   .. py:attribute:: _scoped
+      :type:  dict[str, core_lens.base.view.View]
+
+
+   .. py:property:: current_season
+      :type: str
+
+
+      The season name for today's date under the AoI's SeasonConfig.
+
+      :returns: ``"kharif"``, ``"rabi"``, or ``"zaid"``.
+
+
+   .. py:property:: current_year
+      :type: int
+
+
+      The current calendar year.
+
+      :returns: Current year as an integer.
+
+
+   .. py:method:: plot(overlay: object | None = None) -> None
+      :abstractmethod:
+
+
+      Render an interactive Lonboard map of the AoI and its entity layers.
+
+      :param overlay: An optional :class:`~core_lens.base.result.Result` to
+                      overlay on the map.
+
+      :raises NotImplementedError: Until the plot layer is built.
+
+
+
+   .. py:method:: __getattr__(name: str) -> core_lens.base.view.View
+
+
+   .. py:method:: _resolve_named_boundary(entity_kwargs: dict[str, str]) -> shapely.Geometry
+
+      Resolve a set of named attribute filters to a Shapely geometry.
+
+      The entity whose key column matches one of the kwargs is queried.
+      Multiple kwargs act as AND-filters (e.g. tehsil + district narrows to
+      the unique matching row).
+
+      :param entity_kwargs: Column–value pairs used to identify the boundary.
+
+      :returns: The union of all matching entity geometries as a Shapely object.
+
+      :raises EntityValidationError: If no registered entity can satisfy the filters.
+      :raises ValueError: If the filters match zero rows.
+
+
+
+   .. py:method:: register(entity_cls: type[core_lens.base.entity.BaseEntity]) -> None
+      :classmethod:
+
+
+      Register an entity class so it is available on all future AoI instances.
+
+      The entity name is derived from the class name by stripping a trailing
+      ``"Entity"`` suffix and lower-casing the result
+      (``MWSEntity`` → ``"mws"``, ``ForestEntity`` → ``"forest"``).
+
+      Validation checks (§6.4):
+
+      1. ``static_path`` exists and is readable.
+      2. ``key_cols`` are present in the static file schema.
+      3. ``geometry_col`` is present in the static file schema.
+      4. ``annual_path`` and ``fortnightly_path`` exist if declared.
+
+      :param entity_cls: A concrete subclass of
+                         :class:`~core_lens.base.entity.BaseEntity`.
+
+      :raises EntityValidationError: If any validation check fails.
+
+
+
+   .. py:method:: deregister(entity_cls: type[core_lens.base.entity.BaseEntity]) -> None
+      :classmethod:
+
+
+      Remove a previously registered entity.
+
+      Primarily useful in tests where a clean registry is needed between runs.
+
+      :param entity_cls: The entity class to remove.
+
+
+
+   .. py:method:: registered_entities() -> list[str]
+      :classmethod:
+
+
+      Return the names of all currently registered entities.
+
+      :returns: A sorted list of entity name strings.
+
+
+
+.. py:class:: SeasonConfig
+
+   Date-range definitions for the three Indian crop seasons.
+
+   Each season is a ``(MM-DD, MM-DD)`` inclusive range.  Seasons that cross
+   the calendar year-end (e.g. rabi: Nov → Mar) are handled by comparing
+   the month-day portion of a date against each range, rolling over where
+   necessary.
+
+   The library ships with agronomic defaults for the Indo-Gangetic plain.
+   Override at AoI construction time to match a different agro-climatic zone::
+
+       aoi = AoI("data/", district="Dharwad", seasons=SeasonConfig(
+           kharif=("06-01", "10-15"),
+           rabi=("10-16", "02-28"),
+           zaid=("03-01", "05-31"),
+       ))
+
+   .. attribute:: kharif
+
+      Kharif (monsoon) season range as ``(start_MM-DD, end_MM-DD)``.
+
+   .. attribute:: rabi
+
+      Rabi (winter) season range.
+
+   .. attribute:: zaid
+
+      Zaid (summer) season range.
+
+
+   .. py:attribute:: kharif
+      :type:  tuple[str, str]
+      :value: ('07-01', '10-30')
+
+
+
+   .. py:attribute:: rabi
+      :type:  tuple[str, str]
+      :value: ('11-01', '03-31')
+
+
+
+   .. py:attribute:: zaid
+      :type:  tuple[str, str]
+      :value: ('04-01', '06-30')
+
+
+
+   .. py:method:: season_for(d: datetime.date) -> str
+
+      Return the season name for a given date.
+
+      :param d: The date to classify.
+
+      :returns: ``"kharif"``, ``"rabi"``, or ``"zaid"``.
+
+
+

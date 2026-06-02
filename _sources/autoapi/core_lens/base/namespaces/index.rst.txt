@@ -1,0 +1,22 @@
+core_lens.base.namespaces
+=========================
+
+.. py:module:: core_lens.base.namespaces
+
+
+Attributes
+----------
+
+.. autoapisummary::
+
+   core_lens.base.namespaces.__module__
+
+
+Package Contents
+----------------
+
+.. py:data:: __module__
+   :type:  str
+   :value: 'core_lens.base.namespaces'
+
+

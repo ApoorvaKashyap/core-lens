@@ -1,0 +1,22 @@
+core_lens.__main__
+==================
+
+.. py:module:: core_lens.__main__
+
+
+Functions
+---------
+
+.. autoapisummary::
+
+   core_lens.__main__.hello
+   core_lens.__main__.version
+
+
+Module Contents
+---------------
+
+.. py:function:: hello() -> str
+
+.. py:function:: version() -> str
+
