@@ -154,7 +154,7 @@ class AoI:
         Raises:
             ValueError: If no boundary argument is supplied, or if more than
                 one boundary mode is used simultaneously.
-            EntityValidationError: If a boundary entity referenced in
+            :class:`~core_lens.base.EntityValidationError`: If a boundary entity referenced in
                 ``entity_kwargs`` is not registered.
         """
         self.data_root = pathlib.Path(data_root).resolve()
@@ -186,11 +186,13 @@ class AoI:
             self.geometry = self._resolve_named_boundary(entity_kwargs)
 
         # Pre-filter every registered entity to the resolved geometry.
-        # Results are stored lazily — the spatial_filter call records the
-        # geometry on the View without touching any Parquet data.
+        # The season_config is threaded through to each View so that
+        # season-based time filters can be resolved at materialisation time.
         self._scoped: dict[str, "View"] = {}
         for name, entity in _REGISTRY.items():
-            self._scoped[name] = entity.spatial_filter(geometry=self.geometry)
+            view = entity.spatial_filter(geometry=self.geometry)
+            view._season_config = self.seasons
+            self._scoped[name] = view
 
     @property
     def current_season(self) -> str:
@@ -251,7 +253,7 @@ class AoI:
             The union of all matching entity geometries as a Shapely object.
 
         Raises:
-            EntityValidationError: If no registered entity can satisfy the filters.
+            :class:`~core_lens.base.EntityValidationError`: If no registered entity can satisfy the filters.
             ValueError: If the filters match zero rows.
         """
         import shapely.ops as sops
@@ -261,7 +263,11 @@ class AoI:
         # matches one of the filter keys.
         candidate: BaseEntity | None = None
         for entity in _REGISTRY.values():
-            if any(k in entity.key_cols for k in entity_kwargs):
+            schema = entity.schema_profile
+            if any(
+                k in schema.key_cols or k in schema.extra_static_cols
+                for k in entity_kwargs
+            ):
                 candidate = entity
                 break
 
@@ -327,7 +333,7 @@ class AoI:
                 :class:`~core_lens.base.entity.BaseEntity`.
 
         Raises:
-            EntityValidationError: If any validation check fails.
+            :class:`~core_lens.base.EntityValidationError`: If any validation check fails.
         """
         entity = entity_cls()
         name = _entity_name(entity_cls)
