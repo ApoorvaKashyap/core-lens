@@ -7,8 +7,8 @@
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
 project = "CoreLens"
-copyright = "2026, Apoorva Kashyap, Kislaya Shrestha"
-author = "Apoorva Kashyap, Kislaya Shrestha"
+copyright = "2026, Apoorva Kashyap"
+author = "Apoorva Kashyap"
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
@@ -31,10 +31,18 @@ autoapi_dirs = ["../../src/core_lens"]
 # Optional but recommended
 autoapi_keep_files = True
 autoapi_add_toctree_entry = True
+autoapi_options = [
+    "members",
+    "undoc-members",
+    "show-inheritance",
+    "show-module-summary",
+    "special-members",
+]
 
 # Napoleon settings
 napoleon_google_docstring = True
 napoleon_numpy_docstring = True
+napoleon_use_ivar = True
 
 # MyST markdown support
 myst_enable_extensions = [
