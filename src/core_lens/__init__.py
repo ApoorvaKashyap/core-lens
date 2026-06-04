@@ -1,5 +1,5 @@
 try:
-    from ._version import __version__  # type: ignore[attr-defined]
+    from ._version import __version__  # type: ignore[attr-defined import-not-found]
 except ImportError:
     __version__ = "0.1.0"
 
