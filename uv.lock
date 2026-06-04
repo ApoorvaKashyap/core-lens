@@ -452,6 +452,7 @@ core = [
     { name = "shapely" },
 ]
 dev = [
+    { name = "faker" },
     { name = "mypy" },
     { name = "pip-audit" },
     { name = "pre-commit" },
@@ -496,6 +497,7 @@ core = [
     { name = "shapely", specifier = ">=2.1.2" },
 ]
 dev = [
+    { name = "faker", specifier = ">=40.21.0" },
     { name = "mypy", specifier = ">=1.20.2" },
     { name = "pip-audit", specifier = ">=2.10.0" },
     { name = "pre-commit", specifier = ">=4.6.0" },
@@ -713,6 +715,18 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/cc/28/c14e053b6762b1044f34a13aab6859bbf40456d37d23aa286ac24cfd9a5d/executing-2.2.1.tar.gz", hash = "sha256:3632cc370565f6648cc328b32435bd120a1e4ebb20c77e3fdde9a13cd1e533c4", size = 1129488, upload-time = "2025-09-01T09:48:10.866Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/c1/ea/53f2148663b321f21b5a606bd5f191517cf40b7072c0497d3c92c4a13b1e/executing-2.2.1-py2.py3-none-any.whl", hash = "sha256:760643d3452b4d777d295bb167ccc74c64a81df23fb5e08eff250c425a4b2017", size = 28317, upload-time = "2025-09-01T09:48:08.5Z" },
+]
+
+[[package]]
+name = "faker"
+version = "40.21.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "tzdata", marker = "sys_platform == 'win32'" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/e8/6f/d7b251fb31de7dce0e482680bf7ca876aa0043f475c04aeefa1459ea80d4/faker-40.21.0.tar.gz", hash = "sha256:2fdee1b650a723a54432db9c6dfe17cfa29d1adc8bd60520444a07698524ba4d", size = 1970295, upload-time = "2026-06-02T17:53:46.27Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/bb/77/6adb5a9dcd028f687f81fc9f789591f9572cb5a46454337122add004e134/faker-40.21.0-py3-none-any.whl", hash = "sha256:cb6601b2ae8e128895dc96814d271eab6b930a2d2d7932c6f9ff26785c24ee18", size = 2008808, upload-time = "2026-06-02T17:53:44.346Z" },
 ]
 
 [[package]]
