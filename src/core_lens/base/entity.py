@@ -12,9 +12,19 @@ Plugin authors import from the public surface::
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
+
+import polars as pl
+
+from core_lens.utils.spatial import (
+    bbox_intersects_geometry,
+    build_bbox_index,
+    exact_spatial_filter,
+    resolve_path,
+)
 
 if TYPE_CHECKING:
+    import shapely
     from core_lens.base.view import View
     from core_lens.schema.profile import SchemaProfile
 
@@ -33,25 +43,27 @@ class BaseEntity(ABC):
     * :attr:`key_cols`      — column(s) that uniquely identify one entity instance
     * :attr:`geometry_col`  — geometry column name in the static GeoParquet file
     * :attr:`static_path`   — path to the static GeoParquet file (mandatory)
-    * :attr:`schema_profile` — validated :class:`~core_lens.schema.profile.SchemaProfile`
-    * :meth:`where`         — attribute-based filter returning a :class:`~core_lens.base.view.View`
-    * :meth:`spatial_filter` — geometry-based filter returning a :class:`~core_lens.base.view.View`
-    * :meth:`spatial_join`  — cross-entity spatial join returning a :class:`~core_lens.base.view.View`
 
     Subclasses **may** override:
 
     * :attr:`annual_path`       — path to the annual time-series Parquet file
     * :attr:`fortnightly_path`  — path to the fortnightly time-series Parquet file
+    * :attr:`schema_profile`    — override auto-detection by returning an
+                                  explicit :class:`~core_lens.schema.profile.SchemaProfile`
+
+    ``where``, ``spatial_filter``, ``spatial_join``, and ``schema_profile`` are
+    all implemented on this base class.  Subclasses only need to declare paths
+    and keys.
 
     Plugin example::
 
         from core_lens.base import BaseEntity
 
         class ForestEntity(BaseEntity):
-            key_cols     = ["forest_patch_id"]
-            geometry_col = "geometry"
-            static_path  = "data/forest/static.geoparquet"
-            annual_path  = "data/forest/annual.parquet"
+            key_cols     = [\"forest_patch_id\"]
+            geometry_col = \"geometry\"
+            static_path  = \"/data/forest/static.geoparquet\"
+            annual_path  = \"/data/forest/annual.parquet\"
 
         AoI.register(ForestEntity)
 
@@ -71,7 +83,7 @@ class BaseEntity(ABC):
         """Columns that uniquely identify one instance of this entity.
 
         For built-in entities this is always a single-element list (e.g.
-        ``["mws_id"]``), but the contract allows composite keys for plugins.
+        ``[\"mws_id\"]``), but the contract allows composite keys for plugins.
 
         Returns:
             A list of column name strings present in the static file.
@@ -92,30 +104,14 @@ class BaseEntity(ABC):
     @property
     @abstractmethod
     def static_path(self) -> str:
-        """Filesystem or cloud path to the static GeoParquet file.
+        """Absolute filesystem path to the static GeoParquet file.
 
-        This file must exist and be readable at registration time.  It is the
-        only mandatory data file — ``annual_path`` and ``fortnightly_path``
-        are optional.
-
-        Returns:
-            A path string (local or ``s3://`` URI).
-        """
-
-    @property
-    @abstractmethod
-    def schema_profile(self) -> "SchemaProfile":
-        """Validated schema descriptor for this entity's data files.
-
-        The :class:`~core_lens.schema.profile.SchemaProfile` is built once
-        (lazily) by inspecting Parquet file metadata and caching the result.
-        It captures column names, geometry encoding, and time column
-        identities so that the rest of the library can adapt to schema
-        changes at runtime without hard-coded column assumptions.
+        The path must be absolute.  If a relative path is provided it is
+        resolved against the current working directory at first use.  A
+        ``FileNotFoundError`` is raised if the file does not exist.
 
         Returns:
-            A fully-validated :class:`~core_lens.schema.profile.SchemaProfile`
-            instance.
+            A path string.
         """
 
     @property
@@ -144,76 +140,166 @@ class BaseEntity(ABC):
         """
         return None
 
-    @abstractmethod
-    def where(self, **kwargs) -> "View":
+    @property
+    def schema_profile(self) -> "SchemaProfile":
+        """Validated schema descriptor for this entity's data files.
+
+        Auto-detected from Parquet file metadata on first access and cached on
+        the instance.  Override in subclasses to provide an explicit profile
+        instead of relying on detection.
+
+        Returns:
+            A fully-validated :class:`~core_lens.schema.profile.SchemaProfile`.
+        """
+        if not hasattr(self, "_schema_profile"):
+            from core_lens.schema.detection import detect
+
+            self._schema_profile: SchemaProfile = detect(
+                static_path=resolve_path(self.static_path),
+                key_cols=self.key_cols,
+                geometry_col=self.geometry_col,
+                annual_path=(
+                    resolve_path(self.annual_path)
+                    if self.annual_path is not None
+                    else None
+                ),
+                fortnightly_path=(
+                    resolve_path(self.fortnightly_path)
+                    if self.fortnightly_path is not None
+                    else None
+                ),
+            )
+        return self._schema_profile
+
+    # ------------------------------------------------------------------
+    # In-memory index — built lazily, cached on the instance.
+    # ------------------------------------------------------------------
+
+    @property
+    def _index(self) -> pl.DataFrame:
+        if not hasattr(self, "_cached_index"):
+            profile = self.schema_profile
+            self._cached_index: pl.DataFrame = build_bbox_index(
+                static_path=resolve_path(self.static_path),
+                key_cols=self.key_cols,
+                bbox_cols=profile.bbox_cols,
+                geometry_col=profile.geometry_col,
+                geometry_type=profile.geometry_type,
+            )
+        return self._cached_index
+
+    def where(self, **kwargs: Any) -> "View":
         """Return a lazy :class:`~core_lens.base.view.View` filtered by attributes.
 
         Each keyword argument is interpreted as ``column=value`` applied to
-        the in-memory index or static file.  Multiple arguments are AND-ed.
-        This is the primary mechanism for non-spatial subsetting::
+        the static file's attribute columns.  Multiple arguments are AND-ed.
+        The static file is scanned with predicate pushdown so only the matching
+        rows are read.
 
-            aoi.mws.where(tehsil="Pangi")
-            aoi.district.where(state="Himachal Pradesh")
+        Note: Attribute columns not present in the in-memory index (which
+        contains only key and bbox columns) are resolved by scanning the static
+        file.
 
         Args:
             **kwargs: Arbitrary column–value pairs to filter on.
 
         Returns:
-            A lazy :class:`~core_lens.base.view.View` with resolved key pairs
-            and any pending filters recorded.
+            A lazy :class:`~core_lens.base.view.View` with resolved key pairs.
         """
+        from core_lens.base.view import View
 
-    @abstractmethod
-    def spatial_filter(self, **kwargs) -> "View":
+        static = resolve_path(self.static_path)
+
+        # Build a filter expression for each kwarg — pushed into scan_parquet.
+        filter_expr = pl.lit(True)
+        for col, val in kwargs.items():
+            filter_expr = filter_expr & (pl.col(col) == val)
+
+        lf = pl.scan_parquet(static).filter(filter_expr).select(self.key_cols)
+        keys = lf.collect()
+
+        entity_name = _entity_name(type(self))
+        return View(keys=keys, entity=self, entity_name=entity_name)
+
+    def spatial_filter(
+        self,
+        geometry: "shapely.Geometry | None" = None,
+        bbox: tuple[float, float, float, float] | None = None,
+    ) -> "View":
         """Return a lazy :class:`~core_lens.base.view.View` filtered by geometry.
 
-        Performs a spatial predicate (bbox intersection by default, with an
-        STRtree used for exact containment/intersection on first call) to
-        restrict the entity to instances that fall within the given geometry::
-
-            aoi.mws.spatial_filter(geometry=aoi.geometry)
-            aoi.mws.spatial_filter(bbox=(minx, miny, maxx, maxy))
+        Uses the in-memory bbox index for a fast rectangular pre-filter, then
+        refines with a Shapely STRtree exact-intersection check.  If ``bbox``
+        is provided it is converted to a Shapely box before filtering.
 
         Args:
-            **kwargs: Geometry arguments understood by the concrete
-                implementation (e.g. ``geometry=``, ``bbox=``).
+            geometry: A Shapely geometry representing the spatial extent.
+            bbox: Bounding box as ``(minx, miny, maxx, maxy)`` in WGS-84.
+                Converted to a ``shapely.geometry.box`` internally.
 
         Returns:
             A lazy :class:`~core_lens.base.view.View` scoped to the given
             spatial extent.
-        """
 
-    @abstractmethod
-    def spatial_join(self, other: "BaseEntity", agg: dict) -> "View":
+        Raises:
+            ValueError: If neither ``geometry`` nor ``bbox`` is provided.
+        """
+        import shapely.geometry as sgeom
+
+        from core_lens.base.view import View
+
+        if geometry is None and bbox is None:
+            raise ValueError(
+                "spatial_filter() requires either 'geometry' or 'bbox' to be provided."
+            )
+        if bbox is not None and geometry is None:
+            geometry = sgeom.box(*bbox)
+
+        assert geometry is not None  # guaranteed by the guards above
+
+        profile = self.schema_profile
+        candidates = bbox_intersects_geometry(self._index, geometry)
+        keys = exact_spatial_filter(
+            candidates=candidates,
+            static_path=resolve_path(self.static_path),
+            key_cols=self.key_cols,
+            geometry_col=profile.geometry_col,
+            geometry_type=profile.geometry_type,
+            aoi_geometry=geometry,
+        )
+
+        entity_name = _entity_name(type(self))
+        return View(keys=keys, entity=self, entity_name=entity_name)
+
+    def spatial_join(self, other: "BaseEntity", agg: dict[str, str]) -> "View":
         """Return a lazy :class:`~core_lens.base.view.View` with a cross-entity join pending.
 
-        The join is deferred and computed only at materialisation time
-        (``.static``, ``.annual``, or ``.fortnightly``).  Joined columns are
-        automatically namespaced as ``{entity_name}_{column_name}`` and cannot
-        be overridden::
-
-            aoi.mws.spatial_join(
-                aoi.forest,
-                agg={
-                    "tree_cover":     "area",
-                    "patch_count":    "count",
-                    "canopy_density": "mean",
-                    "biomass":        "sum",
-                }
-            )
+        The join is recorded in the View's ``join_spec`` and computed only at
+        materialisation time (``.static``, ``.annual``, or ``.fortnightly``).
+        Joined columns are namespaced as ``{entity_name}_{column_name}``.
 
         Args:
             other: The secondary :class:`BaseEntity` whose columns will be
                 joined and aggregated onto ``self``.
             agg: Mapping of ``{column: aggregation}`` specifying which columns
                 from ``other`` to bring in and how to aggregate them.  Valid
-                aggregation strings are ``"area"``, ``"count"``, ``"mean"``,
-                ``"sum"``, ``"min"``, and ``"max"``.
+                aggregation strings are ``\"area\"``, ``\"count\"``, ``\"mean\"``,
+                ``\"sum\"``, ``\"min\"``, and ``\"max\"``.
 
         Returns:
             A lazy :class:`~core_lens.base.view.View` with the join spec
             recorded for deferred execution.
         """
+        from core_lens.base.view import View
+
+        entity_name = _entity_name(type(self))
+        join_spec = {"other": other, "agg": agg}
+        return View(
+            keys=self._index.select(self.key_cols),
+            entity=self,
+            entity_name=entity_name,
+            join_spec=join_spec,
+        )
 
 
 class EntityValidationError(Exception):
@@ -223,3 +309,10 @@ class EntityValidationError(Exception):
     key column, invalid geometry column, etc.) to give plugin authors
     actionable feedback.
     """
+
+
+def _entity_name(entity_cls: type[BaseEntity]) -> str:
+    name = entity_cls.__name__
+    if name.endswith("Entity"):
+        name = name[: -len("Entity")]
+    return name.lower()

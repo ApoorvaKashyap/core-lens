@@ -2,13 +2,16 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import polars as pl
 
 from core_lens.schema.profile import Resolution
+from core_lens.utils.polars_utils import scan_with_key_filter
+from core_lens.utils.spatial import resolve_path
 
 if TYPE_CHECKING:
+    from core_lens.aoi import SeasonConfig
     from core_lens.base.entity import BaseEntity
     from core_lens.base.result import Result
 
@@ -55,16 +58,20 @@ class View:
     def __init__(
         self,
         keys: pl.DataFrame,
-        entity: "BaseEntity",
+        entity: BaseEntity,
         entity_name: str,
-        time_filter: dict | None = None,
-        join_spec: dict | None = None,
+        time_filter: dict[str, Any] | None = None,
+        join_spec: dict[str, Any] | None = None,
+        season_config: SeasonConfig | None = None,
     ) -> None:
         self.keys = keys
         self.entity = entity
         self.entity_name = entity_name
         self.time_filter = time_filter
         self.join_spec = join_spec
+        # season_config is only needed at materialisation time when a season
+        # time_filter is present.  Carried forward by between() to new Views.
+        self._season_config = season_config
 
     def between(
         self,
@@ -132,7 +139,7 @@ class View:
                     "Cannot combine year with season='current'. "
                     "The current season is always resolved to the present calendar date."
                 )
-            time_filter: dict = {"season": season}
+            time_filter: dict[str, Any] = {"season": season}
             if year is not None:
                 time_filter["year"] = year
         else:
@@ -148,6 +155,7 @@ class View:
             entity_name=self.entity_name,
             time_filter=time_filter,
             join_spec=self.join_spec,
+            season_config=self._season_config,
         )
 
     @property
@@ -194,10 +202,68 @@ class View:
         return self._materialise(Resolution.FORTNIGHTLY)
 
     def _materialise(self, resolution: Resolution) -> "Result":
-        # Deferred until Result is implemented.  Each concrete entity
-        # subclass may also override this to inject entity-specific scan
-        # logic before delegating upward.
-        raise NotImplementedError(
-            f"Materialisation for resolution={resolution!r} is not yet implemented. "
-            "This will be wired up when Result and the Parquet scan layer are built."
+        from core_lens.base.result import Result
+
+        if self.join_spec is not None:
+            raise NotImplementedError(
+                "spatial_join materialisation is not yet implemented. "
+                "The join_spec is recorded but cross-entity join execution "
+                "will be added in a subsequent release."
+            )
+
+        profile = self.entity.schema_profile
+
+        path: str
+        if resolution == Resolution.STATIC:
+            path = self.entity.static_path
+        elif resolution == Resolution.ANNUAL:
+            annual_path = self.entity.annual_path
+            if annual_path is None:
+                raise AttributeError(
+                    f"Entity {self.entity_name!r} has no annual_path declared."
+                )
+            path = annual_path
+        else:
+            fn_path = self.entity.fortnightly_path
+            if fn_path is None:
+                raise AttributeError(
+                    f"Entity {self.entity_name!r} has no fortnightly_path declared."
+                )
+            path = fn_path
+
+        abs_path = resolve_path(path)
+
+        # Build a time filter expression when a time_filter is present and the
+        # resolution is not static (static files have no time column).
+        time_expr: pl.Expr | None = None
+        if self.time_filter is not None and resolution != Resolution.STATIC:
+            time_col = (
+                profile.annual_time_col
+                if resolution == Resolution.ANNUAL
+                else profile.fortnightly_time_col
+            )
+            if time_col is not None:
+                from core_lens.utils.season import resolve_time_filter
+
+                # Fall back to a no-op SeasonConfig if none was supplied on this View.
+                from core_lens.aoi import SeasonConfig
+
+                season_cfg = self._season_config or SeasonConfig()
+                time_expr = resolve_time_filter(self.time_filter, time_col, season_cfg)
+
+        lf = scan_with_key_filter(
+            path=abs_path,
+            key_cols=self.entity.key_cols,
+            key_values=self.keys,
+            time_expr=time_expr,
+        )
+        data = lf.collect()
+
+        return Result(
+            data=data,
+            resolution=resolution,
+            has_geometry=(resolution == Resolution.STATIC),
+            key_cols=self.entity.key_cols,
+            entity_name=self.entity_name,
+            entity=self.entity,
         )

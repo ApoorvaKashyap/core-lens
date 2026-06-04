@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import polars as pl
 
@@ -59,7 +59,7 @@ class Result:
         key_cols: list[str],
         entity_name: str,
         entity: "BaseEntity",
-        metadata: dict | None = None,
+        metadata: dict[str, str] | None = None,
     ) -> None:
         self.data = data
         self.resolution = resolution
@@ -68,7 +68,7 @@ class Result:
         self.key_cols = key_cols
         self.entity_name = entity_name
         self.entity = entity
-        self.metadata: dict = metadata if metadata is not None else {}
+        self.metadata: dict[str, str] = metadata if metadata is not None else {}
 
     def df(self) -> pl.DataFrame:
         """Return the underlying ``pl.DataFrame``.
@@ -133,14 +133,31 @@ class Result:
 
         Returns:
             A new :class:`Result` with the geometry column merged in and
-            ``has_geometry=True``.
-
-        Raises:
-            NotImplementedError: Until the Parquet scan layer is wired up.
+            ``has_geometry=True``.  If ``has_geometry`` is already ``True``,
+            returns ``self`` unchanged.
         """
-        raise NotImplementedError(
-            "with_geometry() will be implemented when the Parquet scan layer is built."
+        if self.has_geometry:
+            return self
+
+        from core_lens.utils.spatial import resolve_path
+
+        geom_col = self.entity.geometry_col
+        key_cols = self.key_cols
+        static_path = resolve_path(self.entity.static_path)
+
+        geo_df = (
+            pl.scan_parquet(static_path)
+            .select(key_cols + [geom_col])
+            .filter(
+                pl.col(key_cols[0]).is_in(self.data[key_cols[0]].to_list())
+                if len(key_cols) == 1
+                else pl.lit(True)
+            )
+            .collect()
         )
+
+        joined = self.data.join(geo_df, on=key_cols, how="left")
+        return self._replace(data=joined, has_geometry=True)
 
     def derive(self, name: str, expr: pl.Expr) -> "Result":
         """Return a new ``Result`` with a computed column appended.
@@ -226,7 +243,7 @@ class Result:
 
         return self._replace(data=new_data)
 
-    def _replace(self, **overrides) -> "Result":
+    def _replace(self, **overrides: Any) -> "Result":
         # Thin copy-with-modification helper to keep the public methods clean.
         # metadata is intentionally carried forward so chained derive() calls
         # preserve stats context from an earlier step.
