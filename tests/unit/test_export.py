@@ -17,6 +17,16 @@ def test_parquet(sample_result: Result, tmp_path: pathlib.Path) -> None:
     assert df.height == 2
 
 
+def test_parquet_with_options(sample_result: Result, tmp_path: pathlib.Path) -> None:
+    out_path = tmp_path / "out_options.parquet"
+    parquet(sample_result, out_path, compression="uncompressed")
+
+    assert out_path.exists()
+    df = pl.read_parquet(out_path)
+    assert df.columns == ["mws_id", "ndvi_mean"]
+    assert df.height == 2
+
+
 def test_json(sample_result: Result, tmp_path: pathlib.Path) -> None:
     out_path = tmp_path / "out.json"
     json(sample_result, out_path)
@@ -53,6 +63,24 @@ def test_geoparquet_with_geometry(
     # Check that geometry column is appropriately mapped
     assert "geometry" in gdf.columns
     assert gdf.geometry.name == "geometry"
+    assert len(gdf) == 2
+
+
+def test_geoparquet_with_options(sample_result: Result, tmp_path: pathlib.Path) -> None:
+    result_with_geom = sample_result.with_geometry()
+
+    out_path = tmp_path / "out_options.geoparquet"
+    geoparquet(
+        result_with_geom,
+        out_path,
+        compression="ZSTD",
+        row_group_size=1000,
+    )
+
+    assert out_path.exists()
+    gdf = gpd.read_parquet(out_path)
+
+    assert "geometry" in gdf.columns
     assert len(gdf) == 2
 
 

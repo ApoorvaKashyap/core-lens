@@ -1,11 +1,11 @@
 import pathlib
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from core_lens.base.result import Result
 
 
-def parquet(result: "Result", path: str | pathlib.Path) -> None:
+def parquet(result: "Result", path: str | pathlib.Path, **kwargs: Any) -> None:
     """Export the result data to a standard Parquet file.
 
     This function uses Polars to write the underlying data frame.
@@ -13,11 +13,16 @@ def parquet(result: "Result", path: str | pathlib.Path) -> None:
     Args:
         result: The Result object to export.
         path: Destination path for the Parquet file.
+        **kwargs: Additional options to pass to Polars `write_parquet`.
+
+    Example:
+        >>> from core_lens.export import parquet
+        >>> parquet(result, "output.parquet", compression="zstd", compression_level=3)
     """
-    result.df().write_parquet(path)
+    result.df().write_parquet(path, **kwargs)
 
 
-def json(result: "Result", path: str | pathlib.Path) -> None:
+def json(result: "Result", path: str | pathlib.Path, **kwargs: Any) -> None:
     """Export the result data to a standard JSON file.
 
     This function uses Polars to write the underlying data frame.
@@ -25,11 +30,16 @@ def json(result: "Result", path: str | pathlib.Path) -> None:
     Args:
         result: The Result object to export.
         path: Destination path for the JSON file.
+        **kwargs: Additional options to pass to Polars `write_json`.
+
+    Example:
+        >>> from core_lens.export import json
+        >>> json(result, "output.json", pretty=True)
     """
-    result.df().write_json(path)
+    result.df().write_json(path, **kwargs)
 
 
-def geoparquet(result: "Result", path: str | pathlib.Path) -> None:
+def geoparquet(result: "Result", path: str | pathlib.Path, **kwargs: Any) -> None:
     """Export the result data to a GeoParquet file.
 
     This function uses DuckDB to write the data frame with spatial extensions.
@@ -37,6 +47,16 @@ def geoparquet(result: "Result", path: str | pathlib.Path) -> None:
     Args:
         result: The Result object to export.
         path: Destination path for the GeoParquet file.
+        **kwargs: Additional options to pass to DuckDB's COPY statement.
+
+    Example:
+        >>> from core_lens.export import geoparquet
+        >>> geoparquet(
+        ...     result.with_geometry(),
+        ...     "output.geoparquet",
+        ...     compression="ZSTD",
+        ...     partition_by="year"
+        ... )
 
     Raises:
         TypeError: If the Result object does not have geometry.
@@ -67,16 +87,32 @@ def geoparquet(result: "Result", path: str | pathlib.Path) -> None:
     # We must escape single quotes in path if any exist.
     path_str = str(path).replace("'", "''")
 
+    options = ["FORMAT PARQUET"]
+    for k, v in kwargs.items():
+        if k.lower() == "partition_by":
+            if isinstance(v, str):
+                options.append(f"PARTITION_BY ({v})")
+            else:
+                options.append(f"PARTITION_BY ({', '.join(v)})")
+        elif isinstance(v, bool):
+            options.append(f"{k.upper()} {'TRUE' if v else 'FALSE'}")
+        elif isinstance(v, str):
+            options.append(f"{k.upper()} '{v}'")
+        else:
+            options.append(f"{k.upper()} {v}")
+
+    options_str = ", ".join(options)
+
     query = f"""
     COPY (
         SELECT {select_clause}
         FROM df
-    ) TO '{path_str}' (FORMAT PARQUET);
+    ) TO '{path_str}' ({options_str});
     """
     conn.execute(query)
 
 
-def geojson(result: "Result", path: str | pathlib.Path) -> None:
+def geojson(result: "Result", path: str | pathlib.Path, **kwargs: Any) -> None:
     """Export the result data to a GeoJSON file.
 
     This function uses DuckDB to write the data frame with spatial extensions.
@@ -84,6 +120,11 @@ def geojson(result: "Result", path: str | pathlib.Path) -> None:
     Args:
         result: The Result object to export.
         path: Destination path for the GeoJSON file.
+        **kwargs: Additional options to pass to DuckDB's COPY statement.
+
+    Example:
+        >>> from core_lens.export import geojson
+        >>> geojson(result.with_geometry(), "output.json")
 
     Raises:
         TypeError: If the Result object does not have geometry.
@@ -113,10 +154,21 @@ def geojson(result: "Result", path: str | pathlib.Path) -> None:
 
     path_str = str(path).replace("'", "''")
 
+    options = ["FORMAT GDAL", "DRIVER 'GeoJSON'"]
+    for k, v in kwargs.items():
+        if isinstance(v, bool):
+            options.append(f"{k.upper()} {'TRUE' if v else 'FALSE'}")
+        elif isinstance(v, str):
+            options.append(f"{k.upper()} '{v}'")
+        else:
+            options.append(f"{k.upper()} {v}")
+
+    options_str = ", ".join(options)
+
     query = f"""
     COPY (
         SELECT {select_clause}
         FROM df
-    ) TO '{path_str}' (FORMAT GDAL, DRIVER 'GeoJSON');
+    ) TO '{path_str}' ({options_str});
     """
     conn.execute(query)
