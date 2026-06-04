@@ -6,7 +6,7 @@ def hello() -> str:
 
 
 def version() -> str:
-    return __version__
+    return str(__version__)
 
 
 if __name__ == "__main__":
