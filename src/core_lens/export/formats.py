@@ -15,10 +15,17 @@ def parquet(result: "Result", path: str | pathlib.Path, **kwargs: Any) -> None:
         path: Destination path for the Parquet file.
         **kwargs: Additional options to pass to Polars `write_parquet`.
 
+    Raises:
+        TypeError: If the Result object has geometry.
+
     Example:
         >>> from core_lens.export import parquet
         >>> parquet(result, "output.parquet", compression="zstd", compression_level=3)
     """
+    if result.has_geometry:
+        raise TypeError(
+            "This Result has geometry. Use geoparquet() to export geospatial data."
+        )
     result.df().write_parquet(path, **kwargs)
 
 
@@ -32,11 +39,42 @@ def json(result: "Result", path: str | pathlib.Path, **kwargs: Any) -> None:
         path: Destination path for the JSON file.
         **kwargs: Additional options to pass to Polars `write_json`.
 
+    Raises:
+        TypeError: If the Result object has geometry.
+
     Example:
         >>> from core_lens.export import json
         >>> json(result, "output.json", pretty=True)
     """
+    if result.has_geometry:
+        raise TypeError(
+            "This Result has geometry. Use geojson() to export geospatial data."
+        )
     result.df().write_json(path, **kwargs)
+
+
+def csv(result: "Result", path: str | pathlib.Path, **kwargs: Any) -> None:
+    """Export the result data to a standard CSV file.
+
+    This function uses Polars to write the underlying data frame.
+
+    Args:
+        result: The Result object to export.
+        path: Destination path for the CSV file.
+        **kwargs: Additional options to pass to Polars `write_csv`.
+
+    Raises:
+        TypeError: If the Result object has geometry.
+
+    Example:
+        >>> from core_lens.export import csv
+        >>> csv(result, "output.csv", separator=",")
+    """
+    if result.has_geometry:
+        raise TypeError(
+            "This Result has geometry. Exporting geospatial data to CSV is not supported."
+        )
+    result.df().write_csv(path, **kwargs)
 
 
 def geoparquet(result: "Result", path: str | pathlib.Path, **kwargs: Any) -> None:
