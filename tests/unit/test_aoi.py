@@ -1,6 +1,7 @@
 """Tests for ``core_lens.aoi.AoI``."""
 
 from __future__ import annotations
+from typing import Any
 
 import pathlib
 
@@ -11,7 +12,6 @@ import shapely.wkb as swkb
 
 from core_lens.aoi import AoI, SeasonConfig, _REGISTRY, _entity_name
 from core_lens.base.entity import BaseEntity, EntityValidationError
-from core_lens.base.view import View
 from core_lens.schema.profile import SchemaProfile
 
 
@@ -80,58 +80,43 @@ def _make_bad_entity(
         def schema_profile(self) -> SchemaProfile:
             return _profile
 
-        @property
-        def annual_path(self) -> str | None:
-            return None
-
-        @property
-        def fortnightly_path(self) -> str | None:
-            return None
-
-        def where(self, **kw) -> View:  # pragma: no cover
-            raise NotImplementedError
-
-        def spatial_filter(self, **kw) -> View:  # pragma: no cover
-            raise NotImplementedError
-
-        def spatial_join(self, other, agg) -> View:  # pragma: no cover
-            raise NotImplementedError
-
     return _BadEntity
 
 
 class TestAoIBoundaryModes:
-    def test_bbox_sets_polygon_geometry(self, registered_entity_cls):
+    def test_bbox_sets_polygon_geometry(self, registered_entity_cls: Any) -> None:
         aoi = AoI(".", bbox=(73.0, 15.0, 74.0, 16.0))
 
         assert aoi.geometry is not None
-        assert not aoi.geometry.is_empty
+        assert not aoi.geometry.is_empty  # type: ignore[attr-defined]
 
-    def test_geometry_used_directly(self, registered_entity_cls):
+    def test_geometry_used_directly(self, registered_entity_cls: Any) -> None:
         geom = sgeom.Point(73.5, 15.5).buffer(0.5)
         aoi = AoI(".", geometry=geom)
 
         assert aoi.geometry is geom
 
-    def test_no_boundary_raises(self, registered_entity_cls):
+    def test_no_boundary_raises(self, registered_entity_cls: Any) -> None:
         with pytest.raises(ValueError, match="exactly one boundary"):
             AoI(".")
 
-    def test_bbox_and_geometry_raises(self, registered_entity_cls):
+    def test_bbox_and_geometry_raises(self, registered_entity_cls: Any) -> None:
         with pytest.raises(ValueError, match="mutually exclusive"):
             AoI(".", bbox=(0.0, 0.0, 1.0, 1.0), geometry=sgeom.Point(0.5, 0.5))
 
-    def test_bbox_and_entity_kwarg_raises(self, registered_entity_cls):
+    def test_bbox_and_entity_kwarg_raises(self, registered_entity_cls: Any) -> None:
         with pytest.raises(ValueError, match="mutually exclusive"):
             AoI(".", bbox=(0.0, 0.0, 1.0, 1.0), mws_id="13_001")
 
-    def test_geometry_and_entity_kwarg_raises(self, registered_entity_cls):
+    def test_geometry_and_entity_kwarg_raises(self, registered_entity_cls: Any) -> None:
         with pytest.raises(ValueError, match="mutually exclusive"):
             AoI(".", geometry=sgeom.Point(73.5, 15.5), mws_id="13_001")
 
 
 class TestAoIDataRoot:
-    def test_data_root_resolved_to_absolute(self, registered_entity_cls, tmp_path):
+    def test_data_root_resolved_to_absolute(
+        self, registered_entity_cls: Any, tmp_path: Any
+    ) -> None:
         aoi = AoI(str(tmp_path), bbox=(73.0, 15.0, 74.0, 16.0))
 
         assert aoi.data_root == tmp_path.resolve()
@@ -139,12 +124,12 @@ class TestAoIDataRoot:
 
 
 class TestAoISeasons:
-    def test_default_season_config_applied(self, registered_entity_cls):
+    def test_default_season_config_applied(self, registered_entity_cls: Any) -> None:
         aoi = AoI(".", bbox=(73.0, 15.0, 74.0, 16.0))
 
         assert isinstance(aoi.seasons, SeasonConfig)
 
-    def test_custom_season_config_stored(self, registered_entity_cls):
+    def test_custom_season_config_stored(self, registered_entity_cls: Any) -> None:
         custom = SeasonConfig(
             kharif=("06-01", "10-15"),
             rabi=("10-16", "02-28"),
@@ -154,28 +139,28 @@ class TestAoISeasons:
 
         assert aoi.seasons is custom
 
-    def test_current_season_returns_string(self, bbox_aoi):
+    def test_current_season_returns_string(self, bbox_aoi: Any) -> None:
         assert bbox_aoi.current_season in {"kharif", "rabi", "zaid"}
 
-    def test_current_year_is_integer(self, bbox_aoi):
+    def test_current_year_is_integer(self, bbox_aoi: Any) -> None:
         assert isinstance(bbox_aoi.current_year, int)
         assert bbox_aoi.current_year > 2000
 
 
 class TestAoIRegister:
-    def test_register_adds_entity_to_registry(self, entity_cls):
+    def test_register_adds_entity_to_registry(self, entity_cls: Any) -> None:
         AoI.register(entity_cls)
 
         assert "minimalmws" in _REGISTRY
 
-    def test_registered_entities_sorted(self, entity_cls):
+    def test_registered_entities_sorted(self, entity_cls: Any) -> None:
         AoI.register(entity_cls)
 
         names = AoI.registered_entities()
 
         assert names == sorted(names)
 
-    def test_register_missing_static_raises(self, tmp_path):
+    def test_register_missing_static_raises(self, tmp_path: Any) -> None:
         from conftest import _make_entity_cls
 
         cls = _make_entity_cls(tmp_path / "nonexistent.parquet")
@@ -183,7 +168,7 @@ class TestAoIRegister:
         with pytest.raises(EntityValidationError, match="does not exist"):
             AoI.register(cls)
 
-    def test_register_wrong_key_col_raises(self, tmp_path):
+    def test_register_wrong_key_col_raises(self, tmp_path: Any) -> None:
         p = tmp_path / "s.parquet"
         _write_parquet_no_key_col(p)
         cls = _make_bad_entity(p, key_cols=["mws_id"], geometry_col="geometry")
@@ -191,7 +176,7 @@ class TestAoIRegister:
         with pytest.raises(EntityValidationError, match="key_cols"):
             AoI.register(cls)
 
-    def test_register_missing_geometry_col_raises(self, tmp_path):
+    def test_register_missing_geometry_col_raises(self, tmp_path: Any) -> None:
         p = tmp_path / "s.parquet"
         _write_parquet_no_geom_col(p)
         cls = _make_bad_entity(p, key_cols=["mws_id"], geometry_col="geometry")
@@ -199,7 +184,9 @@ class TestAoIRegister:
         with pytest.raises(EntityValidationError, match="geometry_col"):
             AoI.register(cls)
 
-    def test_register_missing_annual_path_raises(self, tmp_path, static_parquet):
+    def test_register_missing_annual_path_raises(
+        self, tmp_path: Any, static_parquet: Any
+    ) -> None:
         from conftest import _make_entity_cls
 
         cls = _make_entity_cls(
@@ -210,7 +197,9 @@ class TestAoIRegister:
         with pytest.raises(EntityValidationError, match="annual"):
             AoI.register(cls)
 
-    def test_register_missing_fortnightly_path_raises(self, tmp_path, static_parquet):
+    def test_register_missing_fortnightly_path_raises(
+        self, tmp_path: Any, static_parquet: Any
+    ) -> None:
         from conftest import _make_entity_cls
 
         cls = _make_entity_cls(
@@ -223,7 +212,7 @@ class TestAoIRegister:
 
 
 class TestAoIDeregister:
-    def test_deregister_removes_entity(self, entity_cls):
+    def test_deregister_removes_entity(self, entity_cls: Any) -> None:
         AoI.register(entity_cls)
         assert "minimalmws" in _REGISTRY
 
@@ -231,78 +220,132 @@ class TestAoIDeregister:
 
         assert "minimalmws" not in _REGISTRY
 
-    def test_deregister_unknown_entity_is_silent(self, entity_cls):
+    def test_deregister_unknown_entity_is_silent(self, entity_cls: Any) -> None:
         AoI.deregister(entity_cls)
 
 
 class TestAoIGetattr:
-    def test_registered_entity_accessible_as_attribute(self, bbox_aoi):
+    def test_registered_entity_accessible_as_attribute(self, bbox_aoi: Any) -> None:
         view = bbox_aoi.minimalmws
 
         assert view is not None
 
-    def test_unregistered_attribute_raises_attribute_error(self, bbox_aoi):
+    def test_unregistered_attribute_raises_attribute_error(self, bbox_aoi: Any) -> None:
         with pytest.raises(AttributeError, match="no attribute"):
             _ = bbox_aoi.nonexistent_entity
 
-    def test_error_message_lists_registered_entities(self, bbox_aoi):
+    def test_error_message_lists_registered_entities(self, bbox_aoi: Any) -> None:
         with pytest.raises(AttributeError, match="minimalmws"):
             _ = bbox_aoi.nonexistent_entity
 
 
 class TestAoIPlot:
-    def test_plot_raises_not_implemented(self, bbox_aoi):
+    def test_plot_raises_not_implemented(self, bbox_aoi: Any) -> None:
         with pytest.raises(NotImplementedError):
             bbox_aoi.plot()
 
 
 class TestEntityName:
-    def test_strips_entity_suffix_and_lowercases(self):
+    def test_strips_entity_suffix_and_lowercases(self) -> None:
         class MWSEntity(BaseEntity):
             @property
-            def key_cols(self):
+            def key_cols(self) -> list[str]:
                 return []  # pragma: no cover
 
             @property
-            def geometry_col(self):
+            def geometry_col(self) -> str:
                 return ""  # pragma: no cover
 
             @property
-            def static_path(self):
+            def static_path(self) -> str:
                 return ""  # pragma: no cover
-
-            @property
-            def schema_profile(self): ...  # pragma: no cover
-
-            def where(self, **kw): ...  # pragma: no cover
-
-            def spatial_filter(self, **kw): ...  # pragma: no cover
-
-            def spatial_join(self, o, a): ...  # pragma: no cover
 
         assert _entity_name(MWSEntity) == "mws"
 
-    def test_class_with_no_entity_suffix_lowercased(self):
+    def test_class_with_no_entity_suffix_lowercased(self) -> None:
         class Forest(BaseEntity):
             @property
-            def key_cols(self):
+            def key_cols(self) -> list[str]:
                 return []  # pragma: no cover
 
             @property
-            def geometry_col(self):
+            def geometry_col(self) -> str:
                 return ""  # pragma: no cover
 
             @property
-            def static_path(self):
+            def static_path(self) -> str:
                 return ""  # pragma: no cover
-
-            @property
-            def schema_profile(self): ...  # pragma: no cover
-
-            def where(self, **kw): ...  # pragma: no cover
-
-            def spatial_filter(self, **kw): ...  # pragma: no cover
-
-            def spatial_join(self, o, a): ...  # pragma: no cover
 
         assert _entity_name(Forest) == "forest"
+
+
+class TestAoIResolveGeometry:
+    def test_resolve_geometry(
+        self, registered_entity_cls: Any, tmp_path: pathlib.Path, monkeypatch: Any
+    ) -> None:
+        from core_lens.aoi import AoI
+        import shapely.geometry as sgeom
+        import shapely.wkb as swkb
+        import polars as pl
+        from core_lens.base.entity import BaseEntity
+
+        static_file = tmp_path / "static.parquet"
+
+        poly1 = sgeom.box(0, 0, 1, 1)
+        poly2 = sgeom.box(1, 1, 2, 2)
+
+        pl.DataFrame(
+            {
+                "mws_id": ["1", "2"],
+                "district": ["Dharwad", "Dharwad"],
+                "geometry": [swkb.dumps(poly1), swkb.dumps(poly2)],
+            }
+        ).write_parquet(static_file)
+
+        class BoundEntity(BaseEntity):
+            @property
+            def key_cols(self) -> list[str]:
+                return ["mws_id"]
+
+            @property
+            def geometry_col(self) -> str:
+                return "geometry"
+
+            @property
+            def static_path(self) -> str:
+                return str(static_file)
+
+            @property
+            def extra_static_cols(self) -> list[str]:
+                return ["district"]
+
+        from core_lens.aoi import _REGISTRY
+
+        old_registry = dict(_REGISTRY)
+
+        try:
+            _REGISTRY.clear()
+            _REGISTRY["mws"] = BoundEntity()
+
+            # Test key match
+            aoi = AoI(data_root=str(tmp_path), mws_id="1")
+            assert getattr(aoi.geometry, "equals", lambda x: False)(poly1)
+
+            # Test attribute match
+            aoi = AoI(data_root=str(tmp_path), district="Dharwad")
+            import shapely.ops as sops
+
+            union = sops.unary_union([poly1, poly2])
+            assert getattr(aoi.geometry, "equals", lambda x: False)(union)
+
+            with pytest.raises(ValueError, match="No rows matched the filters"):
+                AoI(data_root=str(tmp_path), mws_id="999")
+
+            with pytest.raises(
+                EntityValidationError,
+                match="No registered entity can satisfy the filters",
+            ):
+                AoI(data_root=str(tmp_path), unknown_key="1")
+        finally:
+            _REGISTRY.clear()
+            _REGISTRY.update(old_registry)

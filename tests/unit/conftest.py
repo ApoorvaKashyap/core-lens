@@ -1,6 +1,8 @@
 """Shared pytest fixtures for core_lens unit tests."""
 
 from __future__ import annotations
+from typing import Any
+import typing
 
 import datetime
 import pathlib
@@ -13,7 +15,6 @@ import shapely.wkb as swkb
 from core_lens.aoi import AoI, _REGISTRY
 from core_lens.base.entity import BaseEntity
 from core_lens.base.result import Result
-from core_lens.base.view import View
 from core_lens.schema.profile import Resolution, SchemaProfile
 
 
@@ -25,7 +26,7 @@ def _make_static_parquet(path: pathlib.Path, *, extra_cols: bool = False) -> Non
         extra_cols: When True, appends an ``area_ha`` float column.
     """
     wkb_bytes = swkb.dumps(sgeom.box(73.0, 15.0, 74.0, 16.0))
-    data: dict = {
+    data: dict[str, Any] = {
         "mws_id": ["13_001", "13_002"],
         "district": ["TestDistrict", "TestDistrict"],
         "geometry": [wkb_bytes, wkb_bytes],
@@ -127,23 +128,11 @@ def _make_entity_cls(
         def schema_profile(self) -> SchemaProfile:
             return _profile
 
-        def where(self, **kwargs) -> View:  # pragma: no cover
-            raise NotImplementedError
-
-        def spatial_filter(self, **kwargs) -> View:
-            # Return an empty-keyed View so AoI.__init__ can scope entities
-            # without performing any real spatial computation.
-            keys = pl.DataFrame({"mws_id": []}, schema={"mws_id": pl.String})
-            return View(keys=keys, entity=self, entity_name="minimalmws")
-
-        def spatial_join(self, other, agg) -> View:  # pragma: no cover
-            raise NotImplementedError
-
     return MinimalMWSEntity
 
 
 @pytest.fixture(autouse=True)
-def clean_registry():
+def clean_registry() -> typing.Generator[None, None, None]:
     """Clear the global AoI entity registry before and after every test."""
     _REGISTRY.clear()
     yield
@@ -206,13 +195,13 @@ def registered_entity_cls(entity_cls: type[BaseEntity]) -> type[BaseEntity]:
 
 
 @pytest.fixture()
-def bbox_aoi(registered_entity_cls) -> AoI:
+def bbox_aoi(registered_entity_cls: type[BaseEntity]) -> AoI:
     """Return an ``AoI`` constructed from a bounding box."""
     return AoI(".", bbox=(73.0, 15.0, 74.0, 16.0))
 
 
 @pytest.fixture()
-def geom_aoi(registered_entity_cls) -> AoI:
+def geom_aoi(registered_entity_cls: type[BaseEntity]) -> AoI:
     """Return an ``AoI`` constructed from a Shapely geometry."""
     return AoI(".", geometry=sgeom.box(73.0, 15.0, 74.0, 16.0))
 
@@ -231,7 +220,7 @@ def minimal_schema() -> SchemaProfile:
 
 
 @pytest.fixture()
-def sample_result(entity_cls):
+def sample_result(entity_cls: Any) -> Result:
     """Return a ``Result`` with an in-memory DataFrame at annual resolution."""
 
     df = pl.DataFrame({"mws_id": ["13_001", "13_002"], "ndvi_mean": [0.45, 0.50]})

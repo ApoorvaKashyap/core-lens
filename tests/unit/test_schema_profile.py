@@ -1,6 +1,7 @@
 """Tests for ``core_lens.schema.profile.SchemaProfile``."""
 
 from __future__ import annotations
+from typing import Any
 
 import pytest
 from pydantic import ValidationError
@@ -8,7 +9,7 @@ from pydantic import ValidationError
 from core_lens.schema.profile import SchemaProfile
 
 
-def _valid_kwargs(**overrides) -> dict:
+def _valid_kwargs(**overrides: Any) -> dict[str, Any]:
     """Return a minimal set of valid SchemaProfile keyword arguments.
 
     Args:
@@ -30,7 +31,7 @@ def _valid_kwargs(**overrides) -> dict:
 
 
 class TestSchemaProfileConstruction:
-    def test_minimal_valid_profile(self):
+    def test_minimal_valid_profile(self) -> None:
         profile = SchemaProfile(**_valid_kwargs())
 
         assert profile.key_cols == ["mws_id"]
@@ -40,33 +41,33 @@ class TestSchemaProfileConstruction:
         assert profile.fortnightly_time_col is None
         assert profile.bbox_cols is None
 
-    def test_defaults_for_extra_col_lists(self):
+    def test_defaults_for_extra_col_lists(self) -> None:
         profile = SchemaProfile(**_valid_kwargs())
 
         assert profile.extra_static_cols == []
         assert profile.extra_annual_cols == []
         assert profile.extra_fortnightly_cols == []
 
-    def test_composite_key_cols(self):
+    def test_composite_key_cols(self) -> None:
         profile = SchemaProfile(
             **_valid_kwargs(key_cols=["state", "district", "tehsil"])
         )
 
         assert profile.key_cols == ["state", "district", "tehsil"]
 
-    def test_all_geometry_types_accepted(self):
+    def test_all_geometry_types_accepted(self) -> None:
         for geo_type in ("wkb", "wkt"):
             profile = SchemaProfile(**_valid_kwargs(geometry_type=geo_type))
             assert profile.geometry_type == geo_type
 
-    def test_latlon_geometry_type_with_bbox_cols(self):
+    def test_latlon_geometry_type_with_bbox_cols(self) -> None:
         bbox = ("minx", "miny", "maxx", "maxy")
         profile = SchemaProfile(**_valid_kwargs(geometry_type="latlon", bbox_cols=bbox))
 
         assert profile.geometry_type == "latlon"
         assert profile.bbox_cols == bbox
 
-    def test_extra_cols_stored(self):
+    def test_extra_cols_stored(self) -> None:
         profile = SchemaProfile(
             **_valid_kwargs(
                 extra_static_cols=["area_ha", "state"],
@@ -79,7 +80,7 @@ class TestSchemaProfileConstruction:
         assert "ndvi_mean" in profile.extra_annual_cols
         assert "ndvi" in profile.extra_fortnightly_cols
 
-    def test_temporal_cols_stored(self):
+    def test_temporal_cols_stored(self) -> None:
         profile = SchemaProfile(
             **_valid_kwargs(
                 annual_time_col="year",
@@ -92,21 +93,21 @@ class TestSchemaProfileConstruction:
 
 
 class TestSchemaProfileValidators:
-    def test_empty_key_cols_raises(self):
+    def test_empty_key_cols_raises(self) -> None:
         with pytest.raises(ValidationError, match="key_cols"):
             SchemaProfile(**_valid_kwargs(key_cols=[]))
 
-    def test_latlon_without_bbox_cols_raises(self):
+    def test_latlon_without_bbox_cols_raises(self) -> None:
         with pytest.raises(ValidationError, match="bbox_cols"):
             SchemaProfile(**_valid_kwargs(geometry_type="latlon", bbox_cols=None))
 
-    def test_invalid_geometry_type_raises(self):
+    def test_invalid_geometry_type_raises(self) -> None:
         with pytest.raises(ValidationError):
             SchemaProfile(**_valid_kwargs(geometry_type="geojson"))
 
 
 class TestSchemaProfileImmutability:
-    def test_profile_is_frozen(self):
+    def test_profile_is_frozen(self) -> None:
         profile = SchemaProfile(**_valid_kwargs())
 
         with pytest.raises(ValidationError):
