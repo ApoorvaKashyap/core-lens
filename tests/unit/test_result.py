@@ -193,11 +193,12 @@ class TestResultDerive:
 
 
 class TestResultAggregate:
-    def test_aggregate_without_by_collapses_rows(self, entity_cls: Any) -> None:
+    def test_aggregate_without_by_retains_entity_level(self, entity_cls: Any) -> None:
         result = _make_result(entity_cls())
         agg = result.aggregate(pl.mean("ndvi_mean"))
 
-        assert len(agg.df()) == 1
+        assert len(agg.df()) == 2
+        assert "mws_id" in agg.df().columns
 
     def test_aggregate_with_temporal_by_on_fortnightly(self, entity_cls: Any) -> None:
         df = pl.DataFrame(
@@ -211,6 +212,7 @@ class TestResultAggregate:
         agg = result.aggregate(pl.mean("ndvi"), by="year")
 
         assert "year" in agg.df().columns
+        assert "mws_id" in agg.df().columns
 
     def test_aggregate_on_static_raises(self, entity_cls: Any) -> None:
         result = _make_result(entity_cls(), resolution=Resolution.STATIC)
