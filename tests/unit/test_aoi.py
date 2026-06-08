@@ -346,6 +346,34 @@ class TestAoIResolveGeometry:
                 match="No registered entity can satisfy the filters",
             ):
                 AoI(data_root=str(tmp_path), unknown_key="1")
+
+            # Test fallback match by entity name
+            aoi_fallback = AoI(data_root=str(tmp_path), mws="1")
+            assert getattr(aoi_fallback.geometry, "equals", lambda x: False)(union)
+
         finally:
             _REGISTRY.clear()
             _REGISTRY.update(old_registry)
+
+    def test_validate_entity_invalid_parquet(self, tmp_path: pathlib.Path) -> None:
+        from core_lens.aoi import _validate_entity
+        from core_lens.base.entity import BaseEntity
+
+        p = tmp_path / "bad.parquet"
+        p.write_text("not a parquet file")
+
+        class BadEntity(BaseEntity):
+            @property
+            def key_cols(self) -> list[str]:
+                return ["id"]
+
+            @property
+            def geometry_col(self) -> str:
+                return "geom"
+
+            @property
+            def static_path(self) -> str:
+                return str(p)
+
+        with pytest.raises(EntityValidationError, match="could not read schema"):
+            _validate_entity(BadEntity(), "bad_entity")

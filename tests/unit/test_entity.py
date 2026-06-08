@@ -77,3 +77,12 @@ class TestEntitySchemaProfile:
         assert profile.key_cols == ["mws_id"]
         assert profile.geometry_col == "geometry"
         assert profile.geometry_type == "wkb"
+
+    def test_spatial_filter_no_args(self, entity_cls: Any) -> None:
+        entity = entity_cls()
+        import pytest
+
+        with pytest.raises(
+            ValueError, match="spatial_filter.. requires either 'geometry' or 'bbox'"
+        ):
+            entity.spatial_filter()

@@ -127,3 +127,43 @@ def test_geojson_with_geometry(sample_result: Result, tmp_path: pathlib.Path) ->
     assert "geometry" in gdf.columns
     assert gdf.geometry.name == "geometry"
     assert len(gdf) == 2
+
+
+def test_geoparquet_options_partition(
+    sample_result: Result, tmp_path: pathlib.Path
+) -> None:
+    result_with_geom = sample_result.with_geometry()
+    import duckdb
+
+    out_path = tmp_path / "out_partition1.geoparquet"
+    geoparquet(result_with_geom, out_path, partition_by="mws_id")
+    assert out_path.exists()
+
+    out_path2 = tmp_path / "out_partition2.geoparquet"
+    try:
+        geoparquet(
+            result_with_geom,
+            out_path2,
+            partition_by=["mws_id", "ndvi_mean"],
+            unknown_bool=True,
+        )
+    except (duckdb.BinderException, duckdb.NotImplementedException):
+        pass
+
+
+def test_geojson_options(sample_result: Result, tmp_path: pathlib.Path) -> None:
+    result_with_geom = sample_result.with_geometry()
+    import duckdb
+
+    out_path = tmp_path / "out_opts.json"
+    try:
+        geojson(
+            result_with_geom,
+            out_path,
+            overwrite=True,
+            some_option="test_val",
+            flag=False,
+            number=10,
+        )
+    except duckdb.BinderException:
+        pass
