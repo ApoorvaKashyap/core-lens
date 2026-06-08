@@ -259,6 +259,19 @@ class View:
         )
         data = lf.collect()
 
+        # For fortnightly results, inject temporal grouping columns so that
+        # aggregate(by="year"), aggregate(by="season"), etc. work out of the
+        # box without callers having to derive them manually.
+        if (
+            resolution == Resolution.FORTNIGHTLY
+            and profile.fortnightly_time_col is not None
+        ):
+            from core_lens.utils.season import add_temporal_columns
+            from core_lens.aoi import SeasonConfig
+
+            season_cfg = self._season_config or SeasonConfig()
+            data = add_temporal_columns(data, profile.fortnightly_time_col, season_cfg)
+
         return Result(
             data=data,
             resolution=resolution,

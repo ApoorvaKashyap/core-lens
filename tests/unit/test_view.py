@@ -252,3 +252,263 @@ class TestViewMaterialisation:
         new_view = view.between("2020-01-01", "2022-12-31")
 
         assert new_view.join_spec == join_spec
+
+
+class TestFortnightlyTemporalColumns:
+    """Materialising a fortnightly View must inject all temporal grouping columns."""
+
+    def test_year_column_added(self, entity_cls_full: Any) -> None:
+        keys = pl.DataFrame({"mws_id": ["13_001"]})
+        result = View(
+            keys=keys, entity=entity_cls_full(), entity_name="mws"
+        ).fortnightly
+        assert "year" in result.columns
+
+    def test_month_column_added(self, entity_cls_full: Any) -> None:
+        keys = pl.DataFrame({"mws_id": ["13_001"]})
+        result = View(
+            keys=keys, entity=entity_cls_full(), entity_name="mws"
+        ).fortnightly
+        assert "month" in result.columns
+
+    def test_year_month_column_added(self, entity_cls_full: Any) -> None:
+        keys = pl.DataFrame({"mws_id": ["13_001"]})
+        result = View(
+            keys=keys, entity=entity_cls_full(), entity_name="mws"
+        ).fortnightly
+        assert "year_month" in result.columns
+
+    def test_season_column_added(self, entity_cls_full: Any) -> None:
+        keys = pl.DataFrame({"mws_id": ["13_001"]})
+        result = View(
+            keys=keys, entity=entity_cls_full(), entity_name="mws"
+        ).fortnightly
+        assert "season" in result.columns
+
+    def test_season_year_column_added(self, entity_cls_full: Any) -> None:
+        keys = pl.DataFrame({"mws_id": ["13_001"]})
+        result = View(
+            keys=keys, entity=entity_cls_full(), entity_name="mws"
+        ).fortnightly
+        assert "season_year" in result.columns
+
+    def test_year_values_correct(self, entity_cls_full: Any) -> None:
+        keys = pl.DataFrame({"mws_id": ["13_001"]})
+        result = View(
+            keys=keys, entity=entity_cls_full(), entity_name="mws"
+        ).fortnightly
+        # conftest writes fortnightly_date = [2022-01-01, 2022-01-15] for mws_id 13_001
+        assert result.df()["year"].to_list() == [2022, 2022]
+
+    def test_year_month_format(self, entity_cls_full: Any) -> None:
+        keys = pl.DataFrame({"mws_id": ["13_001"]})
+        result = View(
+            keys=keys, entity=entity_cls_full(), entity_name="mws"
+        ).fortnightly
+        assert result.df()["year_month"].to_list() == ["2022-01", "2022-01"]
+
+    def test_season_label_is_string(self, entity_cls_full: Any) -> None:
+        keys = pl.DataFrame({"mws_id": ["13_001"]})
+        result = View(
+            keys=keys, entity=entity_cls_full(), entity_name="mws"
+        ).fortnightly
+        for label in result.df()["season"].to_list():
+            assert isinstance(label, str)
+            assert label in {"kharif", "rabi", "zaid"}
+
+    def test_season_year_format(self, entity_cls_full: Any) -> None:
+        keys = pl.DataFrame({"mws_id": ["13_001"]})
+        result = View(
+            keys=keys, entity=entity_cls_full(), entity_name="mws"
+        ).fortnightly
+        for label in result.df()["season_year"].to_list():
+            # e.g. "rabi_2022"
+            parts = label.rsplit("_", 1)
+            assert len(parts) == 2
+            assert parts[0] in {"kharif", "rabi", "zaid"}
+            assert parts[1].isdigit()
+
+    def test_existing_year_col_not_overwritten(self, tmp_path: Any) -> None:
+        """If entity already supplies a 'year' column it must be preserved."""
+        import datetime
+        from core_lens.base.entity import BaseEntity
+        from core_lens.schema.profile import SchemaProfile
+        import shapely.geometry as sgeom
+        import shapely.wkb as swkb
+
+        wkb_bytes = swkb.dumps(sgeom.box(73.0, 15.0, 74.0, 16.0))
+        static_path = tmp_path / "static.parquet"
+        pl.DataFrame({"mws_id": ["x"], "geometry": [wkb_bytes]}).write_parquet(
+            static_path
+        )
+
+        fn_path = tmp_path / "fortnightly.parquet"
+        pl.DataFrame(
+            {
+                "mws_id": ["x"],
+                "fortnightly_date": [datetime.date(2022, 1, 1)],
+                "year": [9999],  # pre-existing — must survive unchanged
+                "ndvi": [0.5],
+            }
+        ).write_parquet(fn_path)
+
+        _static = str(static_path)
+        _fn = str(fn_path)
+        _profile = SchemaProfile(
+            key_cols=["mws_id"],
+            geometry_col="geometry",
+            geometry_type="wkb",
+            annual_time_col=None,
+            fortnightly_time_col="fortnightly_date",
+            bbox_cols=None,
+        )
+
+        class _TestEntity(BaseEntity):
+            @property
+            def key_cols(self) -> list[str]:
+                return ["mws_id"]
+
+            @property
+            def geometry_col(self) -> str:
+                return "geometry"
+
+            @property
+            def static_path(self) -> str:
+                return _static
+
+            @property
+            def fortnightly_path(self) -> str | None:
+                return _fn
+
+            @property
+            def schema_profile(self) -> SchemaProfile:
+                return _profile
+
+        keys = pl.DataFrame({"mws_id": ["x"]})
+        result = View(keys=keys, entity=_TestEntity(), entity_name="test").fortnightly
+        assert result.df()["year"].to_list() == [9999]
+
+
+class TestAggregateBySeasonIntegration:
+    """aggregate(by=...) must group correctly on fortnightly temporal columns."""
+
+    def test_aggregate_by_year_groups_correctly(self, entity_cls_full: Any) -> None:
+        keys = pl.DataFrame({"mws_id": ["13_001"]})
+        result = View(
+            keys=keys, entity=entity_cls_full(), entity_name="mws"
+        ).fortnightly
+        # both rows are 2022-01-xx → mean of [0.42, 0.47]
+        agg = result.aggregate(pl.mean("ndvi"), by="year")
+        df = agg.df()
+        assert "year" in df.columns
+        assert len(df) == 1
+        assert df["year"].to_list() == [2022]
+
+    def test_aggregate_by_month_groups_correctly(self, entity_cls_full: Any) -> None:
+        keys = pl.DataFrame({"mws_id": ["13_001"]})
+        result = View(
+            keys=keys, entity=entity_cls_full(), entity_name="mws"
+        ).fortnightly
+        agg = result.aggregate(pl.mean("ndvi"), by="month")
+        assert "month" in agg.df().columns
+        assert len(agg.df()) == 1
+
+    def test_aggregate_by_season_returns_valid_labels(
+        self, entity_cls_full: Any
+    ) -> None:
+        keys = pl.DataFrame({"mws_id": ["13_001"]})
+        result = View(
+            keys=keys, entity=entity_cls_full(), entity_name="mws"
+        ).fortnightly
+        agg = result.aggregate(pl.mean("ndvi"), by="season")
+        df = agg.df()
+        assert "season" in df.columns
+        for s in df["season"].to_list():
+            assert s in {"kharif", "rabi", "zaid"}
+
+    def test_aggregate_by_season_year_returns_valid_labels(
+        self, entity_cls_full: Any
+    ) -> None:
+        keys = pl.DataFrame({"mws_id": ["13_001"]})
+        result = View(
+            keys=keys, entity=entity_cls_full(), entity_name="mws"
+        ).fortnightly
+        agg = result.aggregate(pl.mean("ndvi"), by="season_year")
+        df = agg.df()
+        assert "season_year" in df.columns
+        for s in df["season_year"].to_list():
+            parts = s.rsplit("_", 1)
+            assert parts[0] in {"kharif", "rabi", "zaid"}
+
+    def test_aggregate_by_year_month_groups_correctly(
+        self, entity_cls_full: Any
+    ) -> None:
+        keys = pl.DataFrame({"mws_id": ["13_001"]})
+        result = View(
+            keys=keys, entity=entity_cls_full(), entity_name="mws"
+        ).fortnightly
+        agg = result.aggregate(pl.mean("ndvi"), by="year_month")
+        assert "year_month" in agg.df().columns
+        assert agg.df()["year_month"].to_list() == ["2022-01"]
+
+    def test_aggregate_ndvi_mean_value(self, entity_cls_full: Any) -> None:
+        """Mean of 0.42 and 0.47 → 0.445."""
+        keys = pl.DataFrame({"mws_id": ["13_001"]})
+        result = View(
+            keys=keys, entity=entity_cls_full(), entity_name="mws"
+        ).fortnightly
+        agg = result.aggregate(pl.mean("ndvi"), by="year")
+        import math
+
+        assert math.isclose(agg.df()["ndvi"].to_list()[0], 0.445, rel_tol=1e-6)
+
+    def test_derive_then_aggregate(self, entity_cls_full: Any) -> None:
+        """derive() then aggregate() full pipeline."""
+        keys = pl.DataFrame({"mws_id": ["13_001"]})
+        result = (
+            View(keys=keys, entity=entity_cls_full(), entity_name="mws")
+            .fortnightly.derive("ndvi_pct", pl.col("ndvi") * 100)
+            .aggregate(pl.mean("ndvi_pct"), by="year")
+        )
+        assert "ndvi_pct" in result.df().columns
+        assert "year" in result.df().columns
+
+
+class TestWithGeometryJoin:
+    """with_geometry() on a non-static Result must join the geometry column."""
+
+    def test_with_geometry_sets_flag(self, entity_cls_full: Any) -> None:
+        keys = pl.DataFrame({"mws_id": ["13_001"]})
+        result = View(keys=keys, entity=entity_cls_full(), entity_name="mws").annual
+        assert result.has_geometry is False
+        with_geom = result.with_geometry()
+        assert with_geom.has_geometry is True
+
+    def test_with_geometry_adds_geometry_col(self, entity_cls_full: Any) -> None:
+        keys = pl.DataFrame({"mws_id": ["13_001"]})
+        result = View(keys=keys, entity=entity_cls_full(), entity_name="mws").annual
+        with_geom = result.with_geometry()
+        assert entity_cls_full().geometry_col in with_geom.columns
+
+    def test_with_geometry_row_count_preserved(self, entity_cls_full: Any) -> None:
+        keys = pl.DataFrame({"mws_id": ["13_001"]})
+        result = View(keys=keys, entity=entity_cls_full(), entity_name="mws").annual
+        with_geom = result.with_geometry()
+        assert len(with_geom.df()) == len(result.df())
+
+    def test_with_geometry_original_unchanged(self, entity_cls_full: Any) -> None:
+        keys = pl.DataFrame({"mws_id": ["13_001"]})
+        result = View(keys=keys, entity=entity_cls_full(), entity_name="mws").annual
+        result.with_geometry()
+        assert result.has_geometry is False
+
+    def test_derive_with_geometry_chain(self, entity_cls_full: Any) -> None:
+        """derive() → with_geometry() chain must work end-to-end."""
+        keys = pl.DataFrame({"mws_id": ["13_001"]})
+        result = (
+            View(keys=keys, entity=entity_cls_full(), entity_name="mws")
+            .annual.derive("ndvi_sq", pl.col("ndvi_mean") ** 2)
+            .with_geometry()
+        )
+        assert "ndvi_sq" in result.columns
+        assert result.has_geometry is True

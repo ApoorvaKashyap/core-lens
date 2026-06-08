@@ -1,4 +1,4 @@
-"""Season-to-date-range resolution for time filtering."""
+"""Season-to-date-range resolution for time filtering and temporal column derivation."""
 
 from __future__ import annotations
 
@@ -151,3 +151,74 @@ def _year_bounds(year: int | tuple[int, int] | None) -> tuple[int, int]:
     if isinstance(year, int):
         return year, year
     return year[0], year[1]
+
+
+def add_temporal_columns(
+    df: pl.DataFrame,
+    time_col: str,
+    season_config: "SeasonConfig",
+) -> pl.DataFrame:
+    """Return *df* with temporal grouping columns appended.
+
+    Adds the five columns that :meth:`~core_lens.base.result.Result.aggregate`
+    accepts as ``by`` values.  Called by the materialisation layer
+    (:meth:`~core_lens.base.view.View._materialise`) immediately after collect
+    for every fortnightly ``Result``.
+
+    Columns added (if not already present):
+
+    * ``year``        — integer calendar year of the date.
+    * ``month``       — integer month (1–12).
+    * ``year_month``  — string ``"YYYY-MM"`` (zero-padded).
+    * ``season``      — season name string (``"kharif"`` | ``"rabi"`` | ``"zaid"``).
+    * ``season_year`` — string ``"{season}_{year}"`` (e.g. ``"kharif_2022"``).
+
+    If a column with one of those names already exists on *df* it is left
+    untouched — this prevents overwriting data the entity itself may supply.
+
+    Args:
+        df: The collected fortnightly ``pl.DataFrame``.
+        time_col: Name of the date/datetime column to derive from.
+        season_config: The :class:`~core_lens.aoi.SeasonConfig` in effect,
+            used to map each date to its season name.
+
+    Returns:
+        A new ``pl.DataFrame`` with the temporal grouping columns appended.
+    """
+    existing = set(df.columns)
+
+    # --- year / month / year_month -----------------------------------------
+    date_col = pl.col(time_col)
+
+    exprs: list[pl.Expr] = []
+    if "year" not in existing:
+        exprs.append(date_col.dt.year().cast(pl.Int32).alias("year"))
+    if "month" not in existing:
+        exprs.append(date_col.dt.month().cast(pl.Int32).alias("month"))
+    if "year_month" not in existing:
+        exprs.append(
+            (
+                date_col.dt.year().cast(pl.String)
+                + pl.lit("-")
+                + date_col.dt.month().cast(pl.String).str.pad_start(2, "0")
+            ).alias("year_month")
+        )
+
+    if exprs:
+        df = df.with_columns(exprs)
+
+    # --- season / season_year -----------------------------------------------
+    # Built via a Python map so SeasonConfig's exact date ranges are used.
+    # This is the only correct way to handle year-crossing seasons like rabi.
+    if "season" not in existing or "season_year" not in existing:
+        season_labels = [season_config.season_for(d) for d in df[time_col].to_list()]
+        if "season" not in existing:
+            df = df.with_columns(pl.Series("season", season_labels, dtype=pl.String))
+        if "season_year" not in existing:
+            years = df["year"].to_list()
+            season_year_labels = [f"{s}_{y}" for s, y in zip(season_labels, years)]
+            df = df.with_columns(
+                pl.Series("season_year", season_year_labels, dtype=pl.String)
+            )
+
+    return df
