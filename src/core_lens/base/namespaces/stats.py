@@ -650,10 +650,23 @@ class StatsNamespace:
                         "is_anomaly": pl.Series([], dtype=pl.Boolean),
                     }
                 )
+            global_base_vals = (
+                df.filter(
+                    (pl.col(year_col) >= baseline[0])
+                    & (pl.col(year_col) <= baseline[1])
+                )[column]
+                .drop_nulls()
+                .to_numpy()
+                .astype(float)
+            )
+
             meta = {
                 "mode": "timeseries",
                 "method": method,
                 "baseline": baseline,
+                "baseline_mean": float(np.mean(global_base_vals))
+                if len(global_base_vals) > 0
+                else float("nan"),
                 "baseline_fitted": True,
             }
 
