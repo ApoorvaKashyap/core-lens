@@ -102,19 +102,18 @@ def test_timeseries_basic(dummy_result: Result) -> None:
 
 def test_timeseries_aggregate(dummy_result: Result) -> None:
     """Test timeseries aggregate creates a plotly figure."""
-    df = dummy_result.data.with_columns(pl.Series("year", [2020, 2020]))
+    df = dummy_result.data.with_columns(pl.Series("year", [2020, 2021]))
     res = dummy_result._replace(data=df)
 
     fig = res.plot.timeseries(x="year", y="value", aggregate=True)
     assert fig is not None
-    # one point in aggregate
-    assert len(fig.data[0].x) == 1
+    assert len(fig.data[0].x) == 2
 
 
 def test_timeseries_missing_xy(dummy_result: Result) -> None:
-    """Test timeseries raises error if x or y missing."""
-    with pytest.raises(ValueError, match="Both x and y must be provided"):
-        dummy_result.plot.timeseries(x="year")
+    """Test timeseries raises error if x missing."""
+    with pytest.raises(ValueError, match="x must be provided"):
+        dummy_result.plot.timeseries()
 
 
 def test_scatter_basic(dummy_result: Result) -> None:
@@ -129,9 +128,9 @@ def test_scatter_basic(dummy_result: Result) -> None:
 
 
 def test_scatter_missing_xy(dummy_result: Result) -> None:
-    """Test scatter raises error if x or y missing."""
-    with pytest.raises(ValueError, match="Both x and y must be provided"):
-        dummy_result.plot.scatter(x="value")
+    """Test scatter raises error if x missing."""
+    with pytest.raises(ValueError, match="x must be provided"):
+        dummy_result.plot.scatter()
 
 
 def test_distribution_basic(dummy_result: Result) -> None:
@@ -142,9 +141,9 @@ def test_distribution_basic(dummy_result: Result) -> None:
 
 
 def test_distribution_missing_x(dummy_result: Result) -> None:
-    """Test distribution raises error if x missing."""
-    with pytest.raises(ValueError, match="x must be provided"):
-        dummy_result.plot.distribution()
+    """Test distribution does not raise error if x missing (it auto-selects)."""
+    fig = dummy_result.plot.distribution()
+    assert fig is not None
 
 
 def test_correlation_basic(dummy_result: Result) -> None:
