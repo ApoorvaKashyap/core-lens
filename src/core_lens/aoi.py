@@ -6,7 +6,10 @@ import os
 import pathlib
 from dataclasses import dataclass
 from datetime import date
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from core_lens.base.result import Result
 
 import polars as pl
 
@@ -212,19 +215,45 @@ class AoI:
         """
         return date.today().year
 
-    def plot(self, overlay: object | None = None) -> None:
+    def plot(self, overlay: "Result | None" = None) -> Any:
         """Render an interactive Lonboard map of the AoI and its entity layers.
 
         Args:
             overlay: An optional :class:`~core_lens.base.result.Result` to
                 overlay on the map.
 
-        Raises:
-            NotImplementedError: Until the plot layer is built.
+        Returns:
+            A Lonboard Map object.
         """
-        raise NotImplementedError(
-            "aoi.plot() will be implemented when the Lonboard visualisation layer is built."
+        import lonboard
+        import geopandas as gpd
+
+        layers = []
+
+        aoi_gdf = gpd.GeoDataFrame(geometry=[self.geometry], crs="EPSG:4326")
+        base_layer = lonboard.PolygonLayer.from_geopandas(
+            aoi_gdf,
+            get_fill_color=[0, 0, 0, 0],
+            get_line_color=[0, 0, 0, 255],
+            line_width_min_pixels=2,
         )
+        layers.append(base_layer)
+
+        if overlay is not None:
+            # We duck-type the overlay to avoid circular imports of Result
+            if hasattr(overlay, "has_geometry") and not overlay.has_geometry:
+                overlay = overlay.with_geometry()
+
+            if hasattr(overlay, "gdf"):
+                gdf = overlay.gdf()
+                overlay_layer = lonboard.PolygonLayer.from_geopandas(
+                    gdf,
+                    get_fill_color=[255, 0, 0, 100],
+                    get_line_color=[255, 0, 0, 200],
+                )
+                layers.append(overlay_layer)
+
+        return lonboard.Map(layers=layers)
 
     def __getattr__(self, name: str) -> "View":
         # Called only when normal attribute lookup has already failed, so this

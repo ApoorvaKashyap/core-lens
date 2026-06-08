@@ -12,6 +12,7 @@ if TYPE_CHECKING:
     import geopandas as gpd
     from core_lens.base.entity import BaseEntity
     from core_lens.base.namespaces.stats import StatsNamespace
+    from core_lens.base.namespaces.plot import PlotNamespace
 
 _FORTNIGHTLY_ONLY_BY = {"year", "month", "year_month", "season", "season_year"}
 _VALID_BY = {None} | _FORTNIGHTLY_ONLY_BY
@@ -260,6 +261,21 @@ class Result:
         from core_lens.base.namespaces.stats import StatsNamespace
 
         return StatsNamespace(self)
+
+    @property
+    def plot(self) -> "PlotNamespace":
+        """Return the visualisation namespace for this result.
+
+        Methods here return Lonboard or Plotly objects.
+
+        Example::
+
+            result.plot.choropleth("ndvi")
+            result.plot.timeseries(x="year", y="rainfall")
+        """
+        from core_lens.base.namespaces.plot import PlotNamespace
+
+        return PlotNamespace(self)
 
     def _replace(self, **overrides: Any) -> "Result":
         # Thin copy-with-modification helper to keep the public methods clean.

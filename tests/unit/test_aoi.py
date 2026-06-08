@@ -240,9 +240,57 @@ class TestAoIGetattr:
 
 
 class TestAoIPlot:
-    def test_plot_raises_not_implemented(self, bbox_aoi: Any) -> None:
-        with pytest.raises(NotImplementedError):
-            bbox_aoi.plot()
+    def test_plot_returns_lonboard_map(self, bbox_aoi: Any) -> None:
+        import lonboard
+
+        plot_map = bbox_aoi.plot()
+        assert isinstance(plot_map, lonboard.Map)
+        assert len(plot_map.layers) == 1
+        assert isinstance(plot_map.layers[0], lonboard.PolygonLayer)
+
+    def test_plot_with_overlay(self, bbox_aoi: Any, tmp_path: Any) -> None:
+        import lonboard
+        import shapely.geometry as sgeom
+        import shapely.wkb as swkb
+        import polars as pl
+        from core_lens.base.result import Result
+        from core_lens.schema.profile import Resolution
+        from core_lens.base.entity import BaseEntity
+
+        # Need a dummy entity for Result
+        class DummyEntity(BaseEntity):
+            @property
+            def key_cols(self) -> list[str]:
+                return ["id"]
+
+            @property
+            def geometry_col(self) -> str:
+                return "geometry"
+
+            @property
+            def static_path(self) -> str:
+                return ""
+
+            @property
+            def schema_profile(self) -> Any:
+                return None
+
+        geom = sgeom.box(0, 0, 1, 1)
+        df = pl.DataFrame({"id": ["1"], "geometry": [swkb.dumps(geom)]})
+
+        result = Result(
+            data=df,
+            resolution=Resolution.STATIC,
+            has_geometry=True,
+            key_cols=["id"],
+            entity_name="dummy",
+            entity=DummyEntity(),
+        )
+
+        plot_map = bbox_aoi.plot(overlay=result)
+        assert isinstance(plot_map, lonboard.Map)
+        assert len(plot_map.layers) == 2
+        assert isinstance(plot_map.layers[1], lonboard.PolygonLayer)
 
 
 class TestEntityName:
