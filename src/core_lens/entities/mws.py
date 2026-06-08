@@ -5,7 +5,7 @@ class MWSEntity(BaseEntity):
     """Microwatershed (MWS) entity.
 
     Backed by:
-    - Static: data/mws/static/mws.parquet
+    - Static: data/mws/static (partitioned by year)
     - Annual: data/mws/annual (partitioned by year)
     - Fortnightly: data/mws/fortnightly (partitioned by basin then year)
     """
