@@ -146,6 +146,15 @@ class TestAoISeasons:
         assert isinstance(bbox_aoi.current_year, int)
         assert bbox_aoi.current_year > 2000
 
+    def test_custom_season_config_validation(self) -> None:
+        from core_lens.aoi import SeasonConfig
+
+        with pytest.raises(ValueError, match="Invalid date format"):
+            SeasonConfig(kharif=("02-30", "10-15"))
+
+        with pytest.raises(ValueError, match="Expected valid 'MM-DD' strings"):
+            SeasonConfig(rabi=("13-45", "03-31"))
+
 
 class TestAoIRegister:
     def test_register_adds_entity_to_registry(self, entity_cls: Any) -> None:

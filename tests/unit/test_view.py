@@ -119,7 +119,9 @@ class TestViewBetweenSeasonMode:
     def test_year_without_season_raises(self, entity_cls: Any) -> None:
         view = _make_view(entity_cls())
 
-        with pytest.raises(ValueError, match="'year' is only valid"):
+        with pytest.raises(
+            ValueError, match="is only valid when 'season' is also provided"
+        ):
             view.between(year=2022)
 
 

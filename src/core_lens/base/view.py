@@ -121,22 +121,24 @@ class View:
         """
         if season is not None and (start is not None or end is not None):
             raise ValueError(
-                "Date range (start/end) and season mode are mutually exclusive. "
+                "View.between: Date range (start/end) and season mode are mutually exclusive. "
                 "Use either positional date strings or the 'season' keyword, not both."
             )
 
         if season is None and year is not None:
-            raise ValueError("'year' is only valid when 'season' is also provided.")
+            raise ValueError(
+                "View.between: 'year' argument is only valid when 'season' is also provided."
+            )
 
         if season is not None:
             if season not in _VALID_SEASONS:
                 raise ValueError(
-                    f"Unknown season {season!r}. "
-                    f"Valid values: {sorted(_VALID_SEASONS)}."
+                    f"View.between: Unknown season {season!r}. "
+                    f"Valid options: {sorted(_VALID_SEASONS)}."
                 )
             if season == "current" and year is not None:
                 raise ValueError(
-                    "Cannot combine year with season='current'. "
+                    "View.between: Cannot combine year with season='current'. "
                     "The current season is always resolved to the present calendar date."
                 )
             time_filter: dict[str, Any] = {"season": season}
@@ -145,7 +147,7 @@ class View:
         else:
             if start is None or end is None:
                 raise ValueError(
-                    "Both 'start' and 'end' must be provided for date range mode."
+                    "View.between: Both 'start' and 'end' must be provided for date range mode."
                 )
             time_filter = {"start": start, "end": end}
 
@@ -206,7 +208,7 @@ class View:
 
         if self.join_spec is not None:
             raise NotImplementedError(
-                "spatial_join materialisation is not yet implemented. "
+                "View._materialise: spatial_join materialisation is not yet implemented. "
                 "The join_spec is recorded but cross-entity join execution "
                 "will be added in a subsequent release."
             )

@@ -203,7 +203,7 @@ class TestStatisticalTest:
 
     def test_no_mode_raises(self, entity_cls: Any) -> None:
         r = _make(entity_cls(), _big_df())
-        with pytest.raises(ValueError, match="requires exactly one of"):
+        with pytest.raises(ValueError, match="Provide exactly one of"):
             r.stats.test(column="ndvi")
 
     def test_invalid_method_raises(self, entity_cls: Any) -> None:
@@ -326,8 +326,8 @@ class TestAnomalyCrossSectional:
 
     def test_invalid_method_raises(self, entity_cls: Any) -> None:
         r = self._big_cs(entity_cls())
-        with pytest.raises(ValueError, match="invalid"):
-            r.stats.anomaly("ndvi", mode="cross_sectional", method="stl")
+        with pytest.raises(ValueError, match="does not support method"):
+            r.stats.anomaly(column="ndvi", mode="cross_sectional", method="stl")
 
     def test_is_anomaly_boolean(self, entity_cls: Any) -> None:
         r = self._big_cs(entity_cls())
@@ -397,9 +397,9 @@ class TestAnomalyTimeseries:
 
     def test_invalid_ts_method_raises(self, entity_cls: Any) -> None:
         r = _make(entity_cls(), self._ts_df())
-        with pytest.raises(ValueError, match="invalid"):
+        with pytest.raises(ValueError, match="does not support method"):
             r.stats.anomaly(
-                "ndvi", mode="timeseries", method="zscore", baseline=(2010, 2017)
+                column="ndvi", mode="timeseries", method="zscore", baseline=(2010, 2017)
             )
 
 

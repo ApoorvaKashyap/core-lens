@@ -102,7 +102,9 @@ class StatsNamespace:
             data = df.group_by(key).agg(exprs).sort(key)
 
         else:
-            raise ValueError(f"Unknown by={by!r}. Valid: 'column', 'entity'.")
+            raise ValueError(
+                f"StatsNamespace.describe: Unknown by={by!r}. Valid options: 'column', 'entity'."
+            )
 
         return self._r._replace(data=data, metadata={})
 
@@ -129,11 +131,11 @@ class StatsNamespace:
         """
         if len(columns) < 2:
             raise CorrelationError(
-                f"correlate() requires at least 2 columns, got {len(columns)}."
+                f"StatsNamespace.correlate: Requires at least 2 columns, got {len(columns)}."
             )
         if method not in _VALID_CORRELATE_METHODS:
             raise ValueError(
-                f"Unknown method {method!r}. Valid: {sorted(_VALID_CORRELATE_METHODS)}."
+                f"StatsNamespace.correlate: Unknown method {method!r}. Valid options: {sorted(_VALID_CORRELATE_METHODS)}."
             )
 
         import scipy.stats as sp  # type: ignore[import-untyped]
@@ -217,7 +219,7 @@ class StatsNamespace:
 
         if method not in _VALID_TEST_METHODS:
             raise ValueError(
-                f"Unknown method {method!r}. Valid: {sorted(_VALID_TEST_METHODS)}."
+                f"StatsNamespace.test: Unknown method {method!r}. Valid options: {sorted(_VALID_TEST_METHODS)}."
             )
 
         if against is not None:
@@ -227,8 +229,8 @@ class StatsNamespace:
                 stat, pval = sp.wilcoxon(all_vals - against)
             else:
                 raise ValueError(
-                    f"method={method!r} is not valid for single-sample test. "
-                    "Use 't-test' or 'wilcoxon'."
+                    f"StatsNamespace.test: method={method!r} is not valid for single-sample test against a reference value. "
+                    "Valid options: 't-test', 'wilcoxon'."
                 )
             data = pl.DataFrame(
                 {
@@ -282,7 +284,7 @@ class StatsNamespace:
             year_col = self._year_col()
             if year_col is None:
                 raise ValueError(
-                    "test(periods=...) requires a year column. Use annual resolution."
+                    "StatsNamespace.test: periods mode requires a year column. Ensure data is at annual resolution."
                 )
             arrays = [
                 df.filter((pl.col(year_col) >= p[0]) & (pl.col(year_col) <= p[1]))[
@@ -316,7 +318,7 @@ class StatsNamespace:
 
         else:
             raise ValueError(
-                "test() requires exactly one of: 'groups', 'periods', or 'against'."
+                "StatsNamespace.test: Missing test mode. Provide exactly one of: 'groups', 'periods', or 'against'."
             )
 
         return self._r._replace(data=data, metadata=metadata)
@@ -346,7 +348,7 @@ class StatsNamespace:
         """
         if method not in _VALID_CHANGE_METHODS:
             raise ValueError(
-                f"Unknown method {method!r}. Valid: {sorted(_VALID_CHANGE_METHODS)}."
+                f"StatsNamespace.change: Unknown method {method!r}. Valid options: {sorted(_VALID_CHANGE_METHODS)}."
             )
 
         import scipy.stats as sp
@@ -356,7 +358,7 @@ class StatsNamespace:
         year_col = self._year_col()
         if year_col is None:
             raise ValueError(
-                "change() requires a year/time column. Use annual resolution."
+                "StatsNamespace.change: Requires a year/time column. Ensure data is at annual resolution."
             )
 
         if method in ("absolute", "percentage"):
@@ -455,8 +457,8 @@ class StatsNamespace:
         if mode == "cross_sectional":
             if method not in _VALID_ANOMALY_CROSS:
                 raise ValueError(
-                    f"cross_sectional method {method!r} invalid. "
-                    f"Valid: {sorted(_VALID_ANOMALY_CROSS)}."
+                    f"StatsNamespace.anomaly: mode 'cross_sectional' does not support method {method!r}. "
+                    f"Valid options: {sorted(_VALID_ANOMALY_CROSS)}."
                 )
 
             # baseline subset for computing reference stats
@@ -476,8 +478,8 @@ class StatsNamespace:
             min_obs = _MIN_OBS[method]
             if len(ref_vals) < min_obs:
                 raise ValueError(
-                    f"anomaly(method={method!r}) needs ≥{min_obs} observations, "
-                    f"got {len(ref_vals)}."
+                    f"StatsNamespace.anomaly: method {method!r} requires at least {min_obs} baseline observations, "
+                    f"but only got {len(ref_vals)}."
                 )
 
             all_vals = df[column].to_numpy().astype(float)
@@ -548,18 +550,18 @@ class StatsNamespace:
         elif mode == "timeseries":
             if method not in _VALID_ANOMALY_TS:
                 raise ValueError(
-                    f"timeseries method {method!r} invalid. "
-                    f"Valid: {sorted(_VALID_ANOMALY_TS)}."
+                    f"StatsNamespace.anomaly: mode 'timeseries' does not support method {method!r}. "
+                    f"Valid options: {sorted(_VALID_ANOMALY_TS)}."
                 )
             if baseline is None:
                 raise ValueError(
-                    "anomaly(mode='timeseries') requires baseline=(from_year, to_year)."
+                    "StatsNamespace.anomaly: mode 'timeseries' requires a defined baseline=(from_year, to_year)."
                 )
 
             year_col = self._year_col()
             if year_col is None:
                 raise ValueError(
-                    "anomaly(mode='timeseries') requires a year/time column."
+                    "StatsNamespace.anomaly: mode 'timeseries' requires a year/time column. Ensure data is at annual or fortnightly resolution."
                 )
 
             min_obs = _MIN_OBS[method]
@@ -657,7 +659,7 @@ class StatsNamespace:
 
         else:
             raise ValueError(
-                f"Unknown mode {mode!r}. Valid: 'cross_sectional', 'timeseries'."
+                f"StatsNamespace.anomaly: Unknown mode {mode!r}. Valid options: 'cross_sectional', 'timeseries'."
             )
 
         return self._r._replace(data=data, metadata=meta)
@@ -689,8 +691,8 @@ class StatsNamespace:
         """
         if method not in _VALID_SIMILARITY_METHODS:
             raise ValueError(
-                f"Unknown method {method!r}. "
-                f"Valid: {sorted(_VALID_SIMILARITY_METHODS)}."
+                f"StatsNamespace.similarity: Unknown method {method!r}. "
+                f"Valid options: {sorted(_VALID_SIMILARITY_METHODS)}."
             )
 
         df = self._r.data
@@ -699,14 +701,17 @@ class StatsNamespace:
 
         if not col_names:
             raise ValueError(
-                f"None of {list(columns)} found in result columns {df.columns}."
+                f"StatsNamespace.similarity: None of the specified columns {list(columns)} were found in the result data. "
+                f"Available columns: {df.columns}."
             )
 
         feat = df.select([key] + col_names).drop_nulls()
         ids = feat[key].to_list()
 
         if target not in ids:
-            raise ValueError(f"Target {target!r} not found in {key} column.")
+            raise ValueError(
+                f"StatsNamespace.similarity: Target entity {target!r} not found in {key} column."
+            )
 
         mat = feat.select(col_names).to_numpy().astype(float)
         tidx = ids.index(target)

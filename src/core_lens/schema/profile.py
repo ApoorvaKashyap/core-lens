@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from enum import Enum
+import pathlib
 from typing import Literal
 
 from pydantic import BaseModel, model_validator
@@ -68,6 +69,26 @@ class SchemaProfile(BaseModel):
     extra_static_cols: list[str] = []
     extra_annual_cols: list[str] = []
     extra_fortnightly_cols: list[str] = []
+
+    @classmethod
+    def from_file(cls, path: str | pathlib.Path) -> "SchemaProfile":
+        """Load a schema profile from a JSON file.
+
+        Args:
+            path: Path to the JSON configuration file.
+
+        Returns:
+            A new :class:`SchemaProfile` instance.
+
+        Raises:
+            ValueError: If the file is not valid JSON.
+            FileNotFoundError: If the file does not exist.
+        """
+        import json
+
+        with open(path) as f:
+            data = json.load(f)
+        return cls(**data)
 
     @model_validator(mode="after")
     def _check_key_cols_non_empty(self) -> "SchemaProfile":

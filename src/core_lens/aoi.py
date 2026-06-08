@@ -48,6 +48,21 @@ class SeasonConfig:
     rabi: tuple[str, str] = ("11-01", "03-31")
     zaid: tuple[str, str] = ("04-01", "06-30")
 
+    def __post_init__(self) -> None:
+        from datetime import datetime
+
+        for attr in ("kharif", "rabi", "zaid"):
+            start, end = getattr(self, attr)
+            try:
+                # Use a leap year (2000) to allow "02-29"
+                datetime.strptime(f"2000-{start}", "%Y-%m-%d")
+                datetime.strptime(f"2000-{end}", "%Y-%m-%d")
+            except ValueError as e:
+                raise ValueError(
+                    f"SeasonConfig: Invalid date format for {attr}=('{start}', '{end}'). "
+                    f"Expected valid 'MM-DD' strings. Original error: {e}"
+                ) from e
+
     def season_for(self, d: date) -> str:
         """Return the season name for a given date.
 
@@ -425,13 +440,14 @@ def _validate_entity(entity: BaseEntity, name: str) -> None:
     missing_keys = [c for c in entity.key_cols if c not in schema]
     if missing_keys:
         raise EntityValidationError(
-            f"Entity {name!r}: key_cols {missing_keys} not found in {static!r}."
+            f"Entity {name!r}: key_cols {missing_keys} not found in {static!r}. "
+            f"Available columns: {list(schema.keys())}."
         )
 
     if entity.geometry_col not in schema:
         raise EntityValidationError(
             f"Entity {name!r}: geometry_col {entity.geometry_col!r} "
-            f"not found in {static!r}."
+            f"not found in {static!r}. Available columns: {list(schema.keys())}."
         )
 
     for attr, label in [("annual_path", "annual"), ("fortnightly_path", "fortnightly")]:

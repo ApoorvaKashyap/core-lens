@@ -189,7 +189,7 @@ class TestResultDerive:
         assert isinstance(gdf_result, gpd.GeoDataFrame)
         assert len(gdf_result) == 1
         assert "mws_id" in gdf_result.columns
-        assert gdf_result.geometry.iloc[0].equals(point)
+        assert gdf_result.geometry.iloc[0] == point
 
 
 class TestResultAggregate:
@@ -221,7 +221,7 @@ class TestResultAggregate:
     def test_aggregate_temporal_by_on_annual_raises(self, entity_cls: Any) -> None:
         result = _make_result(entity_cls(), resolution=Resolution.ANNUAL)
 
-        with pytest.raises(ValueError, match="resolution='fortnightly'"):
+        with pytest.raises(ValueError, match="requires data at fortnightly resolution"):
             result.aggregate(pl.mean("ndvi_mean"), by="year")
 
     def test_aggregate_unknown_by_raises(self, entity_cls: Any) -> None:

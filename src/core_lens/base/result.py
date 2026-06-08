@@ -94,8 +94,8 @@ class Result:
         """
         if not self.has_geometry:
             raise TypeError(
-                f"This Result (resolution={self.resolution!r}) has no geometry. "
-                "Call .with_geometry() first to join the static geometry column."
+                f"Result.gdf: This Result (resolution={self.resolution!r}) has no geometry. "
+                "Call .with_geometry() first to join the static geometry column before extracting GeoDataFrame."
             )
         import geopandas as gpd
         import shapely.wkb as wkb
@@ -220,19 +220,19 @@ class Result:
         """
         if by is not None and by not in _VALID_BY:
             raise ValueError(
-                f"Unknown grouping {by!r}. "
+                f"Result.aggregate: Unknown grouping by={by!r}. "
                 f"Valid options: {sorted(v for v in _VALID_BY if v is not None)}."
             )
 
         if self.resolution == Resolution.STATIC:
             raise ValueError(
-                "aggregate() is not supported on static results. "
+                "Result.aggregate: Aggregation is not supported on static results. "
                 "Static data has one row per entity with no time dimension to collapse."
             )
 
         if by in _FORTNIGHTLY_ONLY_BY and self.resolution != Resolution.FORTNIGHTLY:
             raise ValueError(
-                f"by={by!r} requires resolution='fortnightly', "
+                f"Result.aggregate: Grouping by={by!r} requires data at fortnightly resolution, "
                 f"but this result has resolution={self.resolution!r}."
             )
 
