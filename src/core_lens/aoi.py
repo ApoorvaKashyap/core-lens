@@ -203,14 +203,8 @@ class AoI:
         else:
             self.geometry = self._resolve_named_boundary(entity_kwargs)
 
-        # Pre-filter every registered entity to the resolved geometry.
-        # The season_config is threaded through to each View so that
-        # season-based time filters can be resolved at materialisation time.
+        # Entity views are created lazily on demand in __getattr__.
         self._scoped: dict[str, "View"] = {}
-        for name, entity in _REGISTRY.items():
-            view = entity.spatial_filter(geometry=self.geometry)
-            view._season_config = self.seasons
-            self._scoped[name] = view
 
     @property
     def current_season(self) -> str:
@@ -274,6 +268,11 @@ class AoI:
         # Called only when normal attribute lookup has already failed, so this
         # never shadows real attributes.  Maps entity names to their scoped Views.
         if name in _REGISTRY:
+            if name not in self._scoped:
+                entity = _REGISTRY[name]
+                view = entity.spatial_filter(geometry=self.geometry)
+                view._season_config = self.seasons
+                self._scoped[name] = view
             return self._scoped[name]
         raise AttributeError(
             f"'AoI' object has no attribute {name!r}. "
@@ -332,21 +331,19 @@ class AoI:
         schema = candidate.schema_profile
         geom_col = schema.geometry_col
 
-        # Read only the geometry and key columns — no full scan.
-        filters = [
-            (col, "==", val)
-            for col, val in entity_kwargs.items()
-            if col in candidate.schema_profile.key_cols
-            or col in candidate.schema_profile.extra_static_cols
-        ]
+        # Build a lazy frame to push filters down into the Parquet reader.
+        # This avoids loading the entire geometry column into memory.
+        lf = pl.scan_parquet(candidate.static_path)
 
-        df = pl.read_parquet(
-            candidate.static_path,
-            columns=candidate.key_cols + [geom_col],
-        )
-        for col, _, val in filters:
-            if col in df.columns:
-                df = df.filter(pl.col(col) == val)
+        filter_expr = pl.lit(True)
+        for col, val in entity_kwargs.items():
+            if (
+                col in candidate.schema_profile.key_cols
+                or col in candidate.schema_profile.extra_static_cols
+            ):
+                filter_expr = filter_expr & (pl.col(col) == val)
+
+        df = lf.filter(filter_expr).select(candidate.key_cols + [geom_col]).collect()
 
         if df.is_empty():
             raise ValueError(

@@ -106,7 +106,7 @@ class StatsNamespace:
                 f"StatsNamespace.describe: Unknown by={by!r}. Valid options: 'column', 'entity'."
             )
 
-        return self._r._replace(data=data, metadata={})
+        return self._r._replace(data=data, has_geometry=False, metadata={})
 
     def correlate(
         self,
@@ -172,7 +172,7 @@ class StatsNamespace:
             "across": across,
             "n_observations": n_obs,
         }
-        return self._r._replace(data=data, metadata=metadata)
+        return self._r._replace(data=data, has_geometry=False, metadata=metadata)
 
     def test(
         self,
@@ -321,7 +321,7 @@ class StatsNamespace:
                 "StatsNamespace.test: Missing test mode. Provide exactly one of: 'groups', 'periods', or 'against'."
             )
 
-        return self._r._replace(data=data, metadata=metadata)
+        return self._r._replace(data=data, has_geometry=False, metadata=metadata)
 
     def change(
         self,
@@ -423,7 +423,7 @@ class StatsNamespace:
             "from_period": from_period,
             "to_period": to_period,
         }
-        return self._r._replace(data=data, metadata=metadata)
+        return self._r._replace(data=data, has_geometry=False, metadata=metadata)
 
     def anomaly(
         self,
@@ -675,7 +675,7 @@ class StatsNamespace:
                 f"StatsNamespace.anomaly: Unknown mode {mode!r}. Valid options: 'cross_sectional', 'timeseries'."
             )
 
-        return self._r._replace(data=data, metadata=meta)
+        return self._r._replace(data=data, has_geometry=False, metadata=meta)
 
     def similarity(
         self,
@@ -771,7 +771,7 @@ class StatsNamespace:
             "columns": list(columns.keys()),
             "top_n": top_n,
         }
-        return self._r._replace(data=data, metadata=metadata)
+        return self._r._replace(data=data, has_geometry=False, metadata=metadata)
 
 
 def _run_test(

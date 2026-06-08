@@ -11,6 +11,7 @@ from core_lens.utils.polars_utils import scan_with_key_filter
 from core_lens.utils.spatial import resolve_path
 
 if TYPE_CHECKING:
+    import shapely
     from core_lens.aoi import SeasonConfig
     from core_lens.base.entity import BaseEntity
     from core_lens.base.result import Result
@@ -72,6 +73,124 @@ class View:
         # season_config is only needed at materialisation time when a season
         # time_filter is present.  Carried forward by between() to new Views.
         self._season_config = season_config
+
+    def where(self, **kwargs: Any) -> "View":
+        """Return a new View further filtered by attributes.
+
+        Each keyword argument is interpreted as ``column=value`` applied to
+        the static file's attribute columns.  Multiple arguments are AND-ed.
+
+        Args:
+            **kwargs: Arbitrary column–value pairs to filter on.
+
+        Returns:
+            A new lazy :class:`View` with the narrowed keys.
+        """
+        static = resolve_path(self.entity.static_path)
+
+        filter_expr = pl.lit(True)
+        for col, val in kwargs.items():
+            filter_expr = filter_expr & (pl.col(col) == val)
+
+        lf = scan_with_key_filter(
+            path=static,
+            key_cols=self.entity.key_cols,
+            key_values=self.keys,
+        )
+        keys = lf.filter(filter_expr).select(self.entity.key_cols).collect()
+
+        return View(
+            keys=keys,
+            entity=self.entity,
+            entity_name=self.entity_name,
+            time_filter=self.time_filter,
+            join_spec=self.join_spec,
+            season_config=self._season_config,
+        )
+
+    def spatial_filter(
+        self,
+        geometry: "shapely.Geometry | None" = None,
+        bbox: tuple[float, float, float, float] | None = None,
+    ) -> "View":
+        """Return a new View further filtered by geometry.
+
+        Uses the in-memory bbox index for a fast rectangular pre-filter, then
+        refines with a Shapely STRtree exact-intersection check.
+
+        Args:
+            geometry: A Shapely geometry representing the spatial extent.
+            bbox: Bounding box as ``(minx, miny, maxx, maxy)`` in WGS-84.
+
+        Returns:
+            A new lazy :class:`View` scoped to the given spatial extent.
+
+        Raises:
+            ValueError: If neither ``geometry`` nor ``bbox`` is provided.
+        """
+        import shapely.geometry as sgeom
+        from core_lens.utils.spatial import (
+            exact_spatial_filter,
+            bbox_intersects_geometry,
+        )
+
+        if geometry is None and bbox is None:
+            raise ValueError(
+                "spatial_filter() requires either 'geometry' or 'bbox' to be provided."
+            )
+        if bbox is not None and geometry is None:
+            geometry = sgeom.box(*bbox)
+
+        assert geometry is not None
+
+        profile = self.entity.schema_profile
+        candidates = bbox_intersects_geometry(self.entity._index, geometry)
+        candidates = candidates.join(self.keys, on=self.entity.key_cols, how="inner")
+
+        keys = exact_spatial_filter(
+            candidates=candidates,
+            static_path=resolve_path(self.entity.static_path),
+            key_cols=self.entity.key_cols,
+            geometry_col=profile.geometry_col,
+            geometry_type=profile.geometry_type,
+            aoi_geometry=geometry,
+        )
+
+        return View(
+            keys=keys,
+            entity=self.entity,
+            entity_name=self.entity_name,
+            time_filter=self.time_filter,
+            join_spec=self.join_spec,
+            season_config=self._season_config,
+        )
+
+    def spatial_join(self, other: "BaseEntity", agg: dict[str, str]) -> "View":
+        """Return a new View with a cross-entity join pending.
+
+        The join is recorded in the View's ``join_spec`` and computed only at
+        materialisation time (``.static``, ``.annual``, or ``.fortnightly``).
+
+        Args:
+            other: The secondary :class:`BaseEntity` whose columns will be
+                joined and aggregated onto ``self``.
+            agg: Mapping of ``{column: aggregation}`` specifying which columns
+                from ``other`` to bring in and how to aggregate them.
+
+        Returns:
+            A new lazy :class:`View` with the join spec recorded.
+        """
+        if self.join_spec is not None:
+            raise ValueError("View already has a pending spatial_join.")
+
+        return View(
+            keys=self.keys,
+            entity=self.entity,
+            entity_name=self.entity_name,
+            time_filter=self.time_filter,
+            join_spec={"other": other, "agg": agg},
+            season_config=self._season_config,
+        )
 
     def between(
         self,
