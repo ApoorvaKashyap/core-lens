@@ -1,4 +1,5 @@
 import pytest
+from typing import Any
 import pathlib
 import polars as pl
 import shapely.geometry as sgeom
@@ -9,19 +10,19 @@ from core_lens.utils.spatial import (
 )
 
 
-def test_resolve_path_relative(tmp_path, monkeypatch):
+def test_resolve_path_relative(tmp_path: Any, monkeypatch: Any) -> None:
     monkeypatch.chdir(tmp_path)
     p = pathlib.Path("some_file.txt")
     p.write_text("hello")
     assert resolve_path("some_file.txt") == str(tmp_path / "some_file.txt")
 
 
-def test_resolve_path_not_found(tmp_path):
+def test_resolve_path_not_found(tmp_path: Any) -> None:
     with pytest.raises(FileNotFoundError):
         resolve_path(str(tmp_path / "missing.txt"))
 
 
-def test_build_bbox_index_with_bbox_cols(tmp_path):
+def test_build_bbox_index_with_bbox_cols(tmp_path: Any) -> None:
     p = tmp_path / "test.parquet"
     pl.DataFrame(
         {"id": [1], "minx": [0.0], "miny": [0.0], "maxx": [1.0], "maxy": [1.0]}
@@ -32,19 +33,19 @@ def test_build_bbox_index_with_bbox_cols(tmp_path):
     assert df.columns == ["id", "minx", "miny", "maxx", "maxy"]
 
 
-def test_build_bbox_index_latlon_error():
+def test_build_bbox_index_latlon_error() -> None:
     with pytest.raises(ValueError, match="geometry_type='latlon' requires bbox_cols"):
         build_bbox_index("path", ["id"], None, "geom", "latlon")
 
 
-def test_build_bbox_index_wkt(tmp_path):
+def test_build_bbox_index_wkt(tmp_path: Any) -> None:
     p = tmp_path / "test.parquet"
     pl.DataFrame({"id": [1], "geom": ["POINT (0.5 0.5)"]}).write_parquet(p)
     df = build_bbox_index(str(p), ["id"], None, "geom", "wkt")
     assert df.columns == ["id", "minx", "miny", "maxx", "maxy"]
 
 
-def test_exact_spatial_filter_empty(tmp_path):
+def test_exact_spatial_filter_empty(tmp_path: Any) -> None:
     candidates = pl.DataFrame({"id": []}, schema={"id": pl.Int64})
     res = exact_spatial_filter(
         candidates, "path", ["id"], "geom", "wkb", sgeom.Point(0, 0)
@@ -52,7 +53,7 @@ def test_exact_spatial_filter_empty(tmp_path):
     assert res.is_empty()
 
 
-def test_exact_spatial_filter_composite_key(tmp_path):
+def test_exact_spatial_filter_composite_key(tmp_path: Any) -> None:
     p = tmp_path / "test.parquet"
     pl.DataFrame({"id1": [1], "id2": [2], "geom": ["POINT (0.5 0.5)"]}).write_parquet(p)
     candidates = pl.DataFrame({"id1": [1], "id2": [2]})

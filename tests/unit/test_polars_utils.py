@@ -1,8 +1,9 @@
 import polars as pl
 from core_lens.utils.polars_utils import scan_with_key_filter
+from typing import Any
 
 
-def test_scan_with_key_filter_composite_key(tmp_path):
+def test_scan_with_key_filter_composite_key(tmp_path: Any) -> None:
     p = tmp_path / "test.parquet"
     pl.DataFrame({"id1": [1, 2], "id2": [3, 4], "val": ["A", "B"]}).write_parquet(p)
 

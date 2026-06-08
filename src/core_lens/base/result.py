@@ -11,6 +11,7 @@ from core_lens.schema.profile import Resolution
 if TYPE_CHECKING:
     import geopandas as gpd
     from core_lens.base.entity import BaseEntity
+    from core_lens.base.namespaces.stats import StatsNamespace
 
 _FORTNIGHTLY_ONLY_BY = {"year", "month", "year_month", "season", "season_year"}
 _VALID_BY = {None} | _FORTNIGHTLY_ONLY_BY
@@ -59,7 +60,7 @@ class Result:
         key_cols: list[str],
         entity_name: str,
         entity: "BaseEntity",
-        metadata: dict[str, str] | None = None,
+        metadata: dict[str, Any] | None = None,
     ) -> None:
         self.data = data
         self.resolution = resolution
@@ -68,7 +69,7 @@ class Result:
         self.key_cols = key_cols
         self.entity_name = entity_name
         self.entity = entity
-        self.metadata: dict[str, str] = metadata if metadata is not None else {}
+        self.metadata: dict[str, Any] = metadata if metadata is not None else {}
 
     def df(self) -> pl.DataFrame:
         """Return the underlying ``pl.DataFrame``.
@@ -242,6 +243,23 @@ class Result:
             new_data = self.data.group_by(by).agg(exprs)
 
         return self._replace(data=new_data)
+
+    @property
+    def stats(self) -> "StatsNamespace":
+        """Return the statistical analysis namespace for this result.
+
+        All methods on this namespace return a fresh :class:`Result` with
+        computed values in ``data`` and method parameters in ``metadata``.
+
+        Example::
+
+            result.stats.describe()
+            result.stats.correlate(["ndvi", "rainfall"], method="spearman")
+            result.stats.anomaly("ndvi", mode="cross_sectional", method="zscore")
+        """
+        from core_lens.base.namespaces.stats import StatsNamespace
+
+        return StatsNamespace(self)
 
     def _replace(self, **overrides: Any) -> "Result":
         # Thin copy-with-modification helper to keep the public methods clean.
