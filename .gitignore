@@ -364,3 +364,6 @@ docs/build/
 # Design Docs
 DESIGN_v6.md
 context.md
+
+# Data
+data/
