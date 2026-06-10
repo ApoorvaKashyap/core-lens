@@ -94,10 +94,10 @@ def _md_in_range(md: str, start: str, end: str) -> bool:
     return md >= start or md <= end
 
 
-# Class-level registry: entity name → entity instance.
+# Class-level registry: entity name → entity **class**.
 # Shared across all AoI instances in a process.  Explicit registration is
 # required; there is no auto-discovery (design §6.1).
-_REGISTRY: dict[str, BaseEntity] = {}
+_REGISTRY: dict[str, type[BaseEntity]] = {}
 
 
 class AoI:
@@ -196,6 +196,14 @@ class AoI:
                 "Provide exactly one boundary mode."
             )
 
+        # Instantiate and validate all registered entities with this data_root.
+        # This is where relative paths are resolved and checked.
+        self._entity_instances: dict[str, BaseEntity] = {}
+        for name, entity_cls in _REGISTRY.items():
+            entity = entity_cls(data_root=self.data_root)
+            _validate_entity(entity, name)
+            self._entity_instances[name] = entity
+
         if geometry is not None:
             self.geometry: "shapely.Geometry" = geometry
         elif bbox is not None:
@@ -258,7 +266,7 @@ class AoI:
 
                 # Lonboard PolygonLayer only supports Polygon and MultiPolygon.
                 # Extract polygon parts from GeometryCollections rather than dropping them.
-                def _extract_polygons(geom) -> Any:
+                def _extract_polygons(geom: Any) -> Any:
                     if geom is None:
                         return None
                     if geom.geom_type in ("Polygon", "MultiPolygon"):
@@ -293,7 +301,7 @@ class AoI:
         # never shadows real attributes.  Maps entity names to their scoped Views.
         if name in _REGISTRY:
             if name not in self._scoped:
-                entity = _REGISTRY[name]
+                entity = self._entity_instances[name]
                 view = entity.spatial_filter(geometry=self.geometry)
                 view._season_config = self.seasons
                 self._scoped[name] = view
@@ -329,7 +337,7 @@ class AoI:
         # Find the registered entity whose key_col or known attribute column
         # matches one of the filter keys.
         candidate: BaseEntity | None = None
-        for entity in _REGISTRY.values():
+        for name, entity in self._entity_instances.items():
             schema = entity.schema_profile
             if any(
                 k in schema.key_cols or k in schema.extra_static_cols
@@ -341,7 +349,7 @@ class AoI:
         # Fall back: look for an entity whose name matches a kwarg key
         # (e.g. tehsil="Pangi" → TehsilEntity if registered as "tehsil").
         if candidate is None:
-            for name, entity in _REGISTRY.items():
+            for name, entity in self._entity_instances.items():
                 if name in entity_kwargs:
                     candidate = entity
                     break
@@ -357,7 +365,7 @@ class AoI:
 
         # Build a lazy frame to push filters down into the Parquet reader.
         # This avoids loading the entire geometry column into memory.
-        lf = pl.scan_parquet(candidate.static_path)
+        lf = pl.scan_parquet(candidate._resolve(candidate.static_path))
 
         filter_expr = pl.lit(True)
         for col, val in entity_kwargs.items():
@@ -386,24 +394,30 @@ class AoI:
         ``"Entity"`` suffix and lower-casing the result
         (``MWSEntity`` → ``"mws"``, ``ForestEntity`` → ``"forest"``).
 
-        Validation checks (§6.4):
-
-        1. ``static_path`` exists and is readable.
-        2. ``key_cols`` are present in the static file schema.
-        3. ``geometry_col`` is present in the static file schema.
-        4. ``annual_path`` and ``fortnightly_path`` exist if declared.
+        For entities with **absolute** paths, validation (file existence, key cols,
+        geometry col) runs immediately at registration time.
+        For entities with **relative** paths, validation is deferred until an
+        :class:`AoI` is instantiated (when ``data_root`` is known).
 
         Args:
             entity_cls: A concrete subclass of
                 :class:`~core_lens.base.entity.BaseEntity`.
 
         Raises:
-            :class:`~core_lens.base.EntityValidationError`: If any validation check fails.
+            :class:`~core_lens.base.EntityValidationError`: If any validation check
+                fails (absolute-path entities only at register time).
         """
-        entity = entity_cls()
+        import pathlib as _pathlib
+
         name = _entity_name(entity_cls)
-        _validate_entity(entity, name)
-        _REGISTRY[name] = entity
+        # Probe with a no-root instance to check if paths are absolute.
+        probe = entity_cls()
+        static = probe.static_path
+        if _pathlib.Path(static).is_absolute():
+            # Absolute path entity: validate now.
+            _validate_entity(probe, name)
+        # Relative path entity: validation deferred to AoI.__init__.
+        _REGISTRY[name] = entity_cls
 
     @classmethod
     def deregister(cls, entity_cls: type[BaseEntity]) -> None:
@@ -444,7 +458,12 @@ def _bbox_to_polygon(
 
 
 def _validate_entity(entity: BaseEntity, name: str) -> None:
-    static = entity.static_path
+    try:
+        static = entity._resolve(entity.static_path)
+    except FileNotFoundError:
+        raise EntityValidationError(
+            f"Entity {name!r}: static_path {entity.static_path!r} does not exist."
+        )
 
     if not os.path.exists(static):
         raise EntityValidationError(
@@ -473,7 +492,12 @@ def _validate_entity(entity: BaseEntity, name: str) -> None:
 
     for attr, label in [("annual_path", "annual"), ("fortnightly_path", "fortnightly")]:
         path = getattr(entity, attr)
-        if path is not None and not os.path.exists(path):
-            raise EntityValidationError(
-                f"Entity {name!r}: {label}_path {path!r} does not exist."
-            )
+        if path is not None:
+            try:
+                abs_path = entity._resolve(path)
+            except FileNotFoundError:
+                abs_path = None
+            if abs_path is None or not os.path.exists(abs_path):
+                raise EntityValidationError(
+                    f"Entity {name!r}: {label}_path {path!r} does not exist."
+                )

@@ -382,7 +382,7 @@ class TestAoIResolveGeometry:
 
         try:
             _REGISTRY.clear()
-            _REGISTRY["mws"] = BoundEntity()
+            _REGISTRY["mws"] = BoundEntity
 
             # Test key match
             aoi = AoI(data_root=str(tmp_path), mws_id="1")

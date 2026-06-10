@@ -8,7 +8,6 @@ import polars as pl
 
 from core_lens.schema.profile import Resolution
 from core_lens.utils.polars_utils import scan_with_key_filter
-from core_lens.utils.spatial import resolve_path
 
 if TYPE_CHECKING:
     import shapely
@@ -86,7 +85,7 @@ class View:
         Returns:
             A new lazy :class:`View` with the narrowed keys.
         """
-        static = resolve_path(self.entity.static_path)
+        static = self.entity._resolve(self.entity.static_path)
 
         filter_expr = pl.lit(True)
         for col, val in kwargs.items():
@@ -149,7 +148,7 @@ class View:
 
         keys = exact_spatial_filter(
             candidates=candidates,
-            static_path=resolve_path(self.entity.static_path),
+            static_path=self.entity._resolve(self.entity.static_path),
             key_cols=self.entity.key_cols,
             geometry_col=profile.geometry_col,
             geometry_type=profile.geometry_type,
@@ -352,7 +351,7 @@ class View:
                 )
             path = fn_path
 
-        abs_path = resolve_path(path)
+        abs_path = self.entity._resolve(path)
 
         # Build a time filter expression when a time_filter is present and the
         # resolution is not static (static files have no time column).

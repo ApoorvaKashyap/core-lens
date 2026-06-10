@@ -23,7 +23,7 @@ class TehsilEntity(BaseEntity):
 
     @property
     def static_path(self) -> str:
-        return "data/tehsil/static/tehsil.parquet"
+        return "tehsil/static/tehsil.parquet"
 
     @property
     def schema_profile(self) -> SchemaProfile:

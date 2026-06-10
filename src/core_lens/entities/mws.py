@@ -5,9 +5,11 @@ class MWSEntity(BaseEntity):
     """Microwatershed (MWS) entity.
 
     Backed by:
-    - Static: data/mws/static (partitioned by year)
-    - Annual: data/mws/annual (partitioned by year)
-    - Fortnightly: data/mws/fortnightly (partitioned by basin then year)
+    - Static: mws/static (partitioned by year)
+    - Annual: mws/annual (partitioned by year)
+    - Fortnightly: mws/fortnightly (partitioned by basin then year)
+
+    All paths are relative to the AoI ``data_root``.
     """
 
     @property
@@ -20,12 +22,12 @@ class MWSEntity(BaseEntity):
 
     @property
     def static_path(self) -> str:
-        return "data/mws/static"
+        return "mws/static"
 
     @property
     def annual_path(self) -> str | None:
-        return "data/mws/annual"
+        return "mws/annual"
 
     @property
     def fortnightly_path(self) -> str | None:
-        return "data/mws/fortnightly"
+        return "mws/fortnightly"

@@ -11,6 +11,7 @@ Plugin authors import from the public surface::
 
 from __future__ import annotations
 
+import pathlib
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Any
 
@@ -20,7 +21,6 @@ from core_lens.utils.spatial import (
     bbox_intersects_geometry,
     build_bbox_index,
     exact_spatial_filter,
-    resolve_path,
 )
 
 if TYPE_CHECKING:
@@ -42,7 +42,9 @@ class BaseEntity(ABC):
 
     * :attr:`key_cols`      — column(s) that uniquely identify one entity instance
     * :attr:`geometry_col`  — geometry column name in the static GeoParquet file
-    * :attr:`static_path`   — path to the static GeoParquet file (mandatory)
+    * :attr:`static_path`   — path to the static GeoParquet file (mandatory).
+                              May be relative; resolved against ``data_root`` when
+                              the entity is instantiated by :class:`~core_lens.aoi.AoI`.
 
     Subclasses **may** override:
 
@@ -62,12 +64,13 @@ class BaseEntity(ABC):
         class ForestEntity(BaseEntity):
             key_cols     = [\"forest_patch_id\"]
             geometry_col = \"geometry\"
-            static_path  = \"/data/forest/static.geoparquet\"
-            annual_path  = \"/data/forest/annual.parquet\"
+            static_path  = \"forest/static.geoparquet\"  # relative to AoI data_root
+            annual_path  = \"forest/annual.parquet\"
 
         AoI.register(ForestEntity)
 
-    Validation rules enforced at :meth:`AoI.register` time:
+    Validation rules enforced at :meth:`AoI` instantiation time (relative paths)
+    or at :meth:`AoI.register` time (absolute paths):
 
     1. ``static_path`` exists and is readable.
     2. ``key_cols`` are present and unique in the static file.
@@ -76,6 +79,48 @@ class BaseEntity(ABC):
 
     Any failure raises :class:`~core_lens.base.entity.EntityValidationError`.
     """
+
+    def __init__(self, data_root: pathlib.Path | None = None) -> None:
+        """Initialise the entity with an optional data root directory.
+
+        Args:
+            data_root: Absolute path to the root data directory.  When
+                supplied, relative :attr:`static_path`, :attr:`annual_path`,
+                and :attr:`fortnightly_path` values are resolved against this
+                directory.  Defaults to ``None``, in which case relative paths
+                are resolved against the current working directory (legacy
+                behaviour, preserved for plugin authors that use absolute paths).
+        """
+        self._data_root = data_root
+
+    def _resolve(self, path: str) -> str:
+        """Return an absolute path string for *path*.
+
+        Relative paths are resolved against :attr:`_data_root` if set,
+        otherwise against the current working directory.
+
+        Args:
+            path: A filesystem path, absolute or relative.
+
+        Returns:
+            An absolute path string.
+
+        Raises:
+            FileNotFoundError: If the resolved path does not exist.
+        """
+        p = pathlib.Path(path)
+        if not p.is_absolute():
+            root = (
+                self._data_root if self._data_root is not None else pathlib.Path.cwd()
+            )
+            p = root / p
+        if not p.exists():
+            raise FileNotFoundError(
+                f"Entity path {path!r} (resolved to {p}) does not exist. "
+                "Provide an absolute path or ensure the file exists relative to "
+                "the AoI data_root directory."
+            )
+        return str(p)
 
     @property
     @abstractmethod
@@ -155,16 +200,16 @@ class BaseEntity(ABC):
             from core_lens.schema.detection import detect
 
             self._schema_profile: SchemaProfile = detect(
-                static_path=resolve_path(self.static_path),
+                static_path=self._resolve(self.static_path),
                 key_cols=self.key_cols,
                 geometry_col=self.geometry_col,
                 annual_path=(
-                    resolve_path(self.annual_path)
+                    self._resolve(self.annual_path)
                     if self.annual_path is not None
                     else None
                 ),
                 fortnightly_path=(
-                    resolve_path(self.fortnightly_path)
+                    self._resolve(self.fortnightly_path)
                     if self.fortnightly_path is not None
                     else None
                 ),
@@ -176,7 +221,7 @@ class BaseEntity(ABC):
         if not hasattr(self, "_cached_index"):
             profile = self.schema_profile
             self._cached_index: pl.DataFrame = build_bbox_index(
-                static_path=resolve_path(self.static_path),
+                static_path=self._resolve(self.static_path),
                 key_cols=self.key_cols,
                 bbox_cols=profile.bbox_cols,
                 geometry_col=profile.geometry_col,
@@ -204,7 +249,7 @@ class BaseEntity(ABC):
         """
         from core_lens.base.view import View
 
-        static = resolve_path(self.static_path)
+        static = self._resolve(self.static_path)
 
         # Build a filter expression for each kwarg — pushed into scan_parquet.
         filter_expr = pl.lit(True)
@@ -257,7 +302,7 @@ class BaseEntity(ABC):
         candidates = bbox_intersects_geometry(self._index, geometry)
         keys = exact_spatial_filter(
             candidates=candidates,
-            static_path=resolve_path(self.static_path),
+            static_path=self._resolve(self.static_path),
             key_cols=self.key_cols,
             geometry_col=profile.geometry_col,
             geometry_type=profile.geometry_type,

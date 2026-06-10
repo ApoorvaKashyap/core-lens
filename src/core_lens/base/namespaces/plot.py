@@ -74,7 +74,7 @@ class PlotNamespace:
 
         # Lonboard PolygonLayer only supports Polygon and MultiPolygon.
         # Extract polygon parts from GeometryCollections rather than dropping them.
-        def _extract_polygons(geom) -> Any:
+        def _extract_polygons(geom: Any) -> Any:
             if geom is None:
                 return None
             if geom.geom_type in ("Polygon", "MultiPolygon"):

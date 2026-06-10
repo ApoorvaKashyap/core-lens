@@ -9,7 +9,7 @@ def test_tehsil_entity() -> None:
     entity = TehsilEntity()
     assert entity.key_cols == ["id"]
     assert entity.geometry_col == "geom"
-    assert entity.static_path == "data/tehsil/static/tehsil.parquet"
+    assert entity.static_path == "tehsil/static/tehsil.parquet"
     assert entity.annual_path is None
     assert entity.fortnightly_path is None
 
@@ -25,6 +25,6 @@ def test_mws_entity() -> None:
     entity = MWSEntity()
     assert entity.key_cols == ["mws_id"]
     assert entity.geometry_col == "geometry"
-    assert entity.static_path == "data/mws/static"
-    assert entity.annual_path == "data/mws/annual"
-    assert entity.fortnightly_path == "data/mws/fortnightly"
+    assert entity.static_path == "mws/static"
+    assert entity.annual_path == "mws/annual"
+    assert entity.fortnightly_path == "mws/fortnightly"
