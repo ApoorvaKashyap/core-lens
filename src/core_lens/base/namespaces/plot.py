@@ -72,6 +72,28 @@ class PlotNamespace:
         res = self.result if self.result.has_geometry else self.result.with_geometry()
         gdf = res.gdf()
 
+        # Lonboard PolygonLayer only supports Polygon and MultiPolygon.
+        # Extract polygon parts from GeometryCollections rather than dropping them.
+        def _extract_polygons(geom) -> Any:
+            if geom is None:
+                return None
+            if geom.geom_type in ("Polygon", "MultiPolygon"):
+                return geom
+            if geom.geom_type == "GeometryCollection":
+                from shapely.geometry import MultiPolygon
+
+                polys = [
+                    g
+                    for g in getattr(geom, "geoms", [])
+                    if g.geom_type in ("Polygon", "MultiPolygon")
+                ]
+                if polys:
+                    return MultiPolygon(polys)
+            return None
+
+        gdf["geometry"] = gdf.geometry.apply(_extract_polygons)
+        gdf = gdf[gdf.geometry.notna()].copy()
+
         import matplotlib as mpl
         import numpy as np
 

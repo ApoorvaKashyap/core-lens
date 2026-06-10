@@ -255,10 +255,34 @@ class AoI:
 
             if hasattr(overlay, "gdf"):
                 gdf = overlay.gdf()
+
+                # Lonboard PolygonLayer only supports Polygon and MultiPolygon.
+                # Extract polygon parts from GeometryCollections rather than dropping them.
+                def _extract_polygons(geom) -> Any:
+                    if geom is None:
+                        return None
+                    if geom.geom_type in ("Polygon", "MultiPolygon"):
+                        return geom
+                    if geom.geom_type == "GeometryCollection":
+                        from shapely.geometry import MultiPolygon
+
+                        polys = [
+                            g
+                            for g in getattr(geom, "geoms", [])
+                            if g.geom_type in ("Polygon", "MultiPolygon")
+                        ]
+                        if polys:
+                            return MultiPolygon(polys)
+                    return None
+
+                gdf["geometry"] = gdf.geometry.apply(_extract_polygons)
+                gdf = gdf[gdf.geometry.notna()].copy()
+
                 overlay_layer = lonboard.PolygonLayer.from_geopandas(
                     gdf,
                     get_fill_color=[255, 0, 0, 100],
                     get_line_color=[255, 0, 0, 200],
+                    line_width_min_pixels=1,
                 )
                 layers.append(overlay_layer)
 

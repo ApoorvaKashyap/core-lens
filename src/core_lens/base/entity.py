@@ -171,10 +171,6 @@ class BaseEntity(ABC):
             )
         return self._schema_profile
 
-    # ------------------------------------------------------------------
-    # In-memory index — built lazily, cached on the instance.
-    # ------------------------------------------------------------------
-
     @property
     def _index(self) -> pl.DataFrame:
         if not hasattr(self, "_cached_index"):
