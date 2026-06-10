@@ -3,9 +3,23 @@ name = "core-lens"
 dynamic = ["version"]
 description = "Query, analyse, and visualise CoreStack's microwatershed and Earth science data through a clean, composable Python API."
 readme = "README.md"
-authors = [{ name = "Apoorva Kashyap" }, { name = "Kislaya Shrestha" }]
+authors = [{ name = "Apoorva Kashyap" }]
 requires-python = ">=3.13"
+license = "GPL-3.0-or-later"
+license-files = ["LICEN[CS]E*"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Operating System :: POSIX :: Linux",
+    "Development Status :: 2 - Pre-Alpha",
+    "Topic :: Scientific/Engineering",
+    "Topic :: Scientific/Engineering :: GIS",
+    "Topic :: Scientific/Engineering :: Hydrology",
+]
 dependencies = []
+
+[project.urls]
+Homepage = "https://github.com/ApoorvaKashyap/core-lens"
+Issues = "https://github.com/ApoorvaKashyap/core-lens/issues"
 
 [build-system]
 requires = ["hatchling", "hatch-vcs"]
@@ -30,11 +44,7 @@ spatial = [
     "shapely>=2.1.2",
     "pyproj>=3.7.2",
 ]
-viz = [
-    "lonboard>=0.16.0",
-    "matplotlib>=3.10.9",
-    "plotly>=6.7.0",
-]
+viz = ["lonboard>=0.16.0", "matplotlib>=3.10.9", "plotly>=6.7.0"]
 stats = ["scipy>=1.17.1", "statsmodels>=0.14.6"]
 dev = [
     "faker>=40.21.0",
