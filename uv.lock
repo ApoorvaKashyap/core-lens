@@ -312,7 +312,7 @@ name = "cffi"
 version = "2.0.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "pycparser", marker = "implementation_name != 'PyPy'" },
+    { name = "pycparser", marker = "implementation_name != 'PyPy' and sys_platform != 'emscripten' and sys_platform != 'win32'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/eb/56/b1ba7935a17738ae8453301356628e8147c79dbb825bcbc73dc7401f9846/cffi-2.0.0.tar.gz", hash = "sha256:44d1b5909021139fe36001ae048dbdde8214afa20200eda0f64c068cac5d5529", size = 523588, upload-time = "2025-09-08T23:24:04.541Z" }
 wheels = [
@@ -498,12 +498,52 @@ wheels = [
 name = "core-lens"
 source = { editable = "." }
 
-[package.dev-dependencies]
+[package.optional-dependencies]
 core = [
     { name = "polars" },
     { name = "pyarrow" },
     { name = "pydantic" },
 ]
+full = [
+    { name = "duckdb" },
+    { name = "geopandas" },
+    { name = "lonboard" },
+    { name = "matplotlib" },
+    { name = "plotly" },
+    { name = "polars" },
+    { name = "pyarrow" },
+    { name = "pydantic" },
+    { name = "pyproj" },
+    { name = "scipy" },
+    { name = "shapely" },
+    { name = "statsmodels" },
+]
+spatial = [
+    { name = "duckdb" },
+    { name = "geopandas" },
+    { name = "polars" },
+    { name = "pyarrow" },
+    { name = "pydantic" },
+    { name = "pyproj" },
+    { name = "shapely" },
+]
+stats = [
+    { name = "polars" },
+    { name = "pyarrow" },
+    { name = "pydantic" },
+    { name = "scipy" },
+    { name = "statsmodels" },
+]
+viz = [
+    { name = "lonboard" },
+    { name = "matplotlib" },
+    { name = "plotly" },
+    { name = "polars" },
+    { name = "pyarrow" },
+    { name = "pydantic" },
+]
+
+[package.dev-dependencies]
 dev = [
     { name = "faker" },
     { name = "mypy" },
@@ -523,34 +563,50 @@ docs = [
     { name = "sphinx-autobuild" },
     { name = "sphinx-copybutton" },
 ]
-spatial = [
-    { name = "duckdb" },
-    { name = "geopandas" },
-    { name = "pyproj" },
-    { name = "shapely" },
-]
-stats = [
-    { name = "scipy" },
-    { name = "statsmodels" },
-]
 types = [
     { name = "types-geopandas" },
     { name = "types-shapely" },
 ]
-viz = [
-    { name = "lonboard" },
-    { name = "matplotlib" },
-    { name = "plotly" },
-]
 
 [package.metadata]
+requires-dist = [
+    { name = "duckdb", marker = "extra == 'full'", specifier = ">=1.5.3,<2" },
+    { name = "duckdb", marker = "extra == 'spatial'", specifier = ">=1.5.3,<2" },
+    { name = "geopandas", marker = "extra == 'full'", specifier = ">=1.1.3,<2" },
+    { name = "geopandas", marker = "extra == 'spatial'", specifier = ">=1.1.3,<2" },
+    { name = "lonboard", marker = "extra == 'full'", specifier = ">=0.16.0,<1" },
+    { name = "lonboard", marker = "extra == 'viz'", specifier = ">=0.16.0,<1" },
+    { name = "matplotlib", marker = "extra == 'full'", specifier = ">=3.10.9,<4" },
+    { name = "matplotlib", marker = "extra == 'viz'", specifier = ">=3.10.9,<4" },
+    { name = "plotly", marker = "extra == 'full'", specifier = ">=6.7.0,<7" },
+    { name = "plotly", marker = "extra == 'viz'", specifier = ">=6.7.0,<7" },
+    { name = "polars", marker = "extra == 'core'", specifier = ">=1.40.1,<2" },
+    { name = "polars", marker = "extra == 'full'", specifier = ">=1.40.1,<2" },
+    { name = "polars", marker = "extra == 'spatial'", specifier = ">=1.40.1,<2" },
+    { name = "polars", marker = "extra == 'stats'", specifier = ">=1.40.1,<2" },
+    { name = "polars", marker = "extra == 'viz'", specifier = ">=1.40.1,<2" },
+    { name = "pyarrow", marker = "extra == 'core'", specifier = ">=24.0.0,<25" },
+    { name = "pyarrow", marker = "extra == 'full'", specifier = ">=24.0.0,<25" },
+    { name = "pyarrow", marker = "extra == 'spatial'", specifier = ">=24.0.0,<25" },
+    { name = "pyarrow", marker = "extra == 'stats'", specifier = ">=24.0.0,<25" },
+    { name = "pyarrow", marker = "extra == 'viz'", specifier = ">=24.0.0,<25" },
+    { name = "pydantic", marker = "extra == 'core'", specifier = ">=2.13.3,<3" },
+    { name = "pydantic", marker = "extra == 'full'", specifier = ">=2.13.3,<3" },
+    { name = "pydantic", marker = "extra == 'spatial'", specifier = ">=2.13.3,<3" },
+    { name = "pydantic", marker = "extra == 'stats'", specifier = ">=2.13.3,<3" },
+    { name = "pydantic", marker = "extra == 'viz'", specifier = ">=2.13.3,<3" },
+    { name = "pyproj", marker = "extra == 'full'", specifier = ">=3.7.2,<4" },
+    { name = "pyproj", marker = "extra == 'spatial'", specifier = ">=3.7.2,<4" },
+    { name = "scipy", marker = "extra == 'full'", specifier = ">=1.17.1,<2" },
+    { name = "scipy", marker = "extra == 'stats'", specifier = ">=1.17.1,<2" },
+    { name = "shapely", marker = "extra == 'full'", specifier = ">=2.1.2,<3" },
+    { name = "shapely", marker = "extra == 'spatial'", specifier = ">=2.1.2,<3" },
+    { name = "statsmodels", marker = "extra == 'full'", specifier = ">=0.14.6,<1" },
+    { name = "statsmodels", marker = "extra == 'stats'", specifier = ">=0.14.6,<1" },
+]
+provides-extras = ["core", "full", "spatial", "stats", "viz"]
 
 [package.metadata.requires-dev]
-core = [
-    { name = "polars", specifier = ">=1.40.1" },
-    { name = "pyarrow", specifier = ">=24.0.0" },
-    { name = "pydantic", specifier = ">=2.13.3" },
-]
 dev = [
     { name = "faker", specifier = ">=40.21.0" },
     { name = "mypy", specifier = ">=1.20.2" },
@@ -570,24 +626,9 @@ docs = [
     { name = "sphinx-autobuild", specifier = ">=2025.8.25" },
     { name = "sphinx-copybutton", specifier = ">=0.5.2" },
 ]
-spatial = [
-    { name = "duckdb", specifier = ">=1.5.3" },
-    { name = "geopandas", specifier = ">=1.1.3" },
-    { name = "pyproj", specifier = ">=3.7.2" },
-    { name = "shapely", specifier = ">=2.1.2" },
-]
-stats = [
-    { name = "scipy", specifier = ">=1.17.1" },
-    { name = "statsmodels", specifier = ">=0.14.6" },
-]
 types = [
     { name = "types-geopandas", specifier = ">=1.1.3.20260518" },
     { name = "types-shapely", specifier = ">=2.1.0.20260518" },
-]
-viz = [
-    { name = "lonboard", specifier = ">=0.16.0" },
-    { name = "matplotlib", specifier = ">=3.10.9" },
-    { name = "plotly", specifier = ">=6.7.0" },
 ]
 
 [[package]]
@@ -664,7 +705,7 @@ name = "cryptography"
 version = "48.0.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "cffi", marker = "platform_python_implementation != 'PyPy'" },
+    { name = "cffi", marker = "platform_python_implementation != 'PyPy' and sys_platform != 'emscripten' and sys_platform != 'win32'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/9f/a9/db8f313fdcd85d767d4973515e1db101f9c71f95fced83233de224673757/cryptography-48.0.0.tar.gz", hash = "sha256:5c3932f4436d1cccb036cb0eaef46e6e2db91035166f1ad6505c3c9d5a635920", size = 832984, upload-time = "2026-05-04T22:59:38.133Z" }
 wheels = [
@@ -2554,8 +2595,8 @@ name = "secretstorage"
 version = "3.5.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "cryptography" },
-    { name = "jeepney" },
+    { name = "cryptography", marker = "sys_platform != 'emscripten' and sys_platform != 'win32'" },
+    { name = "jeepney", marker = "sys_platform != 'emscripten' and sys_platform != 'win32'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/1c/03/e834bcd866f2f8a49a85eaff47340affa3bfa391ee9912a952a1faa68c7b/secretstorage-3.5.0.tar.gz", hash = "sha256:f04b8e4689cbce351744d5537bf6b1329c6fc68f91fa666f60a380edddcd11be", size = 19884, upload-time = "2025-11-23T19:02:53.191Z" }
 wheels = [
