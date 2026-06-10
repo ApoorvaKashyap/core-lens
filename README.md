@@ -36,11 +36,13 @@ aoi.plot(overlay=static_result)
 ## Documentation
 
 Full documentation is available in the `docs/` directory. It includes:
+
 - **Core Concepts**: Understanding AoI, Views, and Results.
 - **Example Queries**: Time filtering, aggregations, spatial joins, and statistics.
 - **Plugin System**: How to add custom entities.
 
 To build the docs locally:
+
 ```bash
 cd docs
 make html

@@ -28,7 +28,11 @@ build-backend = "hatchling.build"
 [tool.hatch.version]
 source = "vcs"
 
-[tool.hatch.buuild.hooks.vcs]
+[tool.hatch.version.raw-options]
+version_scheme = "guess-next-dev"
+local_scheme = "no-local-version"
+
+[tool.hatch.build.hooks.vcs]
 version-file = "src/core_lens/_version.py"
 
 [tool.pyright]

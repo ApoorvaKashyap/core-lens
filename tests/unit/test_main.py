@@ -1,7 +1,8 @@
 def test_version() -> None:
     from core_lens import __version__
 
-    assert __version__ == "0.1.0"
+    assert isinstance(__version__, str)
+    assert __version__.startswith("0.1")
 
 
 def test_hello() -> None:
