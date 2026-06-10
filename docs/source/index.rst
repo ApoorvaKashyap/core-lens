@@ -3,8 +3,8 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-CoRE Lens Library
-=======================
+CoRELens Library
+================
 
 
 A Python library for querying, analysing, and visualising geospatial Earth science data built on CoreStack.
@@ -15,4 +15,11 @@ Provides a unified interface over microwatershed hydrology, administrative bound
    :maxdepth: 2
    :caption: Contents:
 
+   intro
+   quickstart
+   concepts
+   queries
+   stats
+   plots
+   plugins
    autoapi/index

@@ -27,6 +27,7 @@ exclude_patterns = []
 # AutoAPI configuration
 autoapi_type = "python"
 autoapi_dirs = ["../../src/core_lens"]
+autoapi_ignore = ["*__main__.py", "*_version.py"]
 
 # Optional but recommended
 autoapi_keep_files = True
