@@ -15,7 +15,7 @@ classifiers = [
     "Topic :: Scientific/Engineering :: GIS",
     "Topic :: Scientific/Engineering :: Hydrology",
 ]
-dependencies = []
+dependencies = ["core-lens[core]", "core-lens[spatial]"]
 
 [project.urls]
 Homepage = "https://github.com/ApoorvaKashyap/core-lens"
