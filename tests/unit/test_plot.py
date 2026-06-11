@@ -118,6 +118,19 @@ def test_timeseries_missing_xy(dummy_result: Result) -> None:
         dummy_result.plot.timeseries()
 
 
+def test_timeseries_multiple_y(dummy_result: Result) -> None:
+    """Test timeseries with multiple y columns creates a dropdown menu."""
+    df = dummy_result.data.with_columns(
+        [pl.Series("year", [2020, 2021]), pl.Series("value2", [5.0, 10.0])]
+    )
+    res = dummy_result._replace(data=df)
+    fig = res.plot.timeseries(x="year", y=["value", "value2"])
+    assert fig is not None
+    # Verify dropdown menu exists
+    assert hasattr(fig.layout, "updatemenus")
+    assert len(fig.layout.updatemenus) > 0
+
+
 def test_scatter_basic(dummy_result: Result) -> None:
     """Test scatter creates a plotly figure."""
     df = dummy_result.data.with_columns(pl.Series("other_val", [1.1, 2.2]))
@@ -135,6 +148,18 @@ def test_scatter_missing_xy(dummy_result: Result) -> None:
         dummy_result.plot.scatter()
 
 
+def test_scatter_multiple_y(dummy_result: Result) -> None:
+    """Test scatter with multiple y columns creates a dropdown menu."""
+    df = dummy_result.data.with_columns(
+        [pl.Series("other_val", [1.1, 2.2]), pl.Series("third_val", [3.3, 4.4])]
+    )
+    res = dummy_result._replace(data=df)
+    fig = res.plot.scatter(x="value", y=["other_val", "third_val"])
+    assert fig is not None
+    assert hasattr(fig.layout, "updatemenus")
+    assert len(fig.layout.updatemenus) > 0
+
+
 def test_distribution_basic(dummy_result: Result) -> None:
     """Test distribution creates a plotly figure."""
     fig = dummy_result.plot.distribution(x="value")
@@ -148,12 +173,32 @@ def test_distribution_missing_x(dummy_result: Result) -> None:
     assert fig is not None
 
 
+def test_distribution_multiple_x(dummy_result: Result) -> None:
+    """Test distribution with multiple x columns creates a dropdown menu."""
+    df = dummy_result.data.with_columns(pl.Series("other_val", [1.1, 2.2]))
+    res = dummy_result._replace(data=df)
+    fig = res.plot.distribution(x=["value", "other_val"])
+    assert fig is not None
+    assert hasattr(fig.layout, "updatemenus")
+    assert len(fig.layout.updatemenus) > 0
+
+
 def test_correlation_basic(dummy_result: Result) -> None:
     """Test correlation creates a plotly figure."""
     df = dummy_result.data.with_columns(pl.Series("other_val", [1.1, 2.2]))
     res = dummy_result._replace(data=df)
 
     fig = res.plot.correlation()
+    assert fig is not None
+
+
+def test_correlation_multiple_columns(dummy_result: Result) -> None:
+    """Test correlation creates a figure with multiple specified columns."""
+    df = dummy_result.data.with_columns(
+        [pl.Series("other_val", [1.1, 2.2]), pl.Series("third_val", [3.3, 4.4])]
+    )
+    res = dummy_result._replace(data=df)
+    fig = res.plot.correlation(["value", "other_val", "third_val"])
     assert fig is not None
 
 
@@ -186,3 +231,23 @@ def test_matrix_basic(dummy_result: Result) -> None:
 
     fig = res.plot.matrix()
     assert fig is not None
+
+
+def test_choropleth_geometry_collection(dummy_result: Result) -> None:
+    """Test choropleth handles GeometryCollection."""
+    import shapely.geometry as sgeom
+
+    poly = sgeom.Polygon([(0, 0), (1, 0), (1, 1), (0, 1), (0, 0)])
+    gc = sgeom.GeometryCollection([poly, sgeom.Point(0.5, 0.5)])
+    df = dummy_result.data.with_columns(pl.Series("geometry", [gc.wkb, gc.wkb]))
+    res = dummy_result._replace(data=df, has_geometry=True)
+    m = res.plot.choropleth("value")
+    assert m is not None
+
+
+def test_choropleth_subplot_on(dummy_result: Result) -> None:
+    """Test choropleth handles subplot_on argument."""
+    df = dummy_result.data.with_columns(pl.Series("year", [2020, 2021]))
+    res = dummy_result._replace(data=df)
+    m = res.plot.choropleth("value", subplot_on="year")
+    assert m is not None

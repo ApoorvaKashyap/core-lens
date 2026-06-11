@@ -296,6 +296,18 @@ class TestAnomalyCrossSectional:
         assert meta["method"] == "zscore"
         assert "baseline_mean" in meta
 
+    def test_iqr_metadata(self, entity_cls: Any) -> None:
+        r = self._big_cs(entity_cls())
+        meta = r.stats.anomaly("ndvi", mode="cross_sectional", method="iqr").metadata
+        assert "baseline_mean" in meta
+
+    def test_percentile_metadata(self, entity_cls: Any) -> None:
+        r = self._big_cs(entity_cls())
+        meta = r.stats.anomaly(
+            "ndvi", mode="cross_sectional", method="percentile"
+        ).metadata
+        assert "baseline_mean" in meta
+
     def test_iqr_accepted(self, entity_cls: Any) -> None:
         r = self._big_cs(entity_cls())
         out = r.stats.anomaly("ndvi", mode="cross_sectional", method="iqr")
@@ -376,6 +388,13 @@ class TestAnomalyTimeseries:
         )
         assert out.metadata["method"] == "cusum"
 
+    def test_stl_accepted(self, entity_cls: Any) -> None:
+        r = _make(entity_cls(), self._ts_df())
+        out = r.stats.anomaly(
+            "ndvi", mode="timeseries", method="stl", baseline=(2010, 2017)
+        )
+        assert out.metadata["method"] == "stl"
+
     def test_timeseries_metadata(self, entity_cls: Any) -> None:
         r = _make(entity_cls(), self._ts_df())
         meta = r.stats.anomaly(
@@ -432,6 +451,43 @@ class TestSimilarity:
         ).df()
         for col in ("mws_id", "similarity_score", "rank"):
             assert col in df.columns
+
+    def test_option3_columns(self, entity_cls: Any) -> None:
+        df = pl.DataFrame({"mws_id": ["MW_1", "MW_2", "MW_3"], "ndvi": [0.5, 0.6, 0.7]})
+        r = _make(entity_cls(), df)
+        out = r.stats.similarity(
+            target="MW_1", columns={"ndvi": None, "state": ("static", None)}
+        )
+        assert isinstance(out, Result)
+        assert "state" not in out.df().columns  # Only score and rank are returned
+        assert "similarity_score" in out.df().columns
+
+    def test_option3_exhaustive(self, entity_cls_full: Any) -> None:
+        df = pl.DataFrame(
+            {"mws_id": ["13_001", "13_002", "13_003"], "ndvi": [0.5, 0.6, 0.7]}
+        )
+        r = _make(entity_cls_full(), df)
+
+        # 1. Valid resolution + filter_dict
+        out = r.stats.similarity(
+            target="13_001",
+            columns={"ndvi": None, "ndvi_mean": ("annual", {"year": 2021})},
+        )
+        assert "similarity_score" in out.df().columns
+
+        # 2. Invalid spec tuple
+        with pytest.raises(
+            ValueError, match="must be None or a \\(resolution, filter_dict\\)"
+        ):
+            r.stats.similarity(target="13_001", columns={"state": "static"})
+
+        # 3. Invalid resolution
+        with pytest.raises(ValueError, match="Unknown resolution"):
+            r.stats.similarity(target="13_001", columns={"state": ("bad", None)})
+
+        # 4. Missing column in schema (silently skipped, leading to no valid columns)
+        with pytest.raises(ValueError, match="None of the specified columns"):
+            r.stats.similarity(target="13_001", columns={"ghost_col": ("static", None)})
 
     def test_top_n_respected(self, entity_cls: Any) -> None:
         r = _make(entity_cls(), self._sim_df(15))

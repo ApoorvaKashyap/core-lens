@@ -262,7 +262,7 @@ def execute_spatial_join(
     other_key_cols = other_entity.key_cols
 
     # Read other entity: key + geometry + agg columns.
-    agg_col_names = [c for c in agg if c != "count"]
+    agg_col_names = [c for c in agg if c not in ("count", "area")]
     other_cols = list(dict.fromkeys(other_key_cols + [other_geom_col] + agg_col_names))
     other_df = pl.read_parquet(other_static, columns=other_cols)
 
