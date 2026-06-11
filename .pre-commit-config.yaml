@@ -37,3 +37,13 @@ repos:
         language: system
         pass_filenames: false
         always_run: false
+  - repo: local
+    hooks:
+      - id: type-check
+        name: type-check
+        stages: [pre-commit]
+        types: [shell]
+        entry: hooks/mypy.sh
+        language: system
+        pass_filenames: false
+        always_run: true
