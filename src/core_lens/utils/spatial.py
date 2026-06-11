@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import pathlib
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import polars as pl
 import shapely.wkb as swkb
@@ -131,12 +131,13 @@ def exact_spatial_filter(
     geometry_col: str,
     geometry_type: str,
     aoi_geometry: "shapely.Geometry",
+    relationship: str = "centroid",
+    threshold: float = 0.5,
 ) -> pl.DataFrame:
-    """Refine a bbox candidate set to rows that exactly intersect ``aoi_geometry``.
+    """Refine a bbox candidate set to rows that match ``aoi_geometry``.
 
     Reads only the key and geometry columns for the candidate rows, decodes
-    each geometry, and tests for intersection with ``aoi_geometry`` using a
-    Shapely STRtree for efficiency.
+    each geometry, and tests for the requested spatial relationship.
 
     Args:
         candidates: The DataFrame from :func:`bbox_intersects_geometry` —
@@ -145,13 +146,31 @@ def exact_spatial_filter(
         key_cols: Column name(s) that form the entity's unique key.
         geometry_col: Name of the geometry column in the static file.
         geometry_type: One of ``"wkb"`` or ``"wkt"``.
-        aoi_geometry: The Area of Interest geometry to test intersection with.
+        aoi_geometry: The Area of Interest geometry to test against.
+        relationship: Spatial relationship mode.
+
+            * ``"centroid"`` (default) — entity centroid must lie **within**
+              ``aoi_geometry``.
+            * ``"area"`` — fraction of the entity's area covered by the
+              intersection must exceed ``threshold``.
+
+        threshold: Minimum intersection-to-entity area ratio used in
+            ``"area"`` mode.  Ignored in ``"centroid"`` mode.  Default 0.5.
 
     Returns:
         A ``pl.DataFrame`` containing only the key columns for entities that
-        exactly intersect ``aoi_geometry``.
+        satisfy the spatial relationship.
+
+    Raises:
+        ValueError: If ``relationship`` is not one of the valid options.
     """
     import shapely
+
+    if relationship not in ("centroid", "area"):
+        raise ValueError(
+            f"exact_spatial_filter: Unknown relationship={relationship!r}. "
+            "Valid options: 'centroid', 'area'."
+        )
 
     if candidates.is_empty():
         return candidates.select(key_cols)
@@ -174,9 +193,151 @@ def exact_spatial_filter(
     else:
         geoms = [swkt.loads(v) for v in geom_series]
 
-    # STRtree for efficient exact intersection.
-    tree = shapely.STRtree(geoms)
-    hit_indices = tree.query(aoi_geometry, predicate="intersects").tolist()
+    if relationship == "centroid":
+        # Centroid mode: entity centroid must lie within the AoI geometry.
+        # STRtree.query(aoi_geometry, predicate="contains") returns i where
+        # aoi_geometry.contains(centroid[i]) — i.e. centroid inside the AoI.
+        test_geoms = [g.centroid for g in geoms]
+        tree = shapely.STRtree(test_geoms)
+        hit_indices = tree.query(aoi_geometry, predicate="contains").tolist()
+
+    else:  # area mode
+        # Area mode: intersection area / entity area > threshold.
+        tree = shapely.STRtree(geoms)
+        # Candidate indices whose envelope intersects aoi_geometry.
+        intersect_idx = tree.query(aoi_geometry, predicate="intersects").tolist()
+        hit_indices = []
+        for i in intersect_idx:
+            entity_geom = geoms[i]
+            entity_area = entity_geom.area
+            if entity_area == 0.0:
+                continue
+            inter_area = entity_geom.intersection(aoi_geometry).area
+            if inter_area / entity_area >= threshold:
+                hit_indices.append(i)
 
     matched: pl.DataFrame = full_df[hit_indices].select(key_cols)
     return matched
+
+
+def execute_spatial_join(
+    primary_df: pl.DataFrame,
+    primary_key_cols: list[str],
+    primary_geom_col: str,
+    primary_geom_type: str,
+    other_entity: Any,
+    agg: dict[str, str],
+    other_entity_name: str,
+) -> pl.DataFrame:
+    """Materialise a cross-entity spatial join and return enriched DataFrame.
+
+    For each entity in ``primary_df``, finds the overlapping entities in
+    ``other_entity`` and aggregates the requested columns.  Result columns are
+    named ``{other_entity_name}_{column_name}`` to avoid clashes.
+
+    Args:
+        primary_df: The primary entity DataFrame (must contain
+            ``primary_geom_col`` unless geometry is in a separate column).
+        primary_key_cols: Key column(s) of the primary entity.
+        primary_geom_col: Name of the WKB geometry column in ``primary_df``.
+        primary_geom_type: Geometry encoding — ``"wkb"`` or ``"wkt"``.
+        other_entity: A :class:`~core_lens.base.entity.BaseEntity` instance
+            to join against.
+        agg: Mapping ``{column: aggregation}`` — which columns from
+            ``other_entity`` to bring in and how to aggregate them.  Valid
+            aggregations: ``"count"``, ``"mean"``, ``"sum"``, ``"min"``,
+            ``"max"``, ``"area"``.
+        other_entity_name: Used to prefix result column names.
+
+    Returns:
+        ``primary_df`` with additional columns
+        ``{other_entity_name}_{col}`` appended for each ``agg`` entry.
+    """
+    import shapely
+
+    other_profile = other_entity.schema_profile
+    other_static = other_entity._resolve(other_entity.static_path)
+    other_geom_col = other_profile.geometry_col
+    other_geom_type = other_profile.geometry_type
+    other_key_cols = other_entity.key_cols
+
+    # Read other entity: key + geometry + agg columns.
+    agg_col_names = [c for c in agg if c != "count"]
+    other_cols = list(dict.fromkeys(other_key_cols + [other_geom_col] + agg_col_names))
+    other_df = pl.read_parquet(other_static, columns=other_cols)
+
+    # Decode other geometries.
+    other_geom_series = other_df[other_geom_col].to_list()
+    if other_geom_type == "wkb":
+        other_geoms = [swkb.loads(v) for v in other_geom_series]
+    else:
+        other_geoms = [swkt.loads(v) for v in other_geom_series]
+
+    # Build STRtree from other entity geometries.
+    other_tree = shapely.STRtree(other_geoms)
+    other_df_np = other_df.to_pandas()  # for row-level indexing during agg
+
+    # Decode primary geometries.
+    if primary_geom_col not in primary_df.columns:
+        raise ValueError(
+            f"execute_spatial_join: geometry column {primary_geom_col!r} not found "
+            "in primary DataFrame.  Materialise static resolution or call "
+            "with_geometry() first."
+        )
+
+    primary_geom_series = primary_df[primary_geom_col].to_list()
+    if primary_geom_type == "wkb":
+        primary_geoms = [swkb.loads(v) for v in primary_geom_series]
+    else:
+        primary_geoms = [swkt.loads(v) for v in primary_geom_series]
+
+    # For each primary entity, find overlapping other entities and aggregate.
+    result_rows: list[dict[str, Any]] = []
+    primary_keys = primary_df.select(primary_key_cols).to_dicts()
+
+    for i, (pgeom, pkey) in enumerate(zip(primary_geoms, primary_keys)):
+        hit_idx = other_tree.query(pgeom, predicate="intersects").tolist()
+        row: dict[str, Any] = dict(pkey)
+
+        if not hit_idx:
+            for col, fn in agg.items():
+                out_col = f"{other_entity_name}_{col}"
+                row[out_col] = None
+            result_rows.append(row)
+            continue
+
+        matched_other = other_df_np.iloc[hit_idx]
+
+        for col, fn in agg.items():
+            out_col = f"{other_entity_name}_{col}"
+            if fn == "count":
+                row[out_col] = len(hit_idx)
+            elif fn == "area":
+                # Sum of intersection areas (geographic, approx).
+                total = sum(pgeom.intersection(other_geoms[j]).area for j in hit_idx)
+                row[out_col] = total
+            elif col in matched_other.columns:
+                vals = matched_other[col].dropna().values
+                if fn == "mean":
+                    row[out_col] = float(vals.mean()) if len(vals) else None
+                elif fn == "sum":
+                    row[out_col] = float(vals.sum()) if len(vals) else None
+                elif fn == "min":
+                    row[out_col] = float(vals.min()) if len(vals) else None
+                elif fn == "max":
+                    row[out_col] = float(vals.max()) if len(vals) else None
+                else:
+                    row[out_col] = None
+            else:
+                row[out_col] = None
+        result_rows.append(row)
+
+    join_df = pl.from_dicts(result_rows)
+    return primary_df.join(
+        join_df.select(
+            [c for c in join_df.columns if c not in primary_df.columns]
+            + primary_key_cols
+        ),
+        on=primary_key_cols,
+        how="left",
+    )

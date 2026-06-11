@@ -509,6 +509,7 @@ class StatsNamespace:
                     "mode": "cross_sectional",
                     "method": "iqr",
                     "baseline": baseline,
+                    "baseline_mean": float(np.nanmean(ref_vals)),
                     "q1": q1,
                     "q3": q3,
                     "iqr": iqr,
@@ -525,6 +526,7 @@ class StatsNamespace:
                     "mode": "cross_sectional",
                     "method": "percentile",
                     "baseline": baseline,
+                    "baseline_mean": float(np.nanmean(ref_vals)),
                     "lower_pct": lo,
                     "upper_pct": hi,
                 }
@@ -537,6 +539,7 @@ class StatsNamespace:
                     "mode": "cross_sectional",
                     "method": "threshold",
                     "baseline": baseline,
+                    "baseline_mean": mean,
                     "threshold": threshold,
                 }
 
@@ -689,18 +692,27 @@ class StatsNamespace:
         Args:
             target: Key value of the reference entity.
             columns: Mapping ``{column_name: None | (resolution, filter_dict)}``.
-                Only columns present in ``result.data`` are used for distance;
-                the tuple values are stored in ``metadata`` only.
-            method: ``"euclidean"`` (default) | ``"manhattan"`` | ``"cosine"`` |
-                ``"mahalanobis"``.
+
+                * ``None`` — use the column directly from ``result.data``.
+                * ``(resolution, filter_dict)`` — fetch from the entity's file at
+                  the given resolution (``"static"``, ``"annual"``,
+                  ``"fortnightly"``).  Supported ``filter_dict`` keys:
+
+                  - ``"year": int | (int, int)`` — year equality or range.
+                  - ``"season": str`` — season label (``"kharif"`` etc.).
+                  - ``"agg": str`` — time-aggregation before joining
+                    (``"mean"`` default, ``"sum"``, ``"min"``, ``"max"``).
+
+            method: Distance metric. One of ``"euclidean"`` (default),
+                ``"manhattan"``, ``"cosine"``, ``"mahalanobis"``.
             top_n: Number of most-similar entities to return (default 10).
 
         Returns:
             Result with ``key_col | similarity_score | rank``.
 
         Raises:
-            ValueError: If ``method`` invalid, no columns found in data, or
-                ``target`` not present in key column.
+            ValueError: If ``method`` is invalid, no columns can be resolved,
+                or ``target`` is not found.
         """
         if method not in _VALID_SIMILARITY_METHODS:
             raise ValueError(
@@ -710,26 +722,121 @@ class StatsNamespace:
 
         df = self._r.data
         key = self._r.key_cols[0]
-        col_names = [c for c in columns if c in df.columns]
 
-        if not col_names:
+        # --- Build feature DataFrame ------------------------------------------
+        # Universe of entity keys from result.data.
+        feat = df.select([key])
+
+        for col_name, spec in columns.items():
+            if spec is None:
+                # Pull from result.data directly.
+                if col_name in df.columns:
+                    feat = feat.join(df.select([key, col_name]), on=key, how="left")
+                # else silently skip — not in data and no spec provided
+                continue
+
+            # spec = (resolution_str, filter_dict)
+            if not (isinstance(spec, tuple) and len(spec) == 2):
+                raise ValueError(
+                    f"StatsNamespace.similarity: Column spec for {col_name!r} must be "
+                    "None or a (resolution, filter_dict) tuple."
+                )
+
+            resolution_str, filter_dict = spec
+            filter_dict = dict(filter_dict) if filter_dict else {}
+
+            entity = self._r.entity
+            path: str | None
+            if resolution_str == "static":
+                path = entity.static_path
+            elif resolution_str == "annual":
+                path = entity.annual_path
+            elif resolution_str == "fortnightly":
+                path = entity.fortnightly_path
+            else:
+                raise ValueError(
+                    f"StatsNamespace.similarity: Unknown resolution {resolution_str!r} "
+                    "in column spec. Valid: 'static', 'annual', 'fortnightly'."
+                )
+
+            if path is None:
+                continue  # entity doesn't have this resolution
+
+            try:
+                abs_path = entity._resolve(path)
+            except FileNotFoundError:
+                continue
+
+            schema = pl.read_parquet_schema(abs_path)
+            if col_name not in schema:
+                continue  # column doesn't exist in this file
+
+            col_lf = pl.scan_parquet(abs_path)
+
+            # Apply year filter.
+            if "year" in filter_dict:
+                yr = filter_dict["year"]
+                profile = entity.schema_profile
+                yr_col: str | None = None
+                if resolution_str == "annual":
+                    yr_col = profile.annual_time_col
+                elif resolution_str == "fortnightly":
+                    yr_col = profile.fortnightly_time_col
+                # Fallback: look for a literal "year" integer column.
+                if yr_col is None and "year" in schema:
+                    yr_col = "year"
+                if yr_col is not None:
+                    if isinstance(yr, int):
+                        col_lf = col_lf.filter(pl.col(yr_col) == yr)
+                    else:
+                        col_lf = col_lf.filter(pl.col(yr_col).is_between(yr[0], yr[1]))
+
+            # Apply season filter.
+            if "season" in filter_dict and "season" in schema:
+                col_lf = col_lf.filter(pl.col("season") == filter_dict["season"])
+
+            # Aggregate over time per entity.
+            agg_fn = filter_dict.get("agg", "mean")
+            if agg_fn == "sum":
+                agg_expr = pl.col(col_name).sum().alias(col_name)
+            elif agg_fn == "min":
+                agg_expr = pl.col(col_name).min().alias(col_name)
+            elif agg_fn == "max":
+                agg_expr = pl.col(col_name).max().alias(col_name)
+            else:  # mean (default)
+                agg_expr = pl.col(col_name).mean().alias(col_name)
+
+            if resolution_str == "static":
+                # Static: no grouping needed — one row per entity.
+                fetched = col_lf.select([key, col_name]).collect()
+            else:
+                fetched = col_lf.group_by(key).agg(agg_expr).collect()
+
+            feat = feat.join(fetched.select([key, col_name]), on=key, how="left")
+
+        # ------------------------------------------------------------------
+        feature_cols = [c for c in feat.columns if c != key]
+
+        if not feature_cols:
             raise ValueError(
-                f"StatsNamespace.similarity: None of the specified columns {list(columns)} were found in the result data. "
-                f"Available columns: {df.columns}."
+                f"StatsNamespace.similarity: None of the specified columns "
+                f"{list(columns)} could be resolved. "
+                f"Available columns in result: {df.columns}."
             )
 
-        feat = df.select([key] + col_names).drop_nulls()
+        feat = feat.drop_nulls(subset=feature_cols)
         ids = feat[key].to_list()
 
         if target not in ids:
             raise ValueError(
-                f"StatsNamespace.similarity: Target entity {target!r} not found in {key} column."
+                f"StatsNamespace.similarity: Target entity {target!r} not found in "
+                f"{key} column after resolving columns and dropping null rows."
             )
 
-        mat = feat.select(col_names).to_numpy().astype(float)
+        mat = feat.select(feature_cols).to_numpy().astype(float)
         tidx = ids.index(target)
 
-        # z-score normalise before distance
+        # z-score normalise before computing distances.
         means = np.nanmean(mat, axis=0)
         stds = np.nanstd(mat, axis=0, ddof=1)
         stds[stds == 0] = 1.0
@@ -768,7 +875,7 @@ class StatsNamespace:
         metadata: dict[str, Any] = {
             "method": method,
             "target": target,
-            "columns": list(columns.keys()),
+            "columns": {k: v for k, v in columns.items()},
             "top_n": top_n,
         }
         return self._r._replace(data=data, has_geometry=False, metadata=metadata)

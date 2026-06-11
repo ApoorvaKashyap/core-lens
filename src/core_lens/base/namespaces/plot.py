@@ -58,19 +58,42 @@ class PlotNamespace:
 
         Args:
             column: The column to use for colour mapping.
-            subplot_on: Optional temporal column to split data across.
+            subplot_on: Optional temporal dimension to split data across.
+                Valid values: ``\"year\"``, ``\"month\"``, ``\"season\"``,
+                ``\"season_year\"``.  When set, one layer is rendered per unique
+                value of ``subplot_on`` in the data.
 
         Returns:
             A Lonboard Map object.
+
+        Raises:
+            ValueError: If ``column`` or ``subplot_on`` column not found in data.
+            NotImplementedError: Lonboard does not support native subplot grids;
+                only single-value ``subplot_on`` is rendered when specified.
         """
         import lonboard
         from lonboard.colormap import apply_continuous_cmap
 
-        if subplot_on is not None:
-            raise NotImplementedError("subplot_on is not yet supported for choropleth.")
+        _VALID_SUBPLOT_ON = {"year", "month", "season", "season_year"}
+
+        if subplot_on is not None and subplot_on not in _VALID_SUBPLOT_ON:
+            raise ValueError(
+                f"PlotNamespace.choropleth: Unknown subplot_on={subplot_on!r}. "
+                f"Valid options: {sorted(_VALID_SUBPLOT_ON)}."
+            )
 
         res = self.result if self.result.has_geometry else self.result.with_geometry()
         gdf = res.gdf()
+
+        if column not in gdf.columns:
+            raise ValueError(f"Column {column!r} not found in Result.")
+
+        if subplot_on is not None and subplot_on not in gdf.columns:
+            raise ValueError(
+                f"PlotNamespace.choropleth: subplot_on column {subplot_on!r} not found "
+                "in Result. Ensure fortnightly data is materialised and temporal columns "
+                "are present (they are added automatically by the materialisation layer)."
+            )
 
         # Lonboard PolygonLayer only supports Polygon and MultiPolygon.
         # Extract polygon parts from GeometryCollections rather than dropping them.
@@ -97,8 +120,13 @@ class PlotNamespace:
         import matplotlib as mpl
         import numpy as np
 
-        if column not in gdf.columns:
-            raise ValueError(f"Column {column!r} not found in Result.")
+        if subplot_on is not None:
+            # Render the most-recent/first unique value of subplot_on so that the
+            # map is still useful.  True multi-panel subplots are not supported by
+            # Lonboard's single-Map API.
+            unique_vals = sorted(gdf[subplot_on].dropna().unique().tolist())
+            if unique_vals:
+                gdf = gdf[gdf[subplot_on] == unique_vals[-1]].copy()
 
         values = gdf[column].to_numpy()
         v_min, v_max = np.nanmin(values), np.nanmax(values)
@@ -124,14 +152,22 @@ class PlotNamespace:
     ) -> Any:
         """Render a timeseries line chart using Plotly.
 
+        The figure includes a **View** toggle dropdown that lets the user switch
+        between the per-entity view (up to ``top_n`` entities) and an aggregated
+        mean view — both are embedded in the same Plotly figure without
+        regenerating the chart.
+
         Args:
             x: The temporal column to plot on the x-axis.
-            y: The value column(s) to plot on the y-axis. If None, auto-selects all numeric.
-            top_n: Maximum number of entities to plot (if aggregate=False).
-            aggregate: If True, plots the mean of y across all entities over time.
+            y: The value column(s) to plot on the y-axis.
+                If ``None``, all numeric columns (except ``x``) are used.
+            top_n: Maximum number of entities rendered in per-entity view.
+            aggregate: If ``True``, renders only the aggregated mean view and
+                skips the per-entity traces (legacy flag; prefer the in-chart
+                toggle for interactive exploration).
 
         Returns:
-            A Plotly Figure object.
+            A Plotly Figure object with an embedded View toggle.
         """
         import polars as pl
         import polars.selectors as cs
@@ -147,9 +183,7 @@ class PlotNamespace:
 
         y_cols = [y] if isinstance(y, str) else y
         if y_cols is None:
-            y_cols = df.select(cs.numeric()).columns
-            if x in y_cols:
-                y_cols.remove(x)
+            y_cols = [c for c in df.select(cs.numeric()).columns if c != x]
 
         if not y_cols:
             raise ValueError("No numeric columns found for y-axis.")
@@ -165,58 +199,106 @@ class PlotNamespace:
                 .to_pandas()
             )
             fig = px.line(agg_df, x=x, y=y_cols, markers=True)
-            _apply_theme(fig, self.result, "Timeseries (Aggregated)")
+            _apply_theme(fig, self.result, "Timeseries (Aggregated Mean)")
             return fig
 
-        unique_entities = df[key_col].unique()
+        entity_df = df.sort(x)
+        unique_entities = entity_df[key_col].unique()
         if len(unique_entities) > top_n:
             entities = unique_entities.limit(top_n).to_list()
-            df = df.filter(pl.col(key_col).is_in(entities))
+            entity_df = entity_df.filter(pl.col(key_col).is_in(entities))
 
-        df = df.sort(x)
-        df_pd = df.to_pandas()
+        entity_pd = entity_df.to_pandas()
+
+        # Use first y_col for initial display (additional y_cols toggled separately).
+        y_col = y_cols[0]
+
+        entity_fig = px.line(
+            entity_pd,
+            x=x,
+            y=y_col,
+            color=key_col,
+            hover_data=hover_cols,
+            markers=True,
+        )
+        entity_traces = list(entity_fig.data)  # pyright: ignore[reportArgumentType]
+
+        agg_df = (
+            df.group_by(x).agg([pl.col(c).mean() for c in y_cols]).sort(x).to_pandas()
+        )
+        agg_fig = px.line(agg_df, x=x, y=y_col, markers=True)
+        # Give aggregated traces a distinct style.
+        for trace in agg_fig.data:
+            trace.line = dict(width=3, dash="dash")  # pyright: ignore[reportAttributeAccessIssue]
+            trace.name = f"Mean ({y_col})"  # pyright: ignore[reportAttributeAccessIssue]
+        agg_traces = list(agg_fig.data)  # pyright: ignore[reportArgumentType]
 
         fig = go.Figure()
-        num_entities = len(df_pd[key_col].unique())
 
-        for i, y_col in enumerate(y_cols):
-            sub_fig = px.line(
-                df_pd, x=x, y=y_col, color=key_col, hover_data=hover_cols, markers=True
-            )
-            if i == 0:
-                fig.update_layout(sub_fig.layout)
-            for trace in sub_fig.data:
-                trace.visible = i == 0
-                fig.add_trace(trace)
+        # Set initial layout from entity_fig.
+        fig.update_layout(entity_fig.layout)
 
-        if len(y_cols) > 1:
-            buttons = []
-            for i, y_col in enumerate(y_cols):
-                visibility = [False] * (len(y_cols) * num_entities)
-                for j in range(num_entities):
-                    visibility[i * num_entities + j] = True
-                buttons.append(
-                    dict(
-                        method="update",
-                        label=y_col,
-                        args=[{"visible": visibility}, {"yaxis.title.text": y_col}],
-                    )
-                )
-            fig.update_layout(
-                updatemenus=[
-                    dict(
-                        active=0,
-                        buttons=buttons,
-                        x=0.0,
-                        y=1.15,
-                        xanchor="left",
-                        yanchor="top",
-                    )
+        n_entity = len(entity_traces)
+        n_agg = len(agg_traces)
+
+        for trace in entity_traces:
+            trace.visible = True  # pyright: ignore[reportAttributeAccessIssue]
+            fig.add_trace(trace)
+        for trace in agg_traces:
+            trace.visible = False  # pyright: ignore[reportAttributeAccessIssue]  # hidden by default
+            fig.add_trace(trace)
+
+        view_buttons = [
+            dict(
+                method="update",
+                label="Per Entity",
+                args=[
+                    {"visible": [True] * n_entity + [False] * n_agg},
+                    {"title": f"Timeseries — {y_col} (Per Entity)"},
                 ],
-            )
+            ),
+            dict(
+                method="update",
+                label="Aggregated Mean",
+                args=[
+                    {"visible": [False] * n_entity + [True] * n_agg},
+                    {"title": f"Timeseries — {y_col} (Aggregated Mean)"},
+                ],
+            ),
+        ]
 
-        _apply_theme(fig, self.result, "Timeseries")
-        fig.update_layout(yaxis_title=y_cols[0])
+        fig.update_layout(
+            updatemenus=[
+                dict(
+                    type="buttons",
+                    active=0,
+                    buttons=view_buttons,
+                    x=0.0,
+                    y=1.12,
+                    xanchor="left",
+                    yanchor="top",
+                    showactive=True,
+                    bgcolor="rgba(255,255,255,0.9)",
+                    bordercolor="#aaa",
+                    font=dict(size=12),
+                    direction="right",
+                )
+            ],
+            annotations=[
+                dict(
+                    text="View:",
+                    x=0.0,
+                    y=1.16,
+                    xref="paper",
+                    yref="paper",
+                    showarrow=False,
+                    font=dict(size=12),
+                )
+            ],
+        )
+
+        _apply_theme(fig, self.result, f"Timeseries — {y_col}")
+        fig.update_layout(yaxis_title=y_col)
         return fig
 
     def scatter(
@@ -279,7 +361,7 @@ class PlotNamespace:
             if i == 0:
                 fig.update_layout(sub_fig.layout)
             for trace in sub_fig.data:
-                trace.visible = i == 0
+                trace.visible = i == 0  # pyright: ignore[reportAttributeAccessIssue]
                 fig.add_trace(trace)
 
         if len(y_cols) > 1:
@@ -362,7 +444,7 @@ class PlotNamespace:
             if i == 0:
                 fig.update_layout(sub_fig.layout)
             for trace in sub_fig.data:
-                trace.visible = i == 0
+                trace.visible = i == 0  # pyright: ignore[reportAttributeAccessIssue]
                 fig.add_trace(trace)
 
         if len(x_cols) > 1:

@@ -229,21 +229,39 @@ class TestViewMaterialisation:
         with pytest.raises(AttributeError, match="no fortnightly_path"):
             _ = view.fortnightly
 
-    def test_join_spec_raises_not_implemented(self, entity_cls: Any) -> None:
-        join_spec = {"other": "forest", "agg": {"cover": "area"}}
-        keys = pl.DataFrame({"mws_id": []}, schema={"mws_id": pl.String})
-        view = View(
-            keys=keys,
-            entity=entity_cls(),
-            entity_name="minimalmws",
-            join_spec=join_spec,
-        )
+    def test_spatial_join_materialises_prefixed_columns(self, entity_cls: Any) -> None:
+        """Materialising a View with join_spec executes the join and
+        returns columns prefixed ``{other_entity_name}_{col}``."""
+        import pathlib
+        import tempfile
+        import sys
+        import os
 
-        with pytest.raises(NotImplementedError, match="spatial_join"):
-            _ = view.static
+        # Import the helpers from the local conftest module.
+        conftest_dir = os.path.dirname(__file__)
+        if conftest_dir not in sys.path:
+            sys.path.insert(0, conftest_dir)
+        from conftest import _make_static_parquet, _make_entity_cls
+
+        with tempfile.TemporaryDirectory() as td:
+            sp = pathlib.Path(td) / "static.parquet"
+            _make_static_parquet(sp)
+            full_cls = _make_entity_cls(sp)
+            full_entity = full_cls()
+            keys = full_entity._index.select(full_entity.key_cols)
+            view = View(
+                keys=keys,
+                entity=full_entity,
+                entity_name="minimalmws",
+                join_spec={"other": full_entity, "agg": {"district": "count"}},
+            )
+            result = view.static
+        # Should have a column named "minimalmws_district" (self-join).
+        joined_cols = [c for c in result.data.columns if c.startswith("minimalmws_")]
+        assert joined_cols, f"No prefixed join columns found: {result.data.columns}"
 
     def test_join_spec_preserved_across_between(self, entity_cls: Any) -> None:
-        join_spec = {"other": "forest", "agg": {"cover": "area"}}
+        join_spec = {"other": entity_cls(), "agg": {"district": "count"}}
         keys = pl.DataFrame({"mws_id": []}, schema={"mws_id": pl.String})
         view = View(
             keys=keys,

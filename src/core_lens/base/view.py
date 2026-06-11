@@ -111,15 +111,19 @@ class View:
         self,
         geometry: "shapely.Geometry | None" = None,
         bbox: tuple[float, float, float, float] | None = None,
+        relationship: str = "centroid",
+        threshold: float = 0.5,
     ) -> "View":
         """Return a new View further filtered by geometry.
 
         Uses the in-memory bbox index for a fast rectangular pre-filter, then
-        refines with a Shapely STRtree exact-intersection check.
+        refines with a Shapely STRtree exact-relationship check.
 
         Args:
             geometry: A Shapely geometry representing the spatial extent.
             bbox: Bounding box as ``(minx, miny, maxx, maxy)`` in WGS-84.
+            relationship: ``"centroid"`` (default) or ``"area"`` mode.
+            threshold: Area coverage threshold for ``"area"`` mode.  Default 0.5.
 
         Returns:
             A new lazy :class:`View` scoped to the given spatial extent.
@@ -153,6 +157,8 @@ class View:
             geometry_col=profile.geometry_col,
             geometry_type=profile.geometry_type,
             aoi_geometry=geometry,
+            relationship=relationship,
+            threshold=threshold,
         )
 
         return View(
@@ -324,13 +330,6 @@ class View:
     def _materialise(self, resolution: Resolution) -> "Result":
         from core_lens.base.result import Result
 
-        if self.join_spec is not None:
-            raise NotImplementedError(
-                "View._materialise: spatial_join materialisation is not yet implemented. "
-                "The join_spec is recorded but cross-entity join execution "
-                "will be added in a subsequent release."
-            )
-
         profile = self.entity.schema_profile
 
         path: str
@@ -391,6 +390,36 @@ class View:
 
             season_cfg = self._season_config or SeasonConfig()
             data = add_temporal_columns(data, profile.fortnightly_time_col, season_cfg)
+
+        if self.join_spec is not None:
+            other = self.join_spec["other"]
+            agg = self.join_spec["agg"]
+
+            from core_lens.base.entity import _entity_name as _ename
+
+            other_entity_name = _ename(type(other))
+
+            # Ensure geometry is present in data for the join.
+            # For non-static resolutions, load geometry from static file.
+            geom_col = profile.geometry_col
+            if geom_col not in data.columns:
+                geom_df = pl.read_parquet(
+                    self.entity._resolve(self.entity.static_path),
+                    columns=self.entity.key_cols + [geom_col],
+                )
+                data = data.join(geom_df, on=self.entity.key_cols, how="left")
+
+            from core_lens.utils.spatial import execute_spatial_join
+
+            data = execute_spatial_join(
+                primary_df=data,
+                primary_key_cols=self.entity.key_cols,
+                primary_geom_col=geom_col,
+                primary_geom_type=profile.geometry_type,
+                other_entity=other,
+                agg=agg,
+                other_entity_name=other_entity_name,
+            )
 
         return Result(
             data=data,

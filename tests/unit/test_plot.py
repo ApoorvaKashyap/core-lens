@@ -42,6 +42,8 @@ class DummyEntity(BaseEntity):
         self,
         geometry: Any | None = None,
         bbox: tuple[float, float, float, float] | None = None,
+        relationship: str = "centroid",
+        threshold: float = 0.5,
     ) -> Any:
         raise NotImplementedError
 
