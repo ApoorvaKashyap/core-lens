@@ -141,11 +141,9 @@ class Result:
         if self.has_geometry:
             return self
 
-        from core_lens.utils.spatial import resolve_path
-
         geom_col = self.entity.geometry_col
         key_cols = self.key_cols
-        static_path = resolve_path(self.entity.static_path)
+        static_path = self.entity._resolve(self.entity.static_path)
 
         geo_df = (
             pl.scan_parquet(static_path)
