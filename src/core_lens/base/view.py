@@ -223,10 +223,12 @@ class View:
         **Season mode** — pass ``season`` as a keyword argument.  ``year`` is
         optional and may be a single year or an inclusive ``(from, to)`` tuple::
 
-            view.between(season="kharif")
-            view.between(season="kharif", year=2020)
-            view.between(season="kharif", year=(2018, 2023))
-            view.between(season="current")
+            from core_lens.base.view import Season
+
+            view.between(season=Season.KHARIF)
+            view.between(season=Season.KHARIF, year=2020)
+            view.between(season=Season.KHARIF, year=(2018, 2023))
+            view.between(season=Season.CURRENT)
 
         The returned ``View`` carries the filter in :attr:`time_filter` but
         does not execute any I/O.  The filter is applied during materialisation
@@ -237,8 +239,7 @@ class View:
                 mode; must be ``None`` in season mode.
             end: End of the date range (ISO-8601).  Required in date range
                 mode; must be ``None`` in season mode.
-            season: Season name — one of ``"kharif"``, ``"rabi"``,
-                ``"zaid"``, or ``"current"``.  Activates season mode.
+            season: A :class:`~core_lens.base.view.Season` enum value. Activates season mode.
             year: Year or inclusive year range to restrict the season filter.
                 Only valid in season mode.  ``"current"`` season ignores this.
 

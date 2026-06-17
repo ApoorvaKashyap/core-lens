@@ -70,8 +70,7 @@ class PlotNamespace:
         Args:
             column: The column to use for colour mapping.
             subplot_on: Optional temporal dimension to split data across.
-                Valid values: ``\"year\"``, ``\"month\"``, ``\"season\"``,
-                ``\"season_year\"``.  When set, one layer is rendered per unique
+                A :class:`~core_lens.base.namespaces.plot.SubplotOn` enum value. When set, one layer is rendered per unique
                 value of ``subplot_on`` in the data.
 
         Returns:

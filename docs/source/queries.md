@@ -9,10 +9,12 @@ Filter time-series data using exact dates or agronomic seasons:
 annual_data = aoi.mws.between("2010-01-01", "2023-12-31").annual
 
 # Season-based filtering (defaults to Kharif, Rabi, Zaid)
-kharif_2020 = aoi.mws.between(season="kharif", year=2020).fortnightly
+from core_lens.base.view import Season
+
+kharif_2020 = aoi.mws.between(season=Season.KHARIF, year=2020).fortnightly
 
 # Current season based on today's date
-current = aoi.mws.between(season="current").fortnightly
+current = aoi.mws.between(season=Season.CURRENT).fortnightly
 ```
 
 ## Aggregations & Derived Columns
