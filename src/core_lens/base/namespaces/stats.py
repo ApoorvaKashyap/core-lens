@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from enum import Enum
 from itertools import combinations
 from typing import TYPE_CHECKING, Any, cast
 
@@ -11,12 +12,46 @@ import polars as pl
 if TYPE_CHECKING:
     from core_lens.base.result import Result
 
-_VALID_CORRELATE_METHODS = {"pearson", "spearman", "kendall"}
-_VALID_TEST_METHODS = {"t-test", "mann-whitney", "wilcoxon", "ks", "chi-square"}
-_VALID_CHANGE_METHODS = {"absolute", "percentage", "trend"}
-_VALID_ANOMALY_CROSS = {"zscore", "iqr", "percentile", "threshold"}
-_VALID_ANOMALY_TS = {"stl", "cusum", "mad"}
-_VALID_SIMILARITY_METHODS = {"euclidean", "cosine", "mahalanobis", "manhattan"}
+
+class CorrelateMethod(Enum):
+    PEARSON = "pearson"
+    SPEARMAN = "spearman"
+    KENDALL = "kendall"
+
+
+class TestMethod(Enum):
+    T_TEST = "t-test"
+    MANN_WHITNEY = "mann-whitney"
+    WILCOXON = "wilcoxon"
+    KS = "ks"
+    CHI_SQUARE = "chi-square"
+
+
+class ChangeMethod(Enum):
+    ABSOLUTE = "absolute"
+    PERCENTAGE = "percentage"
+    TREND = "trend"
+
+
+class AnomalyCrossMethod(Enum):
+    ZSCORE = "zscore"
+    IQR = "iqr"
+    PERCENTILE = "percentile"
+    THRESHOLD = "threshold"
+
+
+class AnomalyTsMethod(Enum):
+    STL = "stl"
+    CUSUM = "cusum"
+    MAD = "mad"
+
+
+class SimilarityMethod(Enum):
+    EUCLIDEAN = "euclidean"
+    COSINE = "cosine"
+    MAHALANOBIS = "mahalanobis"
+    MANHATTAN = "manhattan"
+
 
 _MIN_OBS: dict[str, int] = {
     "stl": 24,
@@ -111,7 +146,7 @@ class StatsNamespace:
     def correlate(
         self,
         columns: list[str],
-        method: str = "pearson",
+        method: CorrelateMethod | str = CorrelateMethod.PEARSON,
         across: str = "entity",
     ) -> "Result":
         """Pairwise correlations between columns.
@@ -133,9 +168,11 @@ class StatsNamespace:
             raise CorrelationError(
                 f"StatsNamespace.correlate: Requires at least 2 columns, got {len(columns)}."
             )
-        if method not in _VALID_CORRELATE_METHODS:
+        try:
+            method = CorrelateMethod(method).value
+        except ValueError:
             raise ValueError(
-                f"StatsNamespace.correlate: Unknown method {method!r}. Valid options: {sorted(_VALID_CORRELATE_METHODS)}."
+                f"StatsNamespace.correlate: Unknown method {method!r}. Valid options: {[e.value for e in CorrelateMethod]}."
             )
 
         import scipy.stats as sp  # type: ignore[import-untyped]
@@ -180,7 +217,7 @@ class StatsNamespace:
         groups: str | None = None,
         periods: list[tuple[int, int]] | None = None,
         against: float | None = None,
-        method: str | None = None,
+        method: TestMethod | str | None = None,
         significance_level: float = 0.05,
     ) -> "Result":
         """Hypothesis test in three modes: group-based, period-based, single-sample.
@@ -217,9 +254,11 @@ class StatsNamespace:
             else:
                 method = "mann-whitney"
 
-        if method not in _VALID_TEST_METHODS:
+        try:
+            method = TestMethod(method).value
+        except ValueError:
             raise ValueError(
-                f"StatsNamespace.test: Unknown method {method!r}. Valid options: {sorted(_VALID_TEST_METHODS)}."
+                f"StatsNamespace.test: Unknown method {method!r}. Valid options: {[e.value for e in TestMethod]}."
             )
 
         if against is not None:
@@ -328,7 +367,7 @@ class StatsNamespace:
         column: str,
         from_period: int,
         to_period: int,
-        method: str = "absolute",
+        method: ChangeMethod | str = ChangeMethod.ABSOLUTE,
     ) -> "Result":
         """Change between two time periods per entity.
 
@@ -346,9 +385,11 @@ class StatsNamespace:
         Raises:
             ValueError: If ``method`` is not recognised or year column absent.
         """
-        if method not in _VALID_CHANGE_METHODS:
+        try:
+            method = ChangeMethod(method).value
+        except ValueError:
             raise ValueError(
-                f"StatsNamespace.change: Unknown method {method!r}. Valid options: {sorted(_VALID_CHANGE_METHODS)}."
+                f"StatsNamespace.change: Unknown method {method!r}. Valid options: {[e.value for e in ChangeMethod]}."
             )
 
         import scipy.stats as sp
@@ -429,7 +470,7 @@ class StatsNamespace:
         self,
         column: str,
         mode: str,
-        method: str,
+        method: AnomalyCrossMethod | AnomalyTsMethod | str,
         baseline: tuple[int, int] | None = None,
         threshold: float = 2.0,
     ) -> "Result":
@@ -455,10 +496,12 @@ class StatsNamespace:
         key = self._r.key_cols[0]
 
         if mode == "cross_sectional":
-            if method not in _VALID_ANOMALY_CROSS:
+            try:
+                method = AnomalyCrossMethod(method).value
+            except ValueError:
                 raise ValueError(
                     f"StatsNamespace.anomaly: mode 'cross_sectional' does not support method {method!r}. "
-                    f"Valid options: {sorted(_VALID_ANOMALY_CROSS)}."
+                    f"Valid options: {[e.value for e in AnomalyCrossMethod]}."
                 )
 
             # baseline subset for computing reference stats
@@ -551,10 +594,12 @@ class StatsNamespace:
             )
 
         elif mode == "timeseries":
-            if method not in _VALID_ANOMALY_TS:
+            try:
+                method = AnomalyTsMethod(method).value
+            except ValueError:
                 raise ValueError(
                     f"StatsNamespace.anomaly: mode 'timeseries' does not support method {method!r}. "
-                    f"Valid options: {sorted(_VALID_ANOMALY_TS)}."
+                    f"Valid options: {[e.value for e in AnomalyTsMethod]}."
                 )
             if baseline is None:
                 raise ValueError(
@@ -684,7 +729,7 @@ class StatsNamespace:
         self,
         target: str,
         columns: dict[str, Any],
-        method: str = "euclidean",
+        method: SimilarityMethod | str = SimilarityMethod.EUCLIDEAN,
         top_n: int = 10,
     ) -> "Result":
         """Find entities most similar to ``target`` across ``columns``.
@@ -714,10 +759,12 @@ class StatsNamespace:
             ValueError: If ``method`` is invalid, no columns can be resolved,
                 or ``target`` is not found.
         """
-        if method not in _VALID_SIMILARITY_METHODS:
+        try:
+            method = SimilarityMethod(method).value
+        except ValueError:
             raise ValueError(
                 f"StatsNamespace.similarity: Unknown method {method!r}. "
-                f"Valid options: {sorted(_VALID_SIMILARITY_METHODS)}."
+                f"Valid options: {[e.value for e in SimilarityMethod]}."
             )
 
         df = self._r.data
