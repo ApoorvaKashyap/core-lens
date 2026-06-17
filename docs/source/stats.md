@@ -17,9 +17,11 @@ desc_entity = res.stats.describe(by="entity")
 Find temporal or spatial correlations between variables:
 
 ```python
+from core_lens.base.namespaces.stats import CorrelateMethod
+
 corr = res.stats.correlate(
     columns=["ndvi", "rainfall", "temperature"],
-    method="pearson", # or "spearman", "kendall"
+    method=CorrelateMethod.PEARSON, # or SPEARMAN, KENDALL
     across="entity"      # correlate across entities or time
 )
 ```
@@ -29,18 +31,20 @@ corr = res.stats.correlate(
 Test for significant differences between groups or periods:
 
 ```python
+from core_lens.base.namespaces.stats import TestMethod
+
 # Group-based testing
 test_res = res.stats.test(
     column="cropping_intensity",
     groups="temperature_zone",
-    method="mann-whitney"
+    method=TestMethod.MANN_WHITNEY
 )
 
 # Period-based testing
 test_period = res.stats.test(
     column="ndvi",
     periods=[(2010, 2015), (2016, 2023)],
-    method="t-test"
+    method=TestMethod.T_TEST
 )
 ```
 
@@ -49,12 +53,14 @@ test_period = res.stats.test(
 Analyse absolute, percentage, or trend changes over time:
 
 ```python
+from core_lens.base.namespaces.stats import ChangeMethod
+
 # Trend over time
 trend = res.stats.change(
     column="ndvi",
     from_period=2010,
     to_period=2023,
-    method="trend"
+    method=ChangeMethod.TREND
 )
 
 # Absolute or percentage change
@@ -62,7 +68,7 @@ pct_change = res.stats.change(
     column="tree_cover",
     from_period=2018,
     to_period=2023,
-    method="percentage"
+    method=ChangeMethod.PERCENTAGE
 )
 ```
 
@@ -71,11 +77,13 @@ pct_change = res.stats.change(
 Identify anomalies against a historical baseline or cross-sectionally:
 
 ```python
+from core_lens.base.namespaces.stats import AnomalyTsMethod, AnomalyCrossMethod
+
 # Timeseries anomaly against its own history
 ts_anomalies = res.stats.anomaly(
     column="ndvi",
     mode="timeseries",
-    method="stl",
+    method=AnomalyTsMethod.STL,
     baseline=(2010, 2018)
 )
 
@@ -83,7 +91,7 @@ ts_anomalies = res.stats.anomaly(
 cross_anomalies = res.stats.anomaly(
     column="ndvi",
     mode="cross_sectional",
-    method="zscore",
+    method=AnomalyCrossMethod.ZSCORE,
     baseline=(2010, 2020)
 )
 ```
@@ -93,13 +101,15 @@ cross_anomalies = res.stats.anomaly(
 Find entities similar to a target entity across multiple dimensions:
 
 ```python
+from core_lens.base.namespaces.stats import SimilarityMethod
+
 similar = res.stats.similarity(
     target="13_551",
     columns={
         "rainfall": ("annual", {"year": 2018}),
         "ndvi": ("fortnightly", {"season": "kharif", "year": 2020})
     },
-    method="euclidean",
+    method=SimilarityMethod.EUCLIDEAN,
     top_n=10
 )
 ```

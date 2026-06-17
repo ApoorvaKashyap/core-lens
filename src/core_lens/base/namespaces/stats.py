@@ -154,7 +154,7 @@ class StatsNamespace:
 
         Args:
             columns: At least 2 column names.
-            method: ``"pearson"`` | ``"spearman"`` | ``"kendall"``.
+            method: A :class:`~core_lens.base.namespaces.stats.CorrelateMethod` enum value.
             across: ``"entity"`` or ``"time"`` — recorded in metadata only.
 
         Returns:
@@ -226,8 +226,7 @@ class StatsNamespace:
             groups: Categorical column to split groups on.
             periods: List of ``(from_year, to_year)`` period tuples.
             against: Reference value for a one-sample test.
-            method: One of ``\"t-test\"``, ``\"mann-whitney\"`` (default),
-                ``\"wilcoxon\"``, ``\"ks\"``, ``\"chi-square\"``.
+            method: A :class:`~core_lens.base.namespaces.stats.TestMethod` enum value.
                 Auto-selected via Shapiro-Wilk if ``None``.
             significance_level: Alpha level for ``significant`` flag (default 0.05).
 
@@ -372,7 +371,7 @@ class StatsNamespace:
             column: Value column to compute change for.
             from_period: Start year/period integer.
             to_period: End year/period integer.
-            method: ``"absolute"`` (default), ``"percentage"``, or ``"trend"``.
+            method: A :class:`~core_lens.base.namespaces.stats.ChangeMethod` enum value.
 
         Returns:
             For *absolute* / *percentage*: data has
@@ -474,7 +473,7 @@ class StatsNamespace:
         Args:
             column: Value column to analyse.
             mode: ``"cross_sectional"`` or ``"timeseries"``.
-            method: See design §12.5 for per-mode valid methods.
+            method: An :class:`~core_lens.base.namespaces.stats.AnomalyCrossMethod` or :class:`~core_lens.base.namespaces.stats.AnomalyTsMethod` enum value.
             baseline: ``(from_year, to_year)`` inclusive.  Required for
                 timeseries; optional for cross-sectional.
             threshold: Sigma / score threshold for anomaly flag (default 2.0).
@@ -739,8 +738,7 @@ class StatsNamespace:
                   - ``"agg": str`` — time-aggregation before joining
                     (``"mean"`` default, ``"sum"``, ``"min"``, ``"max"``).
 
-            method: Distance metric. One of ``"euclidean"`` (default),
-                ``"manhattan"``, ``"cosine"``, ``"mahalanobis"``.
+            method: Distance metric. A :class:`~core_lens.base.namespaces.stats.SimilarityMethod` enum value.
             top_n: Number of most-similar entities to return (default 10).
 
         Returns:
