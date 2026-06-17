@@ -6,6 +6,8 @@ from typing import TYPE_CHECKING, Any
 
 import polars as pl
 
+from enum import Enum
+
 from core_lens.schema.profile import Resolution
 from core_lens.utils.polars_utils import scan_with_key_filter
 
@@ -15,7 +17,12 @@ if TYPE_CHECKING:
     from core_lens.base.entity import BaseEntity
     from core_lens.base.result import Result
 
-_VALID_SEASONS = {"kharif", "rabi", "zaid", "current"}
+
+class Season(Enum):
+    KHARIF = "kharif"
+    RABI = "rabi"
+    ZAID = "zaid"
+    CURRENT = "current"
 
 
 class View:
@@ -202,7 +209,7 @@ class View:
         start: str | None = None,
         end: str | None = None,
         *,
-        season: str | None = None,
+        season: Season | None = None,
         year: int | tuple[int, int] | None = None,
     ) -> "View":
         """Return a new ``View`` with a pending time filter applied.
@@ -255,17 +262,17 @@ class View:
             )
 
         if season is not None:
-            if season not in _VALID_SEASONS:
+            if not isinstance(season, Season):
                 raise ValueError(
-                    f"View.between: Unknown season {season!r}. "
-                    f"Valid options: {sorted(_VALID_SEASONS)}."
+                    f"View.between: season must be a Season enum. "
+                    f"Valid options: {[e.name for e in Season]}."
                 )
-            if season == "current" and year is not None:
+            if season is Season.CURRENT and year is not None:
                 raise ValueError(
                     "View.between: Cannot combine year with season='current'. "
                     "The current season is always resolved to the present calendar date."
                 )
-            time_filter: dict[str, Any] = {"season": season}
+            time_filter: dict[str, Any] = {"season": season.value}
             if year is not None:
                 time_filter["year"] = year
         else:

@@ -9,6 +9,7 @@ from typing import Any
 from core_lens.base.entity import BaseEntity
 from core_lens.base.result import Result
 from core_lens.schema.profile import Resolution, SchemaProfile
+from core_lens.base.namespaces.plot import SubplotOn
 
 
 class DummyEntity(BaseEntity):
@@ -249,5 +250,5 @@ def test_choropleth_subplot_on(dummy_result: Result) -> None:
     """Test choropleth handles subplot_on argument."""
     df = dummy_result.data.with_columns(pl.Series("year", [2020, 2021]))
     res = dummy_result._replace(data=df)
-    m = res.plot.choropleth("value", subplot_on="year")
+    m = res.plot.choropleth("value", subplot_on=SubplotOn.YEAR)
     assert m is not None

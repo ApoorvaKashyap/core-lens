@@ -2,7 +2,16 @@
 
 from __future__ import annotations
 
+from enum import Enum
 from typing import TYPE_CHECKING, Any
+
+
+class SubplotOn(Enum):
+    YEAR = "year"
+    MONTH = "month"
+    SEASON = "season"
+    SEASON_YEAR = "season_year"
+
 
 if TYPE_CHECKING:
     import lonboard
@@ -50,7 +59,9 @@ class PlotNamespace:
     def __init__(self, result: "Result") -> None:
         self.result = result
 
-    def choropleth(self, column: str, subplot_on: str | None = None) -> "lonboard.Map":
+    def choropleth(
+        self, column: str, subplot_on: SubplotOn | None = None
+    ) -> "lonboard.Map":
         """Render an interactive choropleth map using Lonboard.
 
         If the Result does not already have geometry, it will be attached
@@ -74,13 +85,13 @@ class PlotNamespace:
         import lonboard
         from lonboard.colormap import apply_continuous_cmap
 
-        _VALID_SUBPLOT_ON = {"year", "month", "season", "season_year"}
-
-        if subplot_on is not None and subplot_on not in _VALID_SUBPLOT_ON:
+        if subplot_on is not None and not isinstance(subplot_on, SubplotOn):
             raise ValueError(
-                f"PlotNamespace.choropleth: Unknown subplot_on={subplot_on!r}. "
-                f"Valid options: {sorted(_VALID_SUBPLOT_ON)}."
+                f"PlotNamespace.choropleth: subplot_on must be a SubplotOn enum. "
+                f"Valid options: {[e.name for e in SubplotOn]}."
             )
+
+        subplot_col = subplot_on.value if subplot_on is not None else None
 
         res = self.result if self.result.has_geometry else self.result.with_geometry()
         gdf = res.gdf()
@@ -88,9 +99,9 @@ class PlotNamespace:
         if column not in gdf.columns:
             raise ValueError(f"Column {column!r} not found in Result.")
 
-        if subplot_on is not None and subplot_on not in gdf.columns:
+        if subplot_col is not None and subplot_col not in gdf.columns:
             raise ValueError(
-                f"PlotNamespace.choropleth: subplot_on column {subplot_on!r} not found "
+                f"PlotNamespace.choropleth: subplot_on column {subplot_col!r} not found "
                 "in Result. Ensure fortnightly data is materialised and temporal columns "
                 "are present (they are added automatically by the materialisation layer)."
             )
@@ -120,13 +131,13 @@ class PlotNamespace:
         import matplotlib as mpl
         import numpy as np
 
-        if subplot_on is not None:
+        if subplot_col is not None:
             # Render the most-recent/first unique value of subplot_on so that the
             # map is still useful.  True multi-panel subplots are not supported by
             # Lonboard's single-Map API.
-            unique_vals = sorted(gdf[subplot_on].dropna().unique().tolist())
+            unique_vals = sorted(gdf[subplot_col].dropna().unique().tolist())
             if unique_vals:
-                gdf = gdf[gdf[subplot_on] == unique_vals[-1]].copy()
+                gdf = gdf[gdf[subplot_col] == unique_vals[-1]].copy()
 
         values = gdf[column].to_numpy()
         v_min, v_max = np.nanmin(values), np.nanmax(values)

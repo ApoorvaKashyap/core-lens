@@ -6,7 +6,7 @@ from typing import Any
 import polars as pl
 import pytest
 
-from core_lens.base.view import View
+from core_lens.base.view import View, Season
 
 
 def _make_view(entity: Any, entity_name: str = "minimalmws") -> View:
@@ -76,45 +76,45 @@ class TestViewBetweenDateRange:
 class TestViewBetweenSeasonMode:
     def test_season_stored(self, entity_cls: Any) -> None:
         view = _make_view(entity_cls())
-        result = view.between(season="kharif")
+        result = view.between(season=Season.KHARIF)
 
         assert result.time_filter == {"season": "kharif"}
 
     def test_season_with_year_int(self, entity_cls: Any) -> None:
         view = _make_view(entity_cls())
-        result = view.between(season="kharif", year=2022)
+        result = view.between(season=Season.KHARIF, year=2022)
 
         assert result.time_filter == {"season": "kharif", "year": 2022}
 
     def test_season_with_year_tuple(self, entity_cls: Any) -> None:
         view = _make_view(entity_cls())
-        result = view.between(season="rabi", year=(2018, 2023))
+        result = view.between(season=Season.RABI, year=(2018, 2023))
 
         assert result.time_filter == {"season": "rabi", "year": (2018, 2023)}
 
     def test_current_season_accepted(self, entity_cls: Any) -> None:
         view = _make_view(entity_cls())
-        result = view.between(season="current")
+        result = view.between(season=Season.CURRENT)
 
         assert result.time_filter == {"season": "current"}
 
     def test_invalid_season_name_raises(self, entity_cls: Any) -> None:
         view = _make_view(entity_cls())
 
-        with pytest.raises(ValueError, match="Unknown season"):
-            view.between(season="monsoon")
+        with pytest.raises(ValueError, match="must be a "):
+            view.between(season="monsoon")  # type: ignore[arg-type]
 
     def test_current_season_with_year_raises(self, entity_cls: Any) -> None:
         view = _make_view(entity_cls())
 
         with pytest.raises(ValueError, match="season='current'"):
-            view.between(season="current", year=2022)
+            view.between(season=Season.CURRENT, year=2022)
 
     def test_season_and_date_range_mixed_raises(self, entity_cls: Any) -> None:
         view = _make_view(entity_cls())
 
         with pytest.raises(ValueError, match="mutually exclusive"):
-            view.between("2010-01-01", "2023-12-31", season="kharif")
+            view.between("2010-01-01", "2023-12-31", season=Season.KHARIF)
 
     def test_year_without_season_raises(self, entity_cls: Any) -> None:
         view = _make_view(entity_cls())
@@ -126,13 +126,15 @@ class TestViewBetweenSeasonMode:
 
 
 class TestViewAllSeasonsAccepted:
-    @pytest.mark.parametrize("season", ["kharif", "rabi", "zaid", "current"])
+    @pytest.mark.parametrize(
+        "season", [Season.KHARIF, Season.RABI, Season.ZAID, Season.CURRENT]
+    )
     def test_valid_season_names(self, entity_cls: Any, season: Any) -> None:
         view = _make_view(entity_cls())
         result = view.between(season=season)
 
         assert result.time_filter is not None
-        assert result.time_filter["season"] == season
+        assert result.time_filter["season"] == season.value
 
 
 class TestViewMaterialisation:
