@@ -8,7 +8,15 @@ import polars as pl
 import pytest
 
 from core_lens.base.result import Result
-from core_lens.base.namespaces.stats import CorrelationError
+from core_lens.base.namespaces.stats import (
+    CorrelationError,
+    CorrelateMethod,
+    TestMethod,
+    ChangeMethod,
+    AnomalyCrossMethod,
+    AnomalyTsMethod,
+    SimilarityMethod,
+)
 from core_lens.schema.profile import Resolution
 
 
@@ -107,7 +115,7 @@ class TestDescribeByEntity:
 class TestCorrelate:
     def test_pearson_returns_result(self, entity_cls: Any) -> None:
         r = _make(entity_cls(), _big_df())
-        out = r.stats.correlate(["ndvi", "rainfall"], method="pearson")
+        out = r.stats.correlate(["ndvi", "rainfall"], method=CorrelateMethod.PEARSON)
         assert isinstance(out, Result)
 
     def test_output_schema(self, entity_cls: Any) -> None:
@@ -129,7 +137,9 @@ class TestCorrelate:
 
     def test_metadata_populated(self, entity_cls: Any) -> None:
         r = _make(entity_cls(), _big_df())
-        out = r.stats.correlate(["ndvi", "rainfall"], method="spearman", across="time")
+        out = r.stats.correlate(
+            ["ndvi", "rainfall"], method=CorrelateMethod.SPEARMAN, across="time"
+        )
         assert out.metadata["method"] == "spearman"
         assert out.metadata["across"] == "time"
         assert "n_observations" in out.metadata
@@ -141,24 +151,24 @@ class TestCorrelate:
 
     def test_invalid_method_raises(self, entity_cls: Any) -> None:
         r = _make(entity_cls(), _big_df())
-        with pytest.raises(ValueError, match="Unknown method"):
-            r.stats.correlate(["ndvi", "rainfall"], method="bad")
+        with pytest.raises(ValueError, match="must be a "):
+            r.stats.correlate(["ndvi", "rainfall"], method="bad")  # type: ignore[arg-type]
 
     def test_spearman_accepted(self, entity_cls: Any) -> None:
         r = _make(entity_cls(), _big_df())
-        out = r.stats.correlate(["ndvi", "rainfall"], method="spearman")
+        out = r.stats.correlate(["ndvi", "rainfall"], method=CorrelateMethod.SPEARMAN)
         assert out.metadata["method"] == "spearman"
 
     def test_kendall_accepted(self, entity_cls: Any) -> None:
         r = _make(entity_cls(), _big_df())
-        out = r.stats.correlate(["ndvi", "rainfall"], method="kendall")
+        out = r.stats.correlate(["ndvi", "rainfall"], method=CorrelateMethod.KENDALL)
         assert out.metadata["method"] == "kendall"
 
 
 class TestStatisticalTest:
     def test_group_based_returns_result(self, entity_cls: Any) -> None:
         r = _make(entity_cls(), _big_df())
-        out = r.stats.test(column="ndvi", groups="zone", method="mann-whitney")
+        out = r.stats.test(column="ndvi", groups="zone", method=TestMethod.MANN_WHITNEY)
         assert isinstance(out, Result)
 
     def test_group_data_schema(self, entity_cls: Any) -> None:
@@ -169,7 +179,7 @@ class TestStatisticalTest:
 
     def test_group_metadata(self, entity_cls: Any) -> None:
         r = _make(entity_cls(), _big_df())
-        out = r.stats.test(column="ndvi", groups="zone", method="t-test")
+        out = r.stats.test(column="ndvi", groups="zone", method=TestMethod.T_TEST)
         for key in (
             "method",
             "statistic",
@@ -184,7 +194,7 @@ class TestStatisticalTest:
         out = r.stats.test(
             column="ndvi",
             periods=[(2021, 2021), (2022, 2022)],
-            method="t-test",
+            method=TestMethod.T_TEST,
         )
         df = out.df()
         assert len(df) == 2
@@ -192,7 +202,7 @@ class TestStatisticalTest:
 
     def test_single_sample(self, entity_cls: Any) -> None:
         r = _make(entity_cls(), _big_df())
-        out = r.stats.test(column="ndvi", against=0.5, method="t-test")
+        out = r.stats.test(column="ndvi", against=0.5, method=TestMethod.T_TEST)
         assert "p_value" in out.metadata
         assert out.df()["group"][0] == "all"
 
@@ -208,8 +218,8 @@ class TestStatisticalTest:
 
     def test_invalid_method_raises(self, entity_cls: Any) -> None:
         r = _make(entity_cls(), _big_df())
-        with pytest.raises(ValueError, match="Unknown method"):
-            r.stats.test(column="ndvi", groups="zone", method="bad")
+        with pytest.raises(ValueError, match="must be a "):
+            r.stats.test(column="ndvi", groups="zone", method="bad")  # type: ignore[arg-type]
 
     def test_significant_flag_bool(self, entity_cls: Any) -> None:
         r = _make(entity_cls(), _big_df())
@@ -231,7 +241,7 @@ class TestChange:
 
     def test_percentage_metadata(self, entity_cls: Any) -> None:
         r = _make(entity_cls(), _big_df())
-        out = r.stats.change("ndvi", 2021, 2022, method="percentage")
+        out = r.stats.change("ndvi", 2021, 2022, method=ChangeMethod.PERCENTAGE)
         assert out.metadata["method"] == "percentage"
         assert out.metadata["column"] == "ndvi"
 
@@ -245,7 +255,7 @@ class TestChange:
             }
         )
         r = _make(entity_cls(), df)
-        out = r.stats.change("ndvi", 2020, 2022, method="trend")
+        out = r.stats.change("ndvi", 2020, 2022, method=ChangeMethod.TREND)
         result_df = out.df()
         for col in ("mws_id", "slope", "r_squared", "direction"):
             assert col in result_df.columns
@@ -259,13 +269,13 @@ class TestChange:
             }
         )
         r = _make(entity_cls(), df)
-        out = r.stats.change("ndvi", 2020, 2022, method="trend")
+        out = r.stats.change("ndvi", 2020, 2022, method=ChangeMethod.TREND)
         assert out.df()["direction"][0] == "increasing"
 
     def test_invalid_method_raises(self, entity_cls: Any) -> None:
         r = _make(entity_cls(), _big_df())
-        with pytest.raises(ValueError, match="Unknown method"):
-            r.stats.change("ndvi", 2021, 2022, method="bad")
+        with pytest.raises(ValueError, match="must be a "):
+            r.stats.change("ndvi", 2021, 2022, method="bad")  # type: ignore[arg-type]
 
 
 class TestAnomalyCrossSectional:
@@ -285,42 +295,54 @@ class TestAnomalyCrossSectional:
 
     def test_zscore_schema(self, entity_cls: Any) -> None:
         r = self._big_cs(entity_cls())
-        df = r.stats.anomaly("ndvi", mode="cross_sectional", method="zscore").df()
+        df = r.stats.anomaly(
+            "ndvi", mode="cross_sectional", method=AnomalyCrossMethod.ZSCORE
+        ).df()
         assert "anomaly_score" in df.columns
         assert "is_anomaly" in df.columns
 
     def test_zscore_metadata(self, entity_cls: Any) -> None:
         r = self._big_cs(entity_cls())
-        meta = r.stats.anomaly("ndvi", mode="cross_sectional", method="zscore").metadata
+        meta = r.stats.anomaly(
+            "ndvi", mode="cross_sectional", method=AnomalyCrossMethod.ZSCORE
+        ).metadata
         assert meta["mode"] == "cross_sectional"
         assert meta["method"] == "zscore"
         assert "baseline_mean" in meta
 
     def test_iqr_metadata(self, entity_cls: Any) -> None:
         r = self._big_cs(entity_cls())
-        meta = r.stats.anomaly("ndvi", mode="cross_sectional", method="iqr").metadata
+        meta = r.stats.anomaly(
+            "ndvi", mode="cross_sectional", method=AnomalyCrossMethod.IQR
+        ).metadata
         assert "baseline_mean" in meta
 
     def test_percentile_metadata(self, entity_cls: Any) -> None:
         r = self._big_cs(entity_cls())
         meta = r.stats.anomaly(
-            "ndvi", mode="cross_sectional", method="percentile"
+            "ndvi", mode="cross_sectional", method=AnomalyCrossMethod.PERCENTILE
         ).metadata
         assert "baseline_mean" in meta
 
     def test_iqr_accepted(self, entity_cls: Any) -> None:
         r = self._big_cs(entity_cls())
-        out = r.stats.anomaly("ndvi", mode="cross_sectional", method="iqr")
+        out = r.stats.anomaly(
+            "ndvi", mode="cross_sectional", method=AnomalyCrossMethod.IQR
+        )
         assert out.metadata["method"] == "iqr"
 
     def test_percentile_accepted(self, entity_cls: Any) -> None:
         r = self._big_cs(entity_cls())
-        out = r.stats.anomaly("ndvi", mode="cross_sectional", method="percentile")
+        out = r.stats.anomaly(
+            "ndvi", mode="cross_sectional", method=AnomalyCrossMethod.PERCENTILE
+        )
         assert out.metadata["method"] == "percentile"
 
     def test_threshold_accepted(self, entity_cls: Any) -> None:
         r = self._big_cs(entity_cls())
-        out = r.stats.anomaly("ndvi", mode="cross_sectional", method="threshold")
+        out = r.stats.anomaly(
+            "ndvi", mode="cross_sectional", method=AnomalyCrossMethod.THRESHOLD
+        )
         assert out.metadata["method"] == "threshold"
 
     def test_too_few_obs_raises(self, entity_cls: Any) -> None:
@@ -334,21 +356,29 @@ class TestAnomalyCrossSectional:
             ),
         )
         with pytest.raises(ValueError, match="observations"):
-            r.stats.anomaly("ndvi", mode="cross_sectional", method="zscore")
+            r.stats.anomaly(
+                "ndvi", mode="cross_sectional", method=AnomalyCrossMethod.ZSCORE
+            )
 
     def test_invalid_method_raises(self, entity_cls: Any) -> None:
         r = self._big_cs(entity_cls())
         with pytest.raises(ValueError, match="does not support method"):
-            r.stats.anomaly(column="ndvi", mode="cross_sectional", method="stl")
+            r.stats.anomaly(
+                column="ndvi", mode="cross_sectional", method=AnomalyTsMethod.STL
+            )
 
     def test_is_anomaly_boolean(self, entity_cls: Any) -> None:
         r = self._big_cs(entity_cls())
-        df = r.stats.anomaly("ndvi", mode="cross_sectional", method="zscore").df()
+        df = r.stats.anomaly(
+            "ndvi", mode="cross_sectional", method=AnomalyCrossMethod.ZSCORE
+        ).df()
         assert df["is_anomaly"].dtype == pl.Boolean
 
     def test_row_count_matches_input(self, entity_cls: Any) -> None:
         r = self._big_cs(entity_cls())
-        df = r.stats.anomaly("ndvi", mode="cross_sectional", method="zscore").df()
+        df = r.stats.anomaly(
+            "ndvi", mode="cross_sectional", method=AnomalyCrossMethod.ZSCORE
+        ).df()
         assert len(df) == 20
 
 
@@ -369,7 +399,7 @@ class TestAnomalyTimeseries:
     def test_mad_schema(self, entity_cls: Any) -> None:
         r = _make(entity_cls(), self._ts_df())
         df = r.stats.anomaly(
-            "ndvi", mode="timeseries", method="mad", baseline=(2010, 2017)
+            "ndvi", mode="timeseries", method=AnomalyTsMethod.MAD, baseline=(2010, 2017)
         ).df()
         for col in ("mws_id", "year", "anomaly_score", "is_anomaly"):
             assert col in df.columns
@@ -377,28 +407,31 @@ class TestAnomalyTimeseries:
     def test_mad_baseline_excluded(self, entity_cls: Any) -> None:
         r = _make(entity_cls(), self._ts_df())
         df = r.stats.anomaly(
-            "ndvi", mode="timeseries", method="mad", baseline=(2010, 2017)
+            "ndvi", mode="timeseries", method=AnomalyTsMethod.MAD, baseline=(2010, 2017)
         ).df()
         assert all(yr > 2017 for yr in df["year"].to_list())
 
     def test_cusum_accepted(self, entity_cls: Any) -> None:
         r = _make(entity_cls(), self._ts_df())
         out = r.stats.anomaly(
-            "ndvi", mode="timeseries", method="cusum", baseline=(2010, 2017)
+            "ndvi",
+            mode="timeseries",
+            method=AnomalyTsMethod.CUSUM,
+            baseline=(2010, 2017),
         )
         assert out.metadata["method"] == "cusum"
 
     def test_stl_accepted(self, entity_cls: Any) -> None:
         r = _make(entity_cls(), self._ts_df())
         out = r.stats.anomaly(
-            "ndvi", mode="timeseries", method="stl", baseline=(2010, 2017)
+            "ndvi", mode="timeseries", method=AnomalyTsMethod.STL, baseline=(2010, 2017)
         )
         assert out.metadata["method"] == "stl"
 
     def test_timeseries_metadata(self, entity_cls: Any) -> None:
         r = _make(entity_cls(), self._ts_df())
         meta = r.stats.anomaly(
-            "ndvi", mode="timeseries", method="mad", baseline=(2010, 2017)
+            "ndvi", mode="timeseries", method=AnomalyTsMethod.MAD, baseline=(2010, 2017)
         ).metadata
         assert meta["mode"] == "timeseries"
         assert meta["baseline"] == (2010, 2017)
@@ -407,18 +440,21 @@ class TestAnomalyTimeseries:
     def test_no_baseline_raises(self, entity_cls: Any) -> None:
         r = _make(entity_cls(), self._ts_df())
         with pytest.raises(ValueError, match="baseline"):
-            r.stats.anomaly("ndvi", mode="timeseries", method="mad")
+            r.stats.anomaly("ndvi", mode="timeseries", method=AnomalyTsMethod.MAD)
 
     def test_invalid_mode_raises(self, entity_cls: Any) -> None:
         r = _make(entity_cls(), self._ts_df())
         with pytest.raises(ValueError, match="Unknown mode"):
-            r.stats.anomaly("ndvi", mode="spatial", method="mad")
+            r.stats.anomaly("ndvi", mode="spatial", method=AnomalyTsMethod.MAD)
 
     def test_invalid_ts_method_raises(self, entity_cls: Any) -> None:
         r = _make(entity_cls(), self._ts_df())
         with pytest.raises(ValueError, match="does not support method"):
             r.stats.anomaly(
-                column="ndvi", mode="timeseries", method="zscore", baseline=(2010, 2017)
+                column="ndvi",
+                mode="timeseries",
+                method=AnomalyCrossMethod.ZSCORE,
+                baseline=(2010, 2017),
             )
 
 
@@ -528,7 +564,7 @@ class TestSimilarity:
         out = r.stats.similarity(
             target="id_0",
             columns={"ndvi": None},
-            method="manhattan",
+            method=SimilarityMethod.MANHATTAN,
             top_n=3,
         )
         assert out.metadata["method"] == "manhattan"
@@ -547,10 +583,12 @@ class TestSimilarity:
 
     def test_cosine_accepted(self, entity_cls: Any) -> None:
         r = _make(entity_cls(), self._sim_df())
-        out = r.stats.similarity(target="id_0", columns={"ndvi": None}, method="cosine")
+        out = r.stats.similarity(
+            target="id_0", columns={"ndvi": None}, method=SimilarityMethod.COSINE
+        )
         assert out.metadata["method"] == "cosine"
 
     def test_invalid_method_raises(self, entity_cls: Any) -> None:
         r = _make(entity_cls(), self._sim_df())
-        with pytest.raises(ValueError, match="Unknown method"):
-            r.stats.similarity(target="id_0", columns={"ndvi": None}, method="bad")
+        with pytest.raises(ValueError, match="must be a "):
+            r.stats.similarity(target="id_0", columns={"ndvi": None}, method="bad")  # type: ignore[arg-type]

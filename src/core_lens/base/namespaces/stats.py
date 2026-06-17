@@ -20,6 +20,7 @@ class CorrelateMethod(Enum):
 
 
 class TestMethod(Enum):
+    __test__ = False
     T_TEST = "t-test"
     MANN_WHITNEY = "mann-whitney"
     WILCOXON = "wilcoxon"
@@ -146,7 +147,7 @@ class StatsNamespace:
     def correlate(
         self,
         columns: list[str],
-        method: CorrelateMethod | str = CorrelateMethod.PEARSON,
+        method: CorrelateMethod = CorrelateMethod.PEARSON,
         across: str = "entity",
     ) -> "Result":
         """Pairwise correlations between columns.
@@ -168,11 +169,9 @@ class StatsNamespace:
             raise CorrelationError(
                 f"StatsNamespace.correlate: Requires at least 2 columns, got {len(columns)}."
             )
-        try:
-            method = CorrelateMethod(method).value
-        except ValueError:
+        if not isinstance(method, CorrelateMethod):
             raise ValueError(
-                f"StatsNamespace.correlate: Unknown method {method!r}. Valid options: {[e.value for e in CorrelateMethod]}."
+                f"StatsNamespace.correlate: method must be a CorrelateMethod. Valid options: {[e.name for e in CorrelateMethod]}."
             )
 
         import scipy.stats as sp  # type: ignore[import-untyped]
@@ -186,9 +185,9 @@ class StatsNamespace:
             a = sub[col_a].to_numpy().astype(float)
             b = sub[col_b].to_numpy().astype(float)
 
-            if method == "pearson":
+            if method is CorrelateMethod.PEARSON:
                 corr, pval = sp.pearsonr(a, b)
-            elif method == "spearman":
+            elif method is CorrelateMethod.SPEARMAN:
                 corr, pval = sp.spearmanr(a, b)
             else:
                 corr, pval = sp.kendalltau(a, b)
@@ -204,7 +203,7 @@ class StatsNamespace:
 
         data = pl.DataFrame(rows)
         metadata: dict[str, Any] = {
-            "method": method,
+            "method": method.value if method is not None else None,
             "columns": columns,
             "across": across,
             "n_observations": n_obs,
@@ -217,7 +216,7 @@ class StatsNamespace:
         groups: str | None = None,
         periods: list[tuple[int, int]] | None = None,
         against: float | None = None,
-        method: TestMethod | str | None = None,
+        method: TestMethod | None = None,
         significance_level: float = 0.05,
     ) -> "Result":
         """Hypothesis test in three modes: group-based, period-based, single-sample.
@@ -250,21 +249,19 @@ class StatsNamespace:
         if method is None:
             if len(all_vals) >= 3:
                 _, p_sw = sp.shapiro(all_vals[:5000])
-                method = "t-test" if p_sw > 0.05 else "mann-whitney"
+                method = TestMethod.T_TEST if p_sw > 0.05 else TestMethod.MANN_WHITNEY
             else:
-                method = "mann-whitney"
+                method = TestMethod.MANN_WHITNEY
 
-        try:
-            method = TestMethod(method).value
-        except ValueError:
+        if not isinstance(method, TestMethod):
             raise ValueError(
-                f"StatsNamespace.test: Unknown method {method!r}. Valid options: {[e.value for e in TestMethod]}."
+                f"StatsNamespace.test: method must be a TestMethod. Valid options: {[e.name for e in TestMethod]}."
             )
 
         if against is not None:
-            if method == "t-test":
+            if method is TestMethod.T_TEST:
                 stat, pval = sp.ttest_1samp(all_vals, against)
-            elif method == "wilcoxon":
+            elif method is TestMethod.WILCOXON:
                 stat, pval = sp.wilcoxon(all_vals - against)
             else:
                 raise ValueError(
@@ -281,7 +278,7 @@ class StatsNamespace:
                 }
             )
             metadata: dict[str, Any] = {
-                "method": method,
+                "method": method.value if method is not None else None,
                 "statistic": float(cast(float, stat)),
                 "p_value": float(cast(float, pval)),
                 "significant": bool(cast(float, pval) < significance_level),
@@ -311,7 +308,7 @@ class StatsNamespace:
             ]
             data = pl.DataFrame(rows)
             metadata = {
-                "method": method,
+                "method": method.value if method is not None else None,
                 "statistic": float(stat),
                 "p_value": float(pval),
                 "significant": bool(pval < significance_level),
@@ -347,7 +344,7 @@ class StatsNamespace:
             ]
             data = pl.DataFrame(rows)
             metadata = {
-                "method": method,
+                "method": method.value if method is not None else None,
                 "statistic": float(stat),
                 "p_value": float(pval),
                 "significant": bool(pval < significance_level),
@@ -367,7 +364,7 @@ class StatsNamespace:
         column: str,
         from_period: int,
         to_period: int,
-        method: ChangeMethod | str = ChangeMethod.ABSOLUTE,
+        method: ChangeMethod = ChangeMethod.ABSOLUTE,
     ) -> "Result":
         """Change between two time periods per entity.
 
@@ -385,11 +382,9 @@ class StatsNamespace:
         Raises:
             ValueError: If ``method`` is not recognised or year column absent.
         """
-        try:
-            method = ChangeMethod(method).value
-        except ValueError:
+        if not isinstance(method, ChangeMethod):
             raise ValueError(
-                f"StatsNamespace.change: Unknown method {method!r}. Valid options: {[e.value for e in ChangeMethod]}."
+                f"StatsNamespace.change: method must be a ChangeMethod. Valid options: {[e.name for e in ChangeMethod]}."
             )
 
         import scipy.stats as sp
@@ -402,7 +397,7 @@ class StatsNamespace:
                 "StatsNamespace.change: Requires a year/time column. Ensure data is at annual resolution."
             )
 
-        if method in ("absolute", "percentage"):
+        if method in (ChangeMethod.ABSOLUTE, ChangeMethod.PERCENTAGE):
             from_df = (
                 df.filter(pl.col(year_col) == from_period)
                 .select([key, column])
@@ -459,7 +454,7 @@ class StatsNamespace:
             data = pl.DataFrame(rows)
 
         metadata: dict[str, Any] = {
-            "method": method,
+            "method": method.value if method is not None else None,
             "column": column,
             "from_period": from_period,
             "to_period": to_period,
@@ -470,7 +465,7 @@ class StatsNamespace:
         self,
         column: str,
         mode: str,
-        method: AnomalyCrossMethod | AnomalyTsMethod | str,
+        method: AnomalyCrossMethod | AnomalyTsMethod,
         baseline: tuple[int, int] | None = None,
         threshold: float = 2.0,
     ) -> "Result":
@@ -496,12 +491,10 @@ class StatsNamespace:
         key = self._r.key_cols[0]
 
         if mode == "cross_sectional":
-            try:
-                method = AnomalyCrossMethod(method).value
-            except ValueError:
+            if not isinstance(method, AnomalyCrossMethod):
                 raise ValueError(
                     f"StatsNamespace.anomaly: mode 'cross_sectional' does not support method {method!r}. "
-                    f"Valid options: {[e.value for e in AnomalyCrossMethod]}."
+                    f"Valid options: {[e.name for e in AnomalyCrossMethod]}."
                 )
 
             # baseline subset for computing reference stats
@@ -518,7 +511,7 @@ class StatsNamespace:
             else:
                 ref_vals = df[column].drop_nulls().to_numpy().astype(float)
 
-            min_obs = _MIN_OBS[method]
+            min_obs = _MIN_OBS[method.value]
             if len(ref_vals) < min_obs:
                 raise ValueError(
                     f"StatsNamespace.anomaly: method {method!r} requires at least {min_obs} baseline observations, "
@@ -527,7 +520,7 @@ class StatsNamespace:
 
             all_vals = df[column].to_numpy().astype(float)
 
-            if method == "zscore":
+            if method is AnomalyCrossMethod.ZSCORE:
                 mean = float(np.nanmean(ref_vals))
                 std = float(np.nanstd(ref_vals, ddof=1))
                 scores = (all_vals - mean) / (std or 1.0)
@@ -540,7 +533,7 @@ class StatsNamespace:
                     "baseline_std": std,
                 }
 
-            elif method == "iqr":
+            elif method is AnomalyCrossMethod.IQR:
                 q1 = float(np.nanpercentile(ref_vals, 25))
                 q3 = float(np.nanpercentile(ref_vals, 75))
                 iqr = q3 - q1
@@ -558,7 +551,7 @@ class StatsNamespace:
                     "iqr": iqr,
                 }
 
-            elif method == "percentile":
+            elif method is AnomalyCrossMethod.PERCENTILE:
                 lo = float(np.nanpercentile(ref_vals, 5))
                 hi = float(np.nanpercentile(ref_vals, 95))
                 med = float(np.nanmedian(ref_vals))
@@ -594,12 +587,10 @@ class StatsNamespace:
             )
 
         elif mode == "timeseries":
-            try:
-                method = AnomalyTsMethod(method).value
-            except ValueError:
+            if not isinstance(method, AnomalyTsMethod):
                 raise ValueError(
                     f"StatsNamespace.anomaly: mode 'timeseries' does not support method {method!r}. "
-                    f"Valid options: {[e.value for e in AnomalyTsMethod]}."
+                    f"Valid options: {[e.name for e in AnomalyTsMethod]}."
                 )
             if baseline is None:
                 raise ValueError(
@@ -612,7 +603,7 @@ class StatsNamespace:
                     "StatsNamespace.anomaly: mode 'timeseries' requires a year/time column. Ensure data is at annual or fortnightly resolution."
                 )
 
-            min_obs = _MIN_OBS[method]
+            min_obs = _MIN_OBS[method.value]
             rows: list[dict[str, Any]] = []
 
             for eid in df[key].unique().sort().to_list():
@@ -636,14 +627,14 @@ class StatsNamespace:
                 ts_scores: list[float] = []
                 ts_flags: list[bool] = []
 
-                if method == "mad":
+                if method is AnomalyTsMethod.MAD:
                     med = float(np.median(base_vals))
                     mad = float(np.median(np.abs(base_vals - med)))
                     scale = (mad * 1.4826) or 1.0
                     ts_scores = [(v - med) / scale for v in eval_vals]
                     ts_flags = [abs(s) > threshold for s in ts_scores]
 
-                elif method == "cusum":
+                elif method is AnomalyTsMethod.CUSUM:
                     mean = float(np.mean(base_vals))
                     std = float(np.std(base_vals, ddof=1)) or 1.0
                     k, h = 0.5 * std, threshold * std
@@ -710,7 +701,7 @@ class StatsNamespace:
 
             meta = {
                 "mode": "timeseries",
-                "method": method,
+                "method": method.value if method is not None else None,
                 "baseline": baseline,
                 "baseline_mean": float(np.mean(global_base_vals))
                 if len(global_base_vals) > 0
@@ -729,7 +720,7 @@ class StatsNamespace:
         self,
         target: str,
         columns: dict[str, Any],
-        method: SimilarityMethod | str = SimilarityMethod.EUCLIDEAN,
+        method: SimilarityMethod = SimilarityMethod.EUCLIDEAN,
         top_n: int = 10,
     ) -> "Result":
         """Find entities most similar to ``target`` across ``columns``.
@@ -759,12 +750,10 @@ class StatsNamespace:
             ValueError: If ``method`` is invalid, no columns can be resolved,
                 or ``target`` is not found.
         """
-        try:
-            method = SimilarityMethod(method).value
-        except ValueError:
+        if not isinstance(method, SimilarityMethod):
             raise ValueError(
-                f"StatsNamespace.similarity: Unknown method {method!r}. "
-                f"Valid options: {[e.value for e in SimilarityMethod]}."
+                f"StatsNamespace.similarity: method must be a SimilarityMethod. "
+                f"Valid options: {[e.name for e in SimilarityMethod]}."
             )
 
         df = self._r.data
@@ -890,11 +879,11 @@ class StatsNamespace:
         norm = (mat - means) / stds
         tvec = norm[tidx]
 
-        if method == "euclidean":
+        if method is SimilarityMethod.EUCLIDEAN:
             dists = np.sqrt(np.sum((norm - tvec) ** 2, axis=1))
-        elif method == "manhattan":
+        elif method is SimilarityMethod.MANHATTAN:
             dists = np.sum(np.abs(norm - tvec), axis=1)
-        elif method == "cosine":
+        elif method is SimilarityMethod.COSINE:
             row_norms = np.linalg.norm(norm, axis=1)
             row_norms[row_norms == 0] = 1.0
             tnorm = np.linalg.norm(tvec) or 1.0
@@ -920,7 +909,7 @@ class StatsNamespace:
             }
         )
         metadata: dict[str, Any] = {
-            "method": method,
+            "method": method.value if method is not None else None,
             "target": target,
             "columns": {k: v for k, v in columns.items()},
             "top_n": top_n,
@@ -929,7 +918,7 @@ class StatsNamespace:
 
 
 def _run_test(
-    method: str,
+    method: TestMethod,
     arrays: list[np.ndarray],
     sp: Any,
 ) -> tuple[float, float]:
@@ -939,14 +928,14 @@ def _run_test(
         return float(stat), float(pval)
 
     a, b = arrays[0], arrays[1]
-    if method == "t-test":
+    if method is TestMethod.T_TEST:
         stat, pval = sp.ttest_ind(a, b)
-    elif method == "mann-whitney":
+    elif method is TestMethod.MANN_WHITNEY:
         stat, pval = sp.mannwhitneyu(a, b, alternative="two-sided")
-    elif method == "wilcoxon":
+    elif method is TestMethod.WILCOXON:
         n = min(len(a), len(b))
         stat, pval = sp.wilcoxon(a[:n], b[:n])
-    elif method == "ks":
+    elif method is TestMethod.KS:
         stat, pval = sp.ks_2samp(a, b)
     else:  # chi-square
         stat, pval = sp.chisquare([len(a), len(b)])
