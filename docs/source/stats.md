@@ -20,7 +20,7 @@ Find temporal or spatial correlations between variables:
 corr = res.stats.correlate(
     columns=["ndvi", "rainfall", "temperature"],
     method="pearson", # or "spearman", "kendall"
-    across="mws"      # correlate across entities or time
+    across="entity"      # correlate across entities or time
 )
 ```
 
