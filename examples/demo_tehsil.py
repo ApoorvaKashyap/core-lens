@@ -164,7 +164,7 @@ print(desc_by_entity.df().head(5))
 corr = result_with_area.stats.correlate(
     columns=["area_km2", "Shape_Leng", "compactness"],
     method="spearman",
-    across="mws",
+    across="entity",
 )
 print("\nCorrelation (Spearman):")
 print(corr.df())
