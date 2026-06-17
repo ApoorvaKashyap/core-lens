@@ -112,14 +112,14 @@ class StatsNamespace:
         self,
         columns: list[str],
         method: str = "pearson",
-        across: str = "mws",
+        across: str = "entity",
     ) -> "Result":
         """Pairwise correlations between columns.
 
         Args:
             columns: At least 2 column names.
             method: ``"pearson"`` | ``"spearman"`` | ``"kendall"``.
-            across: ``"mws"`` or ``"time"`` — recorded in metadata only.
+            across: ``"entity"`` or ``"time"`` — recorded in metadata only.
 
         Returns:
             Result whose data has columns
