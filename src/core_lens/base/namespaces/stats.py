@@ -16,6 +16,19 @@ if TYPE_CHECKING:
     from core_lens.base.result import Result
 
 
+def _sf(x: object) -> float:
+    """Narrow a polars scalar (mean/std/median/quantile return type) to float.
+
+    Polars returns a wide union that includes non-numeric types; mypy cannot
+    narrow it automatically.  This helper asserts the value is numeric at
+    runtime and returns a proper ``float``, or ``nan`` when the value is
+    ``None`` (empty series).
+    """
+    if x is None:
+        return float("nan")
+    return float(x)  # type: ignore[arg-type]
+
+
 class CorrelateMethod(Enum):
     """Correlation methods.
 
@@ -322,13 +335,14 @@ class StatsNamespace:
                     f"StatsNamespace.test: method={method!r} is not valid for single-sample test against a reference value. "
                     "Valid options: 't-test', 'wilcoxon'."
                 )
+            _s = pl.Series(all_vals)
             data = pl.DataFrame(
                 {
                     "group": ["all"],
                     "n": [len(all_vals)],
-                    "mean": [float(np.mean(all_vals))],
-                    "std": [float(np.std(all_vals, ddof=1))],
-                    "median": [float(np.median(all_vals))],
+                    "mean": [_sf(_s.mean())],
+                    "std": [_sf(_s.std(ddof=1))],
+                    "median": [_sf(_s.median())],
                 }
             )
             metadata: dict[str, Any] = {
@@ -354,9 +368,11 @@ class StatsNamespace:
                 {
                     "group": str(g),
                     "n": len(a),
-                    "mean": float(np.mean(a)) if len(a) else float("nan"),
-                    "std": float(np.std(a, ddof=1)) if len(a) > 1 else float("nan"),
-                    "median": float(np.median(a)) if len(a) else float("nan"),
+                    "mean": _sf(pl.Series(a).mean()) if len(a) else float("nan"),
+                    "std": _sf(pl.Series(a).std(ddof=1))
+                    if len(a) > 1
+                    else float("nan"),
+                    "median": _sf(pl.Series(a).median()) if len(a) else float("nan"),
                 }
                 for g, a in zip(group_names, arrays)
             ]
@@ -390,9 +406,11 @@ class StatsNamespace:
                 {
                     "group": f"{p[0]}-{p[1]}",
                     "n": len(a),
-                    "mean": float(np.mean(a)) if len(a) else float("nan"),
-                    "std": float(np.std(a, ddof=1)) if len(a) > 1 else float("nan"),
-                    "median": float(np.median(a)) if len(a) else float("nan"),
+                    "mean": _sf(pl.Series(a).mean()) if len(a) else float("nan"),
+                    "std": _sf(pl.Series(a).std(ddof=1))
+                    if len(a) > 1
+                    else float("nan"),
+                    "median": _sf(pl.Series(a).median()) if len(a) else float("nan"),
                 }
                 for p, a in zip(periods, arrays)
             ]
@@ -575,8 +593,9 @@ class StatsNamespace:
             all_vals = df[column].to_numpy().astype(float)
 
             if method is AnomalyCrossMethod.ZSCORE:
-                mean = float(np.nanmean(ref_vals))
-                std = float(np.nanstd(ref_vals, ddof=1))
+                _rs = pl.Series(ref_vals)
+                mean = _sf(_rs.mean())
+                std = _sf(_rs.std(ddof=1))
                 scores = (all_vals - mean) / (std or 1.0)
                 flags = np.abs(scores) > threshold
                 meta: dict[str, Any] = {
@@ -588,41 +607,43 @@ class StatsNamespace:
                 }
 
             elif method is AnomalyCrossMethod.IQR:
-                q1 = float(np.nanpercentile(ref_vals, 25))
-                q3 = float(np.nanpercentile(ref_vals, 75))
+                _rs = pl.Series(ref_vals)
+                q1 = _sf(_rs.quantile(0.25))
+                q3 = _sf(_rs.quantile(0.75))
                 iqr = q3 - q1
                 lo, hi = q1 - 1.5 * iqr, q3 + 1.5 * iqr
-                med = float(np.nanmedian(ref_vals))
+                med = _sf(_rs.median())
                 scores = (all_vals - med) / (iqr or 1.0)
                 flags = (all_vals < lo) | (all_vals > hi)
                 meta = {
                     "mode": "cross_sectional",
                     "method": "iqr",
                     "baseline": baseline,
-                    "baseline_mean": float(np.nanmean(ref_vals)),
+                    "baseline_mean": _sf(_rs.mean()),
                     "q1": q1,
                     "q3": q3,
                     "iqr": iqr,
                 }
 
             elif method is AnomalyCrossMethod.PERCENTILE:
-                lo = float(np.nanpercentile(ref_vals, 5))
-                hi = float(np.nanpercentile(ref_vals, 95))
-                med = float(np.nanmedian(ref_vals))
-                std = float(np.nanstd(ref_vals)) or 1.0
+                _rs = pl.Series(ref_vals)
+                lo = _sf(_rs.quantile(0.05))
+                hi = _sf(_rs.quantile(0.95))
+                med = _sf(_rs.median())
+                std = _sf(_rs.std()) or 1.0
                 scores = (all_vals - med) / std
                 flags = (all_vals < lo) | (all_vals > hi)
                 meta = {
                     "mode": "cross_sectional",
                     "method": "percentile",
                     "baseline": baseline,
-                    "baseline_mean": float(np.nanmean(ref_vals)),
+                    "baseline_mean": _sf(_rs.mean()),
                     "lower_pct": lo,
                     "upper_pct": hi,
                 }
 
             else:  # threshold
-                mean = float(np.nanmean(ref_vals))
+                mean = _sf(pl.Series(ref_vals).mean())
                 scores = all_vals - mean
                 flags = np.abs(scores) > threshold
                 meta = {
@@ -682,15 +703,17 @@ class StatsNamespace:
                 ts_flags: list[bool] = []
 
                 if method is AnomalyTsMethod.MAD:
-                    med = float(np.median(base_vals))
-                    mad = float(np.median(np.abs(base_vals - med)))
+                    _bs = pl.Series(base_vals)
+                    med = _sf(_bs.median())
+                    mad = _sf(pl.Series(np.abs(base_vals - med)).median())
                     scale = (mad * 1.4826) or 1.0
                     ts_scores = [(v - med) / scale for v in eval_vals]
                     ts_flags = [abs(s) > threshold for s in ts_scores]
 
                 elif method is AnomalyTsMethod.CUSUM:
-                    mean = float(np.mean(base_vals))
-                    std = float(np.std(base_vals, ddof=1)) or 1.0
+                    _bs = pl.Series(base_vals)
+                    mean = _sf(_bs.mean())
+                    std = _sf(_bs.std(ddof=1)) or 1.0
                     k, h = 0.5 * std, threshold * std
                     cp, cn = 0.0, 0.0
                     for v in eval_vals:
@@ -715,7 +738,7 @@ class StatsNamespace:
                         base_len = len(base_vals)
                         base_resid = resid[:base_len]
                         eval_resid = resid[base_len : base_len + len(eval_years)]
-                        std = float(np.std(base_resid, ddof=1)) or 1.0
+                        std = _sf(pl.Series(base_resid).std(ddof=1)) or 1.0
                         ts_scores = [float(r / std) for r in eval_resid]
                         ts_flags = [abs(s) > threshold for s in ts_scores]
                     except Exception:
@@ -757,7 +780,7 @@ class StatsNamespace:
                 "mode": "timeseries",
                 "method": method.value if method is not None else None,
                 "baseline": baseline,
-                "baseline_mean": float(np.mean(global_base_vals))
+                "baseline_mean": _sf(pl.Series(global_base_vals).mean())
                 if len(global_base_vals) > 0
                 else float("nan"),
                 "baseline_fitted": True,
