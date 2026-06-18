@@ -44,7 +44,7 @@ class SeasonConfig:
         zaid: Zaid (summer) season range.
     """
 
-    kharif: tuple[str, str] = ("07-01", "10-30")
+    kharif: tuple[str, str] = ("07-01", "10-31")
     rabi: tuple[str, str] = ("11-01", "03-31")
     zaid: tuple[str, str] = ("04-01", "06-30")
 
