@@ -7,6 +7,18 @@ from typing import TYPE_CHECKING, Any
 
 
 class SubplotOn(Enum):
+    """Temporal dimensions to split plot data across.
+
+    Used to specify how data should be partitioned into subplots or map layers
+    based on temporal columns added during materialisation.
+
+    Attributes:
+        YEAR: Split data by year.
+        MONTH: Split data by month.
+        SEASON: Split data by meteorological season.
+        SEASON_YEAR: Split data by season and year.
+    """
+
     YEAR = "year"
     MONTH = "month"
     SEASON = "season"

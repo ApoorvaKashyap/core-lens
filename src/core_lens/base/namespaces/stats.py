@@ -14,12 +14,30 @@ if TYPE_CHECKING:
 
 
 class CorrelateMethod(Enum):
+    """Correlation methods.
+
+    Attributes:
+        PEARSON: Pearson correlation coefficient.
+        SPEARMAN: Spearman rank correlation.
+        KENDALL: Kendall Tau correlation.
+    """
+
     PEARSON = "pearson"
     SPEARMAN = "spearman"
     KENDALL = "kendall"
 
 
 class TestMethod(Enum):
+    """Statistical hypothesis testing methods.
+
+    Attributes:
+        T_TEST: Student's t-test.
+        MANN_WHITNEY: Mann-Whitney U test.
+        WILCOXON: Wilcoxon signed-rank test.
+        KS: Kolmogorov-Smirnov test.
+        CHI_SQUARE: Chi-square test.
+    """
+
     __test__ = False
     T_TEST = "t-test"
     MANN_WHITNEY = "mann-whitney"
@@ -29,12 +47,29 @@ class TestMethod(Enum):
 
 
 class ChangeMethod(Enum):
+    """Methods for calculating change over time.
+
+    Attributes:
+        ABSOLUTE: Absolute difference between periods.
+        PERCENTAGE: Percentage change between periods.
+        TREND: Linear trend over time.
+    """
+
     ABSOLUTE = "absolute"
     PERCENTAGE = "percentage"
     TREND = "trend"
 
 
 class AnomalyCrossMethod(Enum):
+    """Methods for detecting cross-sectional anomalies.
+
+    Attributes:
+        ZSCORE: Z-score method.
+        IQR: Interquartile range method.
+        PERCENTILE: Percentile-based method.
+        THRESHOLD: Fixed threshold method.
+    """
+
     ZSCORE = "zscore"
     IQR = "iqr"
     PERCENTILE = "percentile"
@@ -42,12 +77,29 @@ class AnomalyCrossMethod(Enum):
 
 
 class AnomalyTsMethod(Enum):
+    """Methods for detecting time-series anomalies.
+
+    Attributes:
+        STL: Seasonal-Trend decomposition using LOESS.
+        CUSUM: Cumulative sum control chart.
+        MAD: Median Absolute Deviation.
+    """
+
     STL = "stl"
     CUSUM = "cusum"
     MAD = "mad"
 
 
 class SimilarityMethod(Enum):
+    """Methods for calculating similarity or distance.
+
+    Attributes:
+        EUCLIDEAN: Euclidean distance.
+        COSINE: Cosine similarity.
+        MAHALANOBIS: Mahalanobis distance.
+        MANHATTAN: Manhattan distance.
+    """
+
     EUCLIDEAN = "euclidean"
     COSINE = "cosine"
     MAHALANOBIS = "mahalanobis"
