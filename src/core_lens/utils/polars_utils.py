@@ -4,6 +4,57 @@ from __future__ import annotations
 
 import polars as pl
 
+_GPU_AVAILABLE: bool | None = None  # None = not yet probed
+
+
+def _gpu_available() -> bool:
+    """Return ``True`` if ``cudf_polars`` is importable (RAPIDS GPU backend).
+
+    The result is cached after the first call so subsequent invocations are
+    effectively free.
+    """
+    global _GPU_AVAILABLE
+    if _GPU_AVAILABLE is None:
+        try:
+            import cudf_polars  # noqa: F401  # type: ignore[import-untyped]
+
+            _GPU_AVAILABLE = True
+            gpu = "cudf_polars (RAPIDS)"
+            print(f"GPU : {gpu} found. Running in GPU mode.")
+        except ModuleNotFoundError:
+            _GPU_AVAILABLE = False
+            print("GPU : None found. Running in CPU mode.")
+    return _GPU_AVAILABLE
+
+
+def collect_lf(lf: pl.LazyFrame) -> pl.DataFrame:
+    """Collect a ``LazyFrame`` using the best available backend.
+
+    * **GPU present** — executes via the RAPIDS ``cudf_polars`` streaming
+      engine (``GPUEngine(executor="streaming")``).  Handles datasets larger
+      than VRAM through data partitioning.
+    * **No GPU** — falls back to Polars' built-in CPU streaming executor
+      (``collect(streaming=True)``), which keeps memory usage low for large
+      Parquet scans.
+
+    Use this function for all *data* scans (materialisation, geometry joins,
+    similarity fetches).  Tiny *index* scans that feed into subsequent
+    in-process joins should stay as bare ``.collect()`` calls — the streaming
+    path can occasionally change row ordering in ways that break those joins.
+
+    Args:
+        lf: The lazy frame to collect.
+
+    Returns:
+        A materialised ``pl.DataFrame``.
+    """
+    if _gpu_available():
+        engine = pl.GPUEngine(executor="streaming")
+        result = lf.collect(engine=engine)
+        assert isinstance(result, pl.DataFrame)
+        return result
+    return lf.collect(engine="streaming")
+
 
 def scan_with_key_filter(
     path: str,

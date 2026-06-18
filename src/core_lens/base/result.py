@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, Any
 import polars as pl
 
 from core_lens.schema.profile import Resolution
+from core_lens.utils.polars_utils import collect_lf
 
 if TYPE_CHECKING:
     import geopandas as gpd
@@ -101,10 +102,8 @@ class Result:
         import shapely.wkb as wkb
 
         geometry_col = self.entity.geometry_col
-        geo_series = gpd.GeoSeries(
-            self.data[geometry_col].map_elements(wkb.loads, return_dtype=pl.Object),
-            crs="EPSG:4326",
-        )
+        geometries = [wkb.loads(b) for b in self.data[geometry_col].to_list()]
+        geo_series = gpd.GeoSeries(geometries, crs="EPSG:4326")
         return gpd.GeoDataFrame(
             self.data.drop(geometry_col).to_pandas(),
             geometry=geo_series,
@@ -145,7 +144,7 @@ class Result:
         key_cols = self.key_cols
         static_path = self.entity._resolve(self.entity.static_path)
 
-        geo_df = (
+        geo_df = collect_lf(
             pl.scan_parquet(static_path)
             .select(key_cols + [geom_col])
             .filter(
@@ -153,7 +152,6 @@ class Result:
                 if len(key_cols) == 1
                 else pl.lit(True)
             )
-            .collect()
         )
 
         joined = self.data.join(geo_df, on=key_cols, how="left")

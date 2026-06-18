@@ -10,6 +10,8 @@ from typing import TYPE_CHECKING, Any, cast
 import numpy as np
 import polars as pl
 
+from core_lens.utils.polars_utils import collect_lf
+
 if TYPE_CHECKING:
     from core_lens.base.result import Result
 
@@ -895,13 +897,12 @@ class StatsNamespace:
 
             if resolution_str == "static":
                 # Static: no grouping needed — one row per entity.
-                fetched = col_lf.select([key, col_name]).collect()
+                fetched = collect_lf(col_lf.select([key, col_name]))
             else:
-                fetched = col_lf.group_by(key).agg(agg_expr).collect()
+                fetched = collect_lf(col_lf.group_by(key).agg(agg_expr))
 
             feat = feat.join(fetched.select([key, col_name]), on=key, how="left")
 
-        # ------------------------------------------------------------------
         feature_cols = [c for c in feat.columns if c != key]
 
         if not feature_cols:

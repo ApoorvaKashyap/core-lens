@@ -44,7 +44,7 @@ venvPath = "."
 venv = ".venv"
 
 [project.optional-dependencies]
-core = ["polars>=1.40.1,<2", "pyarrow>=24.0.0,<25", "pydantic>=2.13.3,<3"]
+core = ["polars>=1.39.0,<2", "pyarrow>=23.0.0,<25", "pydantic>=2.13.3,<3"]
 spatial = [
     "core-lens[core]",
     "duckdb>=1.5.3,<2",
@@ -59,7 +59,8 @@ viz = [
     "plotly>=6.7.0,<7",
 ]
 stats = ["core-lens[core]", "scipy>=1.17.1,<2", "statsmodels>=0.14.6,<1"]
-full = ["core-lens[spatial,viz,stats]"]
+gpu = ["core-lens[core]", "cudf-cu13==26.6.*", "cudf-polars-cu13==26.6.*"]
+full = ["core-lens[spatial,viz,stats,gpu]"]
 
 [dependency-groups]
 dev = [
@@ -96,3 +97,12 @@ disallow_incomplete_defs = false
 [[tool.mypy.overrides]]
 module = ["plotly.*"]
 ignore_missing_imports = true
+
+[[tool.uv.index]]
+name = "nvidia"
+url = "https://pypi.nvidia.com"
+explicit = true
+
+[tool.uv.sources]
+cudf-cu13 = { index = "nvidia" }
+cudf-polars-cu13 = { index = "nvidia" }

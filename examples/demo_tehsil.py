@@ -27,6 +27,11 @@ import polars as pl
 from core_lens import AoI, SeasonConfig
 from core_lens.entities import TehsilEntity
 from core_lens.export import geoparquet
+from core_lens.base.namespaces.stats import (
+    CorrelateMethod,
+    SimilarityMethod,
+    TestMethod,
+)
 import shapely.geometry as sgeom
 
 
@@ -163,7 +168,7 @@ print(desc_by_entity.df().head(5))
 
 corr = result_with_area.stats.correlate(
     columns=["area_km2", "Shape_Leng", "compactness"],
-    method="spearman",
+    method=CorrelateMethod.SPEARMAN,
     across="entity",
 )
 print("\nCorrelation (Spearman):")
@@ -180,7 +185,7 @@ try:
     test_result = result_with_area.stats.test(
         column="area_km2",
         groups="STATE",
-        method="mann-whitney",
+        method=TestMethod.MANN_WHITNEY,
     )
     print("\nHypothesis test — area by STATE:")
     print(test_result.df())
@@ -196,7 +201,7 @@ except IndexError:
 test_vs_ref = result_with_area.stats.test(
     column="area_km2",
     against=500.0,  # reference area in km²
-    method="t-test",
+    method=TestMethod.T_TEST,
 )
 print("\nOne-sample t-test vs 500 km²:")
 print(test_vs_ref.metadata)
@@ -227,7 +232,7 @@ sim = result_with_area.stats.similarity(
         "Shape_Leng": None,
         "compactness": None,
     },
-    method="euclidean",
+    method=SimilarityMethod.EUCLIDEAN,
     top_n=5,
 )
 print(f"\nMost similar tehsils to {target_id}:")

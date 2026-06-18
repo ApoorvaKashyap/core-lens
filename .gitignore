@@ -370,3 +370,11 @@ data/
 
 # Profiling results
 scalene*.*
+
+# Results
+*.html
+output_*.parquet
+output_*.csv
+output_*.geojson
+output_*.geoparquet
+output_*.json

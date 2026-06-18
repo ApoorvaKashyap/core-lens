@@ -9,7 +9,7 @@ import polars as pl
 from enum import Enum
 
 from core_lens.schema.profile import Resolution
-from core_lens.utils.polars_utils import scan_with_key_filter
+from core_lens.utils.polars_utils import scan_with_key_filter, collect_lf
 
 if TYPE_CHECKING:
     import shapely
@@ -384,7 +384,7 @@ class View:
             key_values=self.keys,
             time_expr=time_expr,
         )
-        data = lf.collect()
+        data = collect_lf(lf)
 
         # For fortnightly results, inject temporal grouping columns so that
         # aggregate(by="year"), aggregate(by="season"), etc. work out of the
