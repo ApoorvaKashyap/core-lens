@@ -31,6 +31,36 @@ class TestResolveTimeFilter:
         assert "date" in str(expr)
         # We can't strictly assert string contents, but we know it's built successfully
 
+    def test_date_range_evaluation_on_types(self, season_config: SeasonConfig) -> None:
+        df = pl.DataFrame(
+            {
+                "year_int": [2019, 2020, 2021],
+                "date_col": [
+                    datetime.date(2019, 6, 1),
+                    datetime.date(2020, 1, 15),
+                    datetime.date(2021, 1, 1),
+                ],
+            }
+        )
+
+        # Test integer year column
+        expr_int = resolve_time_filter(
+            {"start": "2020-01-01", "end": "2020-12-31"},
+            time_col="year_int",
+            season_config=season_config,
+        )
+        res_int = df.filter(expr_int)
+        assert res_int["year_int"].to_list() == [2020]
+
+        # Test Date column
+        expr_date = resolve_time_filter(
+            {"start": "2020-01-01", "end": "2020-12-31"},
+            time_col="date_col",
+            season_config=season_config,
+        )
+        res_date = df.filter(expr_date)
+        assert res_date["year_int"].to_list() == [2020]
+
     def test_season_no_year(self, season_config: SeasonConfig) -> None:
         expr = resolve_time_filter(
             {"season": "kharif"},

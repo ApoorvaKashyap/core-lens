@@ -81,7 +81,26 @@ def _date_range_expr(time_col: str, start: str, end: str) -> pl.Expr:
     start_date = datetime.date.fromisoformat(start)
     end_date = datetime.date.fromisoformat(end)
     col = pl.col(time_col)
-    return col.is_between(pl.lit(start_date), pl.lit(end_date))
+
+    # We use cast to string to avoid ComputeError when the column is an integer,
+    # but still allow exact date comparison.
+    # For integer year columns (e.g., 2020), cast to string yields "2020".
+    # For date columns, cast to string yields "2020-01-01".
+    # So we compare strings directly! Lexicographical string comparison works perfectly for ISO-8601 dates and 4-digit years.
+    # For year integers, "2020" >= "2020-01-01" is False.
+    # Wait, "2020" < "2020-01-01". So if it's an integer, "2020" will not be between "2020-01-01" and "2023-12-31" because "2020" is less than "2020-01-01".
+    # To fix this, we can extract the year for the integer comparison using a regex or length check.
+    # Better: check the length of the casted string. If 4, it's a year.
+    s_col = col.cast(pl.String)
+    is_year_int = s_col.str.len_bytes() == 4
+
+    # Use strict=False so "2020-01-01" casts to null instead of raising ComputeError
+    year_expr = s_col.cast(pl.Int32, strict=False).is_between(
+        start_date.year, end_date.year
+    )
+    date_expr = s_col.is_between(pl.lit(start), pl.lit(end))
+
+    return pl.when(is_year_int).then(year_expr).otherwise(date_expr)
 
 
 def _season_expr(
