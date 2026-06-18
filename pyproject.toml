@@ -60,7 +60,8 @@ viz = [
 ]
 stats = ["core-lens[core]", "scipy>=1.17.1,<2", "statsmodels>=0.14.6,<1"]
 gpu = ["core-lens[core]", "cudf-cu13==26.6.*", "cudf-polars-cu13==26.6.*"]
-full = ["core-lens[spatial,viz,stats,gpu]"]
+full = ["core-lens[spatial,viz,stats]"]
+full-gpu = ["core-lens[spatial,viz,stats,gpu]"]
 
 [dependency-groups]
 dev = [
