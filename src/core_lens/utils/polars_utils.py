@@ -12,9 +12,6 @@ def _gpu_available() -> bool:
 
     The result is cached after the first call so subsequent invocations are
     effectively free.
-
-    Returns:
-        bool: True if the RAPIDS GPU backend is available, False otherwise.
     """
     global _GPU_AVAILABLE
     if _GPU_AVAILABLE is None:
@@ -55,11 +52,21 @@ def collect_lf(lf: pl.LazyFrame) -> pl.DataFrame:
     Returns:
         A materialised ``pl.DataFrame``.
     """
+    global _GPU_AVAILABLE
     if _gpu_available():
         engine = pl.GPUEngine(executor="streaming")
-        result = lf.collect(engine=engine)
-        assert isinstance(result, pl.DataFrame)
-        return result
+        try:
+            result = lf.collect(engine=engine)
+            assert isinstance(result, pl.DataFrame)
+            return result
+        except pl.exceptions.ComputeError as e:
+            if "cuda" in str(e).lower() or "nvml" in str(e).lower():
+                _GPU_AVAILABLE = False
+                print("=" * 50)
+                print(f"GPU runtime error ({e}). Falling back to CPU mode.")
+                print("=" * 50)
+            else:
+                raise
     return lf.collect(engine="streaming")
 
 
