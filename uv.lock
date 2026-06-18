@@ -428,6 +428,15 @@ wheels = [
 ]
 
 [[package]]
+name = "cloudpickle"
+version = "3.1.2"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/27/fb/576f067976d320f5f0114a8d9fa1215425441bb35627b1993e5afd8111e5/cloudpickle-3.1.2.tar.gz", hash = "sha256:7fda9eb655c9c230dab534f1983763de5835249750e85fbcef43aaa30a9a2414", size = 22330, upload-time = "2025-11-03T09:25:26.604Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/88/39/799be3f2f0f38cc727ee3b4f1445fe6d5e4133064ec2e4115069418a5bb6/cloudpickle-3.1.2-py3-none-any.whl", hash = "sha256:9acb47f6afd73f60dc1df93bb801b472f05ff42fa6c84167d25cb206be1fbf4a", size = 22228, upload-time = "2025-11-03T09:25:25.534Z" },
+]
+
+[[package]]
 name = "colorama"
 version = "0.4.6"
 source = { registry = "https://pypi.org/simple" }
@@ -568,6 +577,7 @@ dev = [
     { name = "pytest-cov" },
     { name = "python-semantic-release" },
     { name = "ruff" },
+    { name = "scalene" },
     { name = "twine" },
 ]
 docs = [
@@ -633,6 +643,7 @@ dev = [
     { name = "pytest-cov", specifier = ">=7.1.0" },
     { name = "python-semantic-release", specifier = ">=10.5.3" },
     { name = "ruff", specifier = ">=0.15.12" },
+    { name = "scalene", specifier = ">=2.3.0" },
     { name = "twine", specifier = ">=6.2.0" },
 ]
 docs = [
@@ -1708,6 +1719,15 @@ wheels = [
 ]
 
 [[package]]
+name = "nvidia-ml-py"
+version = "13.610.43"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/f0/b5/a8fbc356f768fa5c9cfd646668fd7d34bf55bdd1c6e20754642a64d930d4/nvidia_ml_py-13.610.43.tar.gz", hash = "sha256:65437eb73d68d0c62c931ca4d45038472faff03bd0b8729abba4b899f70d60f2", size = 52109, upload-time = "2026-06-01T18:54:08.829Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/23/45/caa600acfab94560807a20a64b5830d2cd3c3202b7f1328644d70b7d6bd8/nvidia_ml_py-13.610.43-py3-none-any.whl", hash = "sha256:f13c72698edef492f985cc225f14faafe68ae065a2e407f45bdf6f4b9b43fde8", size = 53163, upload-time = "2026-06-01T18:54:07.704Z" },
+]
+
+[[package]]
 name = "packageurl-python"
 version = "0.17.6"
 source = { registry = "https://pypi.org/simple" }
@@ -2562,6 +2582,30 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/49/71/9b29d6b87cef468d697f43c6a91e3fae4a80185779d7d5a4ef27d173439f/ruff-0.15.17-py3-none-win32.whl", hash = "sha256:596065960ab1ff593f744220c9fe6580eda00a95003cffa9f4048bb5b1bf0392", size = 10925574, upload-time = "2026-06-11T17:54:55.723Z" },
     { url = "https://files.pythonhosted.org/packages/3d/b2/8fc77f3723228836fa5d12497eb71c808f83782e10d058d2b15cfa14640b/ruff-0.15.17-py3-none-win_amd64.whl", hash = "sha256:6769e5fa1710b179b92e0bfa5a51735b35baea9013dadb06d5f44cbcf9547084", size = 12058788, upload-time = "2026-06-11T17:54:41.042Z" },
     { url = "https://files.pythonhosted.org/packages/2d/c7/c53e8dbff9c9dc4b7928773421ae294a5d28fcb8dcda1a089579d3a7e510/ruff-0.15.17-py3-none-win_arm64.whl", hash = "sha256:f3be1fbb34bcdfd146240d8fb92a709d4c2c8191348580a3c044ec60fa0b4456", size = 11355275, upload-time = "2026-06-11T17:54:43.635Z" },
+]
+
+[[package]]
+name = "scalene"
+version = "2.3.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "cloudpickle" },
+    { name = "jinja2" },
+    { name = "numpy" },
+    { name = "nvidia-ml-py", marker = "sys_platform != 'darwin'" },
+    { name = "psutil" },
+    { name = "pydantic" },
+    { name = "pyyaml" },
+    { name = "rich" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/91/96/e2ea55e8d1d981fb2d0fe76c38c1d7ab7b91c2229176bbeed771b9da0f1f/scalene-2.3.0.tar.gz", hash = "sha256:57212ceeeeeef9891c344275592413f4b90fb407ecdec75b5b164f0eef2e6261", size = 9457857, upload-time = "2026-05-12T18:45:43.894Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/1c/c0/b35cfe08c8b2babfd37f8b8cdc3480269dc337485e9bd55209d9b9d000c3/scalene-2.3.0-cp313-cp313-macosx_15_0_universal2.whl", hash = "sha256:68ccf616be1bd957802fdc88675810352c714d26bfdbcf25445e68711822e510", size = 1134020, upload-time = "2026-05-12T18:45:49.5Z" },
+    { url = "https://files.pythonhosted.org/packages/72/3f/420c84e218324edec59ccfcda32c82ef8eb6778ce6ebb0f703bb87f6f555/scalene-2.3.0-cp313-cp313-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:deca1214b8f2b3b1d2c770651d7817364c2e9d41c17e0fd37537707ae8482121", size = 1495613, upload-time = "2026-05-12T18:46:01.544Z" },
+    { url = "https://files.pythonhosted.org/packages/f2/82/f7505155102e5a87e8ddeb869d6f69a5ab86c26a7eeff3b7be7c999412f7/scalene-2.3.0-cp313-cp313-win_amd64.whl", hash = "sha256:5af3eeccf109712d0bb14c4d2782314835c30de3aa7286c787f25441caadf248", size = 1046204, upload-time = "2026-05-12T18:50:24.805Z" },
+    { url = "https://files.pythonhosted.org/packages/64/59/53e513a6cd926e1b222491aa7105891f7b0b5f0fcfe713c8046769746358/scalene-2.3.0-cp314-cp314-macosx_15_0_universal2.whl", hash = "sha256:b8400014d4af47410f6ba5250e27f19f1addf0f534cef7013b1a7827170f5ea8", size = 1134328, upload-time = "2026-05-12T18:46:29.283Z" },
+    { url = "https://files.pythonhosted.org/packages/0a/ad/99f345fb1030fb1eca7d9bc8bc77d52a642bb81dbd6efb7d599d490b2c9e/scalene-2.3.0-cp314-cp314-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:2c6acc3bb76e32dfbfc7a0fe75986cde8eb8e98cee2515aea541631d440bc465", size = 1495627, upload-time = "2026-05-12T18:46:01.128Z" },
+    { url = "https://files.pythonhosted.org/packages/1d/35/2c8ba0472df79511e3a903100d95348c6d3113d2e2fdca89e2ca5141f265/scalene-2.3.0-cp314-cp314-win_amd64.whl", hash = "sha256:dec3398f6166bbe65494241506745ed088395c6298d31394461bf7061729edef", size = 1054162, upload-time = "2026-05-12T18:49:17.465Z" },
 ]
 
 [[package]]
