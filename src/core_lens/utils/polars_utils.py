@@ -12,6 +12,9 @@ def _gpu_available() -> bool:
 
     The result is cached after the first call so subsequent invocations are
     effectively free.
+
+    Returns:
+        bool: True if the RAPIDS GPU backend is available, False otherwise.
     """
     global _GPU_AVAILABLE
     if _GPU_AVAILABLE is None:

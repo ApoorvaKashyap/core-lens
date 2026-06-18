@@ -20,9 +20,15 @@ def _sf(x: object) -> float:
     """Narrow a polars scalar (mean/std/median/quantile return type) to float.
 
     Polars returns a wide union that includes non-numeric types; mypy cannot
-    narrow it automatically.  This helper asserts the value is numeric at
+    narrow it automatically. This helper asserts the value is numeric at
     runtime and returns a proper ``float``, or ``nan`` when the value is
     ``None`` (empty series).
+
+    Args:
+        x: The scalar value returned by a Polars aggregation.
+
+    Returns:
+        float: The numeric value as a float, or NaN if the input is None.
     """
     if x is None:
         return float("nan")

@@ -6,6 +6,12 @@
 pip install core-lens
 ```
 
+To enable GPU-accelerated queries (requires an NVIDIA GPU and Linux), install with the `gpu` extra. You will need to configure your package manager to use the NVIDIA PyPI index for RAPIDS dependencies:
+
+```bash
+pip install "core-lens[gpu]" --extra-index-url=https://pypi.nvidia.com
+```
+
 ## Basic Usage
 
 Before querying, you must register the entities you plan to use:
