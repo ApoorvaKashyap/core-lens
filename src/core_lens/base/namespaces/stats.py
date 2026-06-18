@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import warnings
 from enum import Enum
 from itertools import combinations
 from typing import TYPE_CHECKING, Any, cast
@@ -923,9 +924,11 @@ class StatsNamespace:
         tidx = ids.index(target)
 
         # z-score normalise before computing distances.
-        means = np.nanmean(mat, axis=0)
-        stds = np.nanstd(mat, axis=0, ddof=1)
-        stds[stds == 0] = 1.0
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", category=RuntimeWarning)
+            means = np.nanmean(mat, axis=0)
+            stds = np.nanstd(mat, axis=0, ddof=1)
+        stds[np.isnan(stds) | (stds == 0)] = 1.0
         norm = (mat - means) / stds
         tvec = norm[tidx]
 
