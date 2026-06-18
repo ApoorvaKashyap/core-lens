@@ -20,10 +20,14 @@ def _gpu_available() -> bool:
 
             _GPU_AVAILABLE = True
             gpu = "cudf_polars (RAPIDS)"
+            print("=" * 50)
             print(f"GPU : {gpu} found. Running in GPU mode.")
+            print("=" * 50)
         except ModuleNotFoundError:
             _GPU_AVAILABLE = False
+            print("=" * 50)
             print("GPU : None found. Running in CPU mode.")
+            print("=" * 50)
     return _GPU_AVAILABLE
 
 
