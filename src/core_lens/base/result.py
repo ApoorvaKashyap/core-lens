@@ -235,12 +235,12 @@ class Result:
             )
 
         if by is None:
-            new_data = self.data.group_by(self.key_cols).agg(exprs)
+            new_data = self.data.group_by(self.key_cols).agg(*exprs)
         else:
             # Temporal grouping columns are expected to already exist on the
             # frame (added by the materialisation layer from the time column).
             group_cols = self.key_cols + [by]
-            new_data = self.data.group_by(group_cols).agg(exprs)
+            new_data = self.data.group_by(group_cols).agg(*exprs)
 
         return self._replace(data=new_data)
 
