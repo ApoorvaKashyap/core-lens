@@ -43,19 +43,17 @@ def _apply_theme(fig: Any, result: "Result", title: str) -> None:
         legend_title_text="Entity",
         hovermode="closest",
         margin=dict(b=60),
-        annotations=[
-            dict(
-                text=f"Entity: {entity_name} | Visualised with Plotly",
-                showarrow=False,
-                xref="paper",
-                yref="paper",
-                x=1.0,
-                y=-0.18,
-                xanchor="right",
-                yanchor="top",
-                font=dict(size=10, color="gray"),
-            )
-        ],
+    )
+    fig.add_annotation(
+        text=f"Entity: {entity_name} | Visualised with Plotly",
+        showarrow=False,
+        xref="paper",
+        yref="paper",
+        x=1.0,
+        y=-0.18,
+        xanchor="right",
+        yanchor="top",
+        font=dict(size=10, color="gray"),
     )
 
 
@@ -169,6 +167,7 @@ class PlotNamespace:
         self,
         x: str | None = None,
         y: str | list[str] | None = None,
+        subplot_on: SubplotOn | str | None = None,
         top_n: int = 10,
         aggregate: bool = False,
     ) -> Any:
@@ -183,6 +182,8 @@ class PlotNamespace:
             x: The temporal column to plot on the x-axis.
             y: The value column(s) to plot on the y-axis.
                 If ``None``, all numeric columns (except ``x``) are used.
+            subplot_on: Optional temporal dimension to split data across.
+                A :class:`~core_lens.base.namespaces.plot.SubplotOn` enum value or string.
             top_n: Maximum number of entities rendered in per-entity view.
             aggregate: If ``True``, renders only the aggregated mean view and
                 skips the per-entity traces (legacy flag; prefer the in-chart
@@ -210,17 +211,30 @@ class PlotNamespace:
         if not y_cols:
             raise ValueError("No numeric columns found for y-axis.")
 
+        subplot_col = None
+        if subplot_on is not None:
+            if isinstance(subplot_on, SubplotOn):
+                subplot_col = subplot_on.value
+            else:
+                subplot_col = str(subplot_on)
+            if subplot_col not in df.columns:
+                raise ValueError(
+                    f"PlotNamespace.timeseries: subplot_on column {subplot_col!r} not found "
+                    "in Result."
+                )
+
         key_col = self.result.key_cols[0]
         hover_cols = [c for c in df.columns if c not in ("geometry", "geom")]
 
         if aggregate:
+            group_cols = [x, subplot_col] if subplot_col else [x]
             agg_df = (
-                df.group_by(x)
+                df.group_by(group_cols)
                 .agg([pl.col(c).mean() for c in y_cols])
                 .sort(x)
                 .to_pandas()
             )
-            fig = px.line(agg_df, x=x, y=y_cols, markers=True)
+            fig = px.line(agg_df, x=x, y=y_cols, facet_col=subplot_col, markers=True)
             _apply_theme(fig, self.result, "Timeseries (Aggregated Mean)")
             return fig
 
@@ -240,15 +254,20 @@ class PlotNamespace:
             x=x,
             y=y_col,
             color=key_col,
+            facet_col=subplot_col,
             hover_data=hover_cols,
             markers=True,
         )
         entity_traces = list(entity_fig.data)  # pyright: ignore[reportArgumentType]
 
+        group_cols = [x, subplot_col] if subplot_col else [x]
         agg_df = (
-            df.group_by(x).agg([pl.col(c).mean() for c in y_cols]).sort(x).to_pandas()
+            df.group_by(group_cols)
+            .agg([pl.col(c).mean() for c in y_cols])
+            .sort(x)
+            .to_pandas()
         )
-        agg_fig = px.line(agg_df, x=x, y=y_col, markers=True)
+        agg_fig = px.line(agg_df, x=x, y=y_col, facet_col=subplot_col, markers=True)
         # Give aggregated traces a distinct style.
         for trace in agg_fig.data:
             trace.line = dict(width=3, dash="dash")  # pyright: ignore[reportAttributeAccessIssue]
@@ -305,21 +324,23 @@ class PlotNamespace:
                     font=dict(size=12),
                     direction="right",
                 )
-            ],
-            annotations=[
-                dict(
-                    text="View:",
-                    x=0.0,
-                    y=1.16,
-                    xref="paper",
-                    yref="paper",
-                    showarrow=False,
-                    font=dict(size=12),
-                )
-            ],
+            ]
+        )
+        fig.add_annotation(
+            text="View:",
+            x=0.0,
+            y=1.16,
+            xref="paper",
+            yref="paper",
+            showarrow=False,
+            font=dict(size=12),
         )
 
         _apply_theme(fig, self.result, f"Timeseries — {y_col}")
+
+        # When faceting, we should avoid overriding the yaxis_title broadly if not needed
+        # or apply it cleanly. px.line already sets it if we have faceting, but let's
+        # just do what was there originally (update_layout applies it to the first yaxis).
         fig.update_layout(yaxis_title=y_col)
         return fig
 
