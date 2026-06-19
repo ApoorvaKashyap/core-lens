@@ -150,7 +150,7 @@ class AoI:
         bbox: tuple[float, float, float, float] | None = None,
         geometry: "shapely.Geometry | None" = None,
         seasons: SeasonConfig | None = None,
-        **entity_kwargs: str,
+        **entity_kwargs: str | list[str],
     ) -> None:
         """Resolve the AoI boundary and scope all registered entities.
 
@@ -313,7 +313,7 @@ class AoI:
         )
 
     def _resolve_named_boundary(
-        self, entity_kwargs: dict[str, str]
+        self, entity_kwargs: dict[str, str | list[str]]
     ) -> "shapely.Geometry":
         """Resolve a set of named attribute filters to a Shapely geometry.
 
@@ -373,7 +373,10 @@ class AoI:
                 col in candidate.schema_profile.key_cols
                 or col in candidate.schema_profile.extra_static_cols
             ):
-                filter_expr = filter_expr & (pl.col(col) == val)
+                if isinstance(val, list):
+                    filter_expr = filter_expr & pl.col(col).is_in(val)
+                else:
+                    filter_expr = filter_expr & (pl.col(col) == val)
 
         df = lf.filter(filter_expr).select(candidate.key_cols + [geom_col]).collect()
 
