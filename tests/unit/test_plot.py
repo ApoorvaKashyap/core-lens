@@ -99,8 +99,12 @@ def test_timeseries_basic(dummy_result: Result) -> None:
 
     fig = res.plot.timeseries(x="year", y="value")
     assert fig is not None
-    assert fig.layout.xaxis.title.text == "year"
-    assert fig.layout.yaxis.title.text == "value"
+    from bokeh.models import Tabs
+
+    assert isinstance(fig, Tabs)
+    entity_fig = fig.tabs[0].child  # type: ignore[union-attr]
+    assert entity_fig.xaxis.axis_label == "year"  # type: ignore[union-attr]
+    assert entity_fig.yaxis.axis_label == "value"  # type: ignore[union-attr]
 
 
 def test_timeseries_aggregate(dummy_result: Result) -> None:
@@ -110,7 +114,7 @@ def test_timeseries_aggregate(dummy_result: Result) -> None:
 
     fig = res.plot.timeseries(x="year", y="value", aggregate=True)
     assert fig is not None
-    assert len(fig.data[0].x) == 2
+    assert len(fig.renderers) > 0
 
 
 def test_timeseries_missing_xy(dummy_result: Result) -> None:
@@ -127,9 +131,9 @@ def test_timeseries_multiple_y(dummy_result: Result) -> None:
     res = dummy_result._replace(data=df)
     fig = res.plot.timeseries(x="year", y=["value", "value2"])
     assert fig is not None
-    # Verify dropdown menu exists
-    assert hasattr(fig.layout, "updatemenus")
-    assert len(fig.layout.updatemenus) > 0
+    from bokeh.models import Tabs
+
+    assert isinstance(fig, Tabs)
 
 
 def test_scatter_basic(dummy_result: Result) -> None:
@@ -139,8 +143,8 @@ def test_scatter_basic(dummy_result: Result) -> None:
 
     fig = res.plot.scatter(x="value", y="other_val")
     assert fig is not None
-    assert fig.layout.xaxis.title.text == "value"
-    assert fig.layout.yaxis.title.text == "other_val"
+    assert fig.xaxis.axis_label == "value"
+    assert fig.yaxis.axis_label == "other_val"
 
 
 def test_scatter_missing_xy(dummy_result: Result) -> None:
@@ -157,15 +161,15 @@ def test_scatter_multiple_y(dummy_result: Result) -> None:
     res = dummy_result._replace(data=df)
     fig = res.plot.scatter(x="value", y=["other_val", "third_val"])
     assert fig is not None
-    assert hasattr(fig.layout, "updatemenus")
-    assert len(fig.layout.updatemenus) > 0
+    assert hasattr(fig, "tabs")
+    assert len(fig.tabs) > 0
 
 
 def test_distribution_basic(dummy_result: Result) -> None:
     """Test distribution creates a plotly figure."""
     fig = dummy_result.plot.distribution(x="value")
     assert fig is not None
-    assert fig.layout.xaxis.title.text == "value"
+    assert fig.xaxis.axis_label == "value"
 
 
 def test_distribution_missing_x(dummy_result: Result) -> None:
@@ -180,8 +184,8 @@ def test_distribution_multiple_x(dummy_result: Result) -> None:
     res = dummy_result._replace(data=df)
     fig = res.plot.distribution(x=["value", "other_val"])
     assert fig is not None
-    assert hasattr(fig.layout, "updatemenus")
-    assert len(fig.layout.updatemenus) > 0
+    assert hasattr(fig, "tabs")
+    assert len(fig.tabs) > 0
 
 
 def test_correlation_basic(dummy_result: Result) -> None:

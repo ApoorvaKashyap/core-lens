@@ -56,7 +56,7 @@ viz = [
     "core-lens[core]",
     "lonboard>=0.16.0,<1",
     "matplotlib>=3.10.9,<4",
-    "plotly>=6.7.0,<7",
+    "bokeh>=3.6.0,<4",
 ]
 stats = ["core-lens[core]", "scipy>=1.17.1,<2", "statsmodels>=0.14.6,<1"]
 gpu = ["core-lens[core]", "cudf-cu13==26.6.*", "cudf-polars-cu13==26.6.*"]
@@ -96,7 +96,7 @@ disallow_untyped_defs = false
 disallow_incomplete_defs = false
 
 [[tool.mypy.overrides]]
-module = ["plotly.*"]
+module = ["bokeh.*"]
 ignore_missing_imports = true
 
 [[tool.uv.index]]

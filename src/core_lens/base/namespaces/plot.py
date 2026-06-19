@@ -27,34 +27,68 @@ class SubplotOn(Enum):
 
 if TYPE_CHECKING:
     import lonboard
+    from bokeh.plotting import figure as BokehFigure
     from core_lens.base.result import Result
 
 
+_PALETTE = [
+    "#1f77b4",
+    "#ff7f0e",
+    "#2ca02c",
+    "#d62728",
+    "#9467bd",
+    "#8c564b",
+    "#e377c2",
+    "#7f7f7f",
+    "#bcbd22",
+    "#17becf",
+]
+
+
+def _color_for(index: int) -> str:
+    """Get a color from the palette by index.
+
+    Args:
+        index: The index of the color.
+
+    Returns:
+        The hex color string.
+    """
+    return _PALETTE[index % len(_PALETTE)]
+
+
 def _apply_theme(fig: Any, result: "Result", title: str) -> None:
-    """Apply standard CoreLens theme to a Plotly figure."""
+    """Apply standard CoreLens theme to a Bokeh figure.
+
+    Args:
+        fig: The Bokeh figure.
+        result: The parent Result object.
+        title: The title text.
+    """
     entity_name = getattr(result.entity, "__name__", "Unknown")
     if hasattr(result, "entity_name"):
         entity_name = result.entity_name
 
-    fig.update_layout(
-        template="plotly_white",
-        font=dict(family="Inter, sans-serif"),
-        title=title,
-        legend_title_text="Entity",
-        hovermode="closest",
-        margin=dict(b=60),
+    fig.title.text = title
+    fig.title.text_font = "Inter, sans-serif"
+    fig.title.text_font_size = "14pt"
+
+    # Subtitle-style annotation in the bottom-right corner.
+    from bokeh.models.annotations import Label
+
+    subtitle = Label(
+        x=fig.plot_width if hasattr(fig, "plot_width") else 800,
+        y=0,
+        x_units="screen",
+        y_units="screen",
+        text=f"Entity: {entity_name} | Visualised with Bokeh",
+        text_font_size="9pt",
+        text_color="gray",
+        x_offset=-8,
+        y_offset=4,
+        text_align="right",
     )
-    fig.add_annotation(
-        text=f"Entity: {entity_name} | Visualised with Plotly",
-        showarrow=False,
-        xref="paper",
-        yref="paper",
-        x=1.0,
-        y=-0.18,
-        xanchor="right",
-        yanchor="top",
-        font=dict(size=10, color="gray"),
-    )
+    fig.add_layout(subtitle)
 
 
 class PlotNamespace:
@@ -144,11 +178,11 @@ class PlotNamespace:
             # Render the most-recent/first unique value of subplot_on so that the
             # map is still useful.  True multi-panel subplots are not supported by
             # Lonboard's single-Map API.
-            unique_vals = sorted(gdf[subplot_col].dropna().unique().tolist())
+            unique_vals = sorted(gdf[subplot_col].to_list())
             if unique_vals:
                 gdf = gdf[gdf[subplot_col] == unique_vals[-1]].copy()
 
-        values = gdf[column].to_numpy()
+        values = np.asarray(gdf[column])
         v_min, v_max = np.nanmin(values), np.nanmax(values)
         if v_max > v_min:
             norm_values = (values - v_min) / (v_max - v_min)
@@ -157,8 +191,10 @@ class PlotNamespace:
 
         cmap = mpl.colormaps["plasma"]
 
+        import geopandas as gpd
+
         layer = lonboard.PolygonLayer.from_geopandas(
-            gdf,
+            gpd.GeoDataFrame(gdf),
             get_fill_color=apply_continuous_cmap(norm_values, cmap),
         )
         return lonboard.Map(layers=[layer])
@@ -171,12 +207,12 @@ class PlotNamespace:
         top_n: int = 10,
         aggregate: bool = False,
     ) -> Any:
-        """Render a timeseries line chart using Plotly.
+        """Render a timeseries line chart using Bokeh.
 
-        The figure includes a **View** toggle dropdown that lets the user switch
-        between the per-entity view (up to ``top_n`` entities) and an aggregated
-        mean view — both are embedded in the same Plotly figure without
-        regenerating the chart.
+        Returns a :class:`bokeh.models.Tabs` widget with two panels:
+        *Per Entity* (up to ``top_n`` entities) and *Aggregated Mean*.
+        When ``aggregate=True``, only the aggregated panel is returned as a
+        plain :class:`bokeh.plotting.figure`.
 
         Args:
             x: The temporal column to plot on the x-axis.
@@ -185,17 +221,15 @@ class PlotNamespace:
             subplot_on: Optional temporal dimension to split data across.
                 A :class:`~core_lens.base.namespaces.plot.SubplotOn` enum value or string.
             top_n: Maximum number of entities rendered in per-entity view.
-            aggregate: If ``True``, renders only the aggregated mean view and
-                skips the per-entity traces (legacy flag; prefer the in-chart
-                toggle for interactive exploration).
+            aggregate: If ``True``, renders only the aggregated mean view.
 
         Returns:
-            A Plotly Figure object with an embedded View toggle.
+            A Bokeh Tabs object (or a single Figure when ``aggregate=True``).
         """
         import polars as pl
         import polars.selectors as cs
-        import plotly.express as px
-        import plotly.graph_objects as go
+        from bokeh.models import Tabs, TabPanel
+        from bokeh.plotting import figure
 
         if x is None:
             raise ValueError("x must be provided for timeseries plot.")
@@ -224,130 +258,116 @@ class PlotNamespace:
                 )
 
         key_col = self.result.key_cols[0]
-        hover_cols = [c for c in df.columns if c not in ("geometry", "geom")]
-
-        if aggregate:
-            group_cols = [x, subplot_col] if subplot_col else [x]
-            agg_df = (
-                df.group_by(group_cols)
-                .agg([pl.col(c).mean() for c in y_cols])
-                .sort(x)
-                .to_pandas()
-            )
-            fig = px.line(agg_df, x=x, y=y_cols, facet_col=subplot_col, markers=True)
-            _apply_theme(fig, self.result, "Timeseries (Aggregated Mean)")
-            return fig
-
-        entity_df = df.sort(x)
-        unique_entities = entity_df[key_col].unique()
-        if len(unique_entities) > top_n:
-            entities = unique_entities.limit(top_n).to_list()
-            entity_df = entity_df.filter(pl.col(key_col).is_in(entities))
-
-        entity_pd = entity_df.to_pandas()
-
-        # Use first y_col for initial display (additional y_cols toggled separately).
         y_col = y_cols[0]
 
-        entity_fig = px.line(
-            entity_pd,
-            x=x,
-            y=y_col,
-            color=key_col,
-            facet_col=subplot_col,
-            hover_data=hover_cols,
-            markers=True,
-        )
-        entity_traces = list(entity_fig.data)  # pyright: ignore[reportArgumentType]
+        def _make_fig(pdf: Any, title: str) -> "BokehFigure":
+            tooltips = [
+                (c, f"@{{{c}}}") for c in pdf.columns if c not in ("geometry", "geom")
+            ]
+            fig = figure(  # type: ignore[call-arg]
+                width=900,
+                height=400,
+                x_axis_label=x,
+                y_axis_label=y_col,
+                tools="pan,wheel_zoom,box_zoom,reset,save,hover",
+                tooltips=tooltips,
+            )
+            fig.xaxis.axis_label_text_font = "Inter, sans-serif"
+            fig.yaxis.axis_label_text_font = "Inter, sans-serif"
 
+            if subplot_col and subplot_col in pdf.columns:
+                # One sub-panel per unique subplot_col value via colour coding.
+                unique_vals = sorted(pdf[subplot_col].dropna().unique())
+                for vi, val in enumerate(unique_vals):
+                    sub = pdf[pdf[subplot_col] == val]
+                    entities = (
+                        sub[key_col].unique() if key_col in sub.columns else [None]
+                    )
+                    for ei, entity in enumerate(entities):
+                        row = sub[sub[key_col] == entity] if entity is not None else sub
+                        color = _color_for(vi * len(entities) + ei)
+                        label = f"{entity} ({val})" if entity is not None else str(val)
+                        fig.line(
+                            x=row[x].tolist(),
+                            y=row[y_col].tolist(),
+                            color=color,
+                            legend_label=label,
+                            line_width=2,
+                        )
+                        fig.scatter(
+                            x=row[x].tolist(),
+                            y=row[y_col].tolist(),
+                            color=color,
+                            size=5,
+                        )
+            elif key_col in pdf.columns:
+                for i, entity in enumerate(pdf[key_col].unique()):
+                    row = pdf[pdf[key_col] == entity]
+                    color = _color_for(i)
+                    fig.line(
+                        x=row[x].tolist(),
+                        y=row[y_col].tolist(),
+                        color=color,
+                        legend_label=str(entity),
+                        line_width=2,
+                    )
+                    fig.scatter(
+                        x=row[x].tolist(), y=row[y_col].tolist(), color=color, size=5
+                    )
+            else:
+                fig.line(
+                    x=pdf[x].tolist(),
+                    y=pdf[y_col].tolist(),
+                    color=_color_for(0),
+                    line_width=2,
+                )
+                fig.scatter(
+                    x=pdf[x].tolist(),
+                    y=pdf[y_col].tolist(),
+                    color=_color_for(0),
+                    size=5,
+                )
+
+            fig.legend.location = "top_left"
+            fig.legend.click_policy = "hide"
+            _apply_theme(fig, self.result, title)
+            return fig
+
+        # --- Aggregated view --------------------------------------------------
         group_cols = [x, subplot_col] if subplot_col else [x]
-        agg_df = (
+        agg_pdf = (
             df.group_by(group_cols)
             .agg([pl.col(c).mean() for c in y_cols])
             .sort(x)
             .to_pandas()
         )
-        agg_fig = px.line(agg_df, x=x, y=y_col, facet_col=subplot_col, markers=True)
-        # Give aggregated traces a distinct style.
-        for trace in agg_fig.data:
-            trace.line = dict(width=3, dash="dash")  # pyright: ignore[reportAttributeAccessIssue]
-            trace.name = f"Mean ({y_col})"  # pyright: ignore[reportAttributeAccessIssue]
-        agg_traces = list(agg_fig.data)  # pyright: ignore[reportArgumentType]
 
-        fig = go.Figure()
+        if aggregate:
+            return _make_fig(agg_pdf, "Timeseries (Aggregated Mean)")
 
-        # Set initial layout from entity_fig.
-        fig.update_layout(entity_fig.layout)
+        # --- Per-entity view --------------------------------------------------
+        entity_df = df.sort(x)
+        unique_entities = entity_df[key_col].unique()
+        if len(unique_entities) > top_n:
+            entities = unique_entities.limit(top_n).to_list()
+            entity_df = entity_df.filter(pl.col(key_col).is_in(entities))
+        entity_pdf = entity_df.to_pandas()
 
-        n_entity = len(entity_traces)
-        n_agg = len(agg_traces)
+        fig_entity = _make_fig(entity_pdf, f"Timeseries — {y_col} (Per Entity)")
+        fig_agg = _make_fig(agg_pdf, f"Timeseries — {y_col} (Aggregated Mean)")
 
-        for trace in entity_traces:
-            trace.visible = True  # pyright: ignore[reportAttributeAccessIssue]
-            fig.add_trace(trace)
-        for trace in agg_traces:
-            trace.visible = False  # pyright: ignore[reportAttributeAccessIssue]  # hidden by default
-            fig.add_trace(trace)
-
-        view_buttons = [
-            dict(
-                method="update",
-                label="Per Entity",
-                args=[
-                    {"visible": [True] * n_entity + [False] * n_agg},
-                    {"title": f"Timeseries — {y_col} (Per Entity)"},
-                ],
-            ),
-            dict(
-                method="update",
-                label="Aggregated Mean",
-                args=[
-                    {"visible": [False] * n_entity + [True] * n_agg},
-                    {"title": f"Timeseries — {y_col} (Aggregated Mean)"},
-                ],
-            ),
-        ]
-
-        fig.update_layout(
-            updatemenus=[
-                dict(
-                    type="buttons",
-                    active=0,
-                    buttons=view_buttons,
-                    x=0.0,
-                    y=1.12,
-                    xanchor="left",
-                    yanchor="top",
-                    showactive=True,
-                    bgcolor="rgba(255,255,255,0.9)",
-                    bordercolor="#aaa",
-                    font=dict(size=12),
-                    direction="right",
-                )
+        tabs = Tabs(
+            tabs=[
+                TabPanel(child=fig_entity, title="Per Entity"),
+                TabPanel(child=fig_agg, title="Aggregated Mean"),
             ]
         )
-        fig.add_annotation(
-            text="View:",
-            x=0.0,
-            y=1.16,
-            xref="paper",
-            yref="paper",
-            showarrow=False,
-            font=dict(size=12),
-        )
-
-        _apply_theme(fig, self.result, f"Timeseries — {y_col}")
-
-        # When faceting, we should avoid overriding the yaxis_title broadly if not needed
-        # or apply it cleanly. px.line already sets it if we have faceting, but let's
-        # just do what was there originally (update_layout applies it to the first yaxis).
-        fig.update_layout(yaxis_title=y_col)
-        return fig
+        return tabs
 
     def scatter(
         self, x: str | None = None, y: str | list[str] | None = None, top_n: int = 10
     ) -> Any:
-        """Render a scatter plot using Plotly.
+        """Render a scatter plot using Bokeh.
 
         Args:
             x: The column to plot on the x-axis.
@@ -355,12 +375,12 @@ class PlotNamespace:
             top_n: Maximum number of entities to plot.
 
         Returns:
-            A Plotly Figure object.
+            A Bokeh Figure or Tabs object.
         """
         import polars as pl
         import polars.selectors as cs
-        import plotly.express as px
-        import plotly.graph_objects as go
+        from bokeh.models import Tabs, TabPanel
+        from bokeh.plotting import figure
 
         if x is None:
             raise ValueError("x must be provided for scatter plot.")
@@ -369,11 +389,9 @@ class PlotNamespace:
         if x not in df.columns:
             raise ValueError(f"Column {x!r} not found in Result.")
 
-        y_cols = [y] if isinstance(y, str) else y
-        if y_cols is None:
-            y_cols = df.select(cs.numeric()).columns
-            if x in y_cols:
-                y_cols.remove(x)
+        y_cols = list([y] if isinstance(y, str) else (y if y is not None else []))
+        if not y_cols:
+            y_cols = [c for c in df.select(cs.numeric()).columns if c != x]
 
         if not y_cols:
             raise ValueError("No numeric columns found for y-axis.")
@@ -387,83 +405,64 @@ class PlotNamespace:
             df = df.filter(pl.col(key_col).is_in(entities))
 
         df_pd = df.to_pandas()
-        fig = go.Figure()
-        num_entities = len(df_pd[key_col].unique())
 
-        for i, y_col in enumerate(y_cols):
-            sub_fig = px.scatter(
-                df_pd,
-                x=x,
-                y=y_col,
-                color=key_col,
-                hover_data=hover_cols,
-                marginal_x="histogram",
-                marginal_y="histogram",
-                opacity=0.7,
+        def _make_scatter(y_col: str) -> "BokehFigure":
+            fig = figure(  # type: ignore[call-arg]
+                width=800,
+                height=450,
+                x_axis_label=x,
+                y_axis_label=y_col,
+                tools="pan,wheel_zoom,box_zoom,reset,save,hover",
+                tooltips=[(c, f"@{{{c}}}") for c in hover_cols],
             )
-            if i == 0:
-                fig.update_layout(sub_fig.layout)
-            for trace in sub_fig.data:
-                trace.visible = i == 0  # pyright: ignore[reportAttributeAccessIssue]
-                fig.add_trace(trace)
-
-        if len(y_cols) > 1:
-            buttons = []
-            traces_per_y = num_entities * 3
-            for i, y_col in enumerate(y_cols):
-                visibility = [False] * (len(y_cols) * traces_per_y)
-                for j in range(traces_per_y):
-                    visibility[i * traces_per_y + j] = True
-                buttons.append(
-                    dict(
-                        method="update",
-                        label=y_col,
-                        args=[{"visible": visibility}, {"yaxis.title.text": y_col}],
-                    )
+            for i, entity in enumerate(df_pd[key_col].unique()):
+                row = df_pd[df_pd[key_col] == entity]
+                fig.scatter(
+                    x=row[x].tolist(),
+                    y=row[y_col].tolist(),
+                    color=_color_for(i),
+                    legend_label=str(entity),
+                    size=8,
+                    alpha=0.7,
                 )
-            fig.update_layout(
-                updatemenus=[
-                    dict(
-                        active=0,
-                        buttons=buttons,
-                        x=0.0,
-                        y=1.15,
-                        xanchor="left",
-                        yanchor="top",
-                    )
-                ],
-            )
+            fig.legend.location = "top_left"
+            fig.legend.click_policy = "hide"
+            _apply_theme(fig, self.result, "Scatter Distribution")
+            return fig
 
-        _apply_theme(fig, self.result, "Scatter Distribution")
-        fig.update_layout(yaxis_title=y_cols[0], barmode="overlay")
-        return fig
+        if len(y_cols) == 1:
+            return _make_scatter(y_cols[0])
+
+        tabs = Tabs(tabs=[TabPanel(child=_make_scatter(yc), title=yc) for yc in y_cols])
+        return tabs
 
     def distribution(self, x: str | list[str] | None = None, top_n: int = 10) -> Any:
-        """Render a distribution (histogram) plot using Plotly.
+        """Render a distribution (histogram) plot using Bokeh.
 
         Args:
             x: The column(s) to plot the distribution for. If None, auto-selects all numeric.
             top_n: Maximum number of entities to include.
 
         Returns:
-            A Plotly Figure object.
+            A Bokeh Figure or Tabs object.
         """
+        import numpy as np
+        import pandas as pd
         import polars as pl
         import polars.selectors as cs
-        import plotly.express as px
-        import plotly.graph_objects as go
+        from bokeh.models import Tabs, TabPanel
+        from bokeh.plotting import figure
 
         df = self.result.df()
 
-        x_cols = [x] if isinstance(x, str) else x
-        if x_cols is None:
+        x_cols = list([x] if isinstance(x, str) else (x if x is not None else []))
+        if not x_cols:
             x_cols = df.select(cs.numeric()).columns
 
         if not x_cols:
             raise ValueError("No numeric columns found for distribution.")
 
         key_col = self.result.key_cols[0]
-        hover_cols = [c for c in df.columns if c not in ("geometry", "geom")]
 
         unique_entities = df[key_col].unique()
         if len(unique_entities) > top_n:
@@ -471,68 +470,56 @@ class PlotNamespace:
             df = df.filter(pl.col(key_col).is_in(entities))
 
         df_pd = df.to_pandas()
-        fig = go.Figure()
-        num_entities = len(df_pd[key_col].unique())
 
-        for i, x_col in enumerate(x_cols):
-            sub_fig = px.histogram(
-                df_pd,
-                x=x_col,
-                color=key_col,
-                marginal="box",
-                hover_data=hover_cols,
-                opacity=0.7,
-                barmode="overlay",
+        def _make_hist(x_col: str) -> "BokehFigure":
+            fig = figure(  # type: ignore[call-arg]
+                width=800,
+                height=400,
+                x_axis_label=x_col,
+                y_axis_label="Count",
+                tools="pan,wheel_zoom,box_zoom,reset,save",
             )
-            if i == 0:
-                fig.update_layout(sub_fig.layout)
-            for trace in sub_fig.data:
-                trace.visible = i == 0  # pyright: ignore[reportAttributeAccessIssue]
-                fig.add_trace(trace)
-
-        if len(x_cols) > 1:
-            buttons = []
-            traces_per_x = num_entities * 2
-            for i, x_col in enumerate(x_cols):
-                visibility = [False] * (len(x_cols) * traces_per_x)
-                for j in range(traces_per_x):
-                    visibility[i * traces_per_x + j] = True
-                buttons.append(
-                    dict(
-                        method="update",
-                        label=x_col,
-                        args=[{"visible": visibility}, {"xaxis.title.text": x_col}],
-                    )
+            all_vals = df_pd[x_col].dropna().to_numpy()
+            bins = np.histogram_bin_edges(all_vals, bins=30)
+            for i, entity in enumerate(df_pd[key_col].unique()):
+                subset = pd.Series(df_pd.loc[df_pd[key_col] == entity, x_col])
+                vals = np.asarray(subset.dropna())
+                hist, _ = np.histogram(vals, bins=bins)
+                fig.quad(
+                    top=hist,
+                    bottom=0,
+                    left=bins[:-1],
+                    right=bins[1:],
+                    color=_color_for(i),
+                    alpha=0.6,
+                    legend_label=str(entity),
                 )
-            fig.update_layout(
-                updatemenus=[
-                    dict(
-                        active=0,
-                        buttons=buttons,
-                        x=0.0,
-                        y=1.15,
-                        xanchor="left",
-                        yanchor="top",
-                    )
-                ],
-            )
+            fig.legend.location = "top_right"
+            fig.legend.click_policy = "hide"
+            _apply_theme(fig, self.result, "Distribution")
+            return fig
 
-        _apply_theme(fig, self.result, "Distribution")
-        fig.update_layout(xaxis_title=x_cols[0], barmode="overlay")
-        return fig
+        if len(x_cols) == 1:
+            return _make_hist(x_cols[0])
+
+        tabs = Tabs(tabs=[TabPanel(child=_make_hist(xc), title=xc) for xc in x_cols])
+        return tabs
 
     def correlation(self, columns: list[str] | None = None, top_n: int = 10) -> Any:
-        """Render a correlation heatmap using Plotly.
+        """Render a correlation heatmap using Bokeh.
 
         Args:
             columns: Optional list of columns to correlate. Defaults to all numeric.
             top_n: Maximum number of entities to include (currently unused).
 
         Returns:
-            A Plotly Figure object.
+            A Bokeh Figure object.
         """
         import polars.selectors as cs
-        import plotly.express as px
+        from bokeh.models import BasicTicker, ColumnDataSource, LinearColorMapper
+        from bokeh.models.annotations import ColorBar
+        from bokeh.plotting import figure
+        from bokeh.transform import transform
 
         df = self.result.df()
         if columns is not None:
@@ -544,15 +531,48 @@ class PlotNamespace:
             df = df.select(cs.numeric())
 
         corr = df.to_pandas().corr()
-        fig = px.imshow(
-            corr,
-            text_auto=True,
-            aspect="auto",
-            color_continuous_scale="RdBu_r",
-            zmin=-1,
-            zmax=1,
+        cols = list(corr.columns)
+
+        # Build long-form data for rect glyphs.
+        xs: list[str] = []
+        ys: list[str] = []
+        vals: list[float] = []
+        for row_col in cols:
+            for col_col in cols:
+                xs.append(col_col)
+                ys.append(row_col)
+                vals.append(float(corr.loc[row_col, col_col]))  # type: ignore[arg-type]
+
+        source = ColumnDataSource({"x": xs, "y": ys, "value": vals})
+
+        mapper = LinearColorMapper(palette="RdBu11", low=-1, high=1)
+
+        from bokeh.models import FactorRange
+
+        fig = figure(  # type: ignore[call-arg]
+            width=600,
+            height=550,
+            x_range=FactorRange(factors=cols),
+            y_range=FactorRange(factors=list(reversed(cols))),
+            tools="hover,save",
+            tooltips=[("pair", "@x vs @y"), ("r", "@value{0.00}")],
         )
-        fig.update_traces(texttemplate="%{z:.2f}")
+        fig.rect(
+            x="x",
+            y="y",
+            width=1,
+            height=1,
+            source=source,
+            fill_color=transform("value", mapper),
+            line_color=None,
+        )
+        color_bar = ColorBar(
+            color_mapper=mapper,
+            ticker=BasicTicker(desired_num_ticks=11),
+            width=12,
+        )
+        fig.add_layout(color_bar, "right")
+        fig.xaxis.major_label_orientation = 1.0
         _apply_theme(fig, self.result, "Correlation Matrix")
         return fig
 
@@ -563,7 +583,7 @@ class PlotNamespace:
         value: str | None = None,
         top_n: int = 10,
     ) -> Any:
-        """Render a heatmap using Plotly.
+        """Render a heatmap using Bokeh.
 
         Args:
             x: The column for the x-axis.
@@ -572,9 +592,17 @@ class PlotNamespace:
             top_n: Maximum number of entities to include (currently unused).
 
         Returns:
-            A Plotly Figure object.
+            A Bokeh Figure object.
         """
-        import plotly.express as px
+        from bokeh.models import (
+            BasicTicker,
+            ColumnDataSource,
+            FactorRange,
+            LinearColorMapper,
+        )
+        from bokeh.models.annotations import ColorBar
+        from bokeh.plotting import figure
+        from bokeh.transform import transform
 
         if x is None or y is None or value is None:
             raise ValueError("x, y, and value must be provided for heatmap.")
@@ -586,27 +614,97 @@ class PlotNamespace:
 
         pivot_df = df.pivot(values=value, index=y, on=x, aggregate_function="mean")
         pdf = pivot_df.to_pandas().set_index(y)
-        fig = px.imshow(pdf, aspect="auto", color_continuous_scale="Viridis")
+
+        x_vals = [str(v) for v in pdf.columns.tolist()]
+        y_vals = [str(v) for v in pdf.index.tolist()]
+
+        # Long-form
+        xs2: list[str] = []
+        ys2: list[str] = []
+        vals2: list[float] = []
+        for yv in y_vals:
+            for xv in x_vals:
+                xs2.append(xv)
+                ys2.append(yv)
+                raw = pdf.loc[yv, xv]
+                vals2.append(float(raw) if raw is not None else float("nan"))  # type: ignore[arg-type]
+
+        source = ColumnDataSource({"x": xs2, "y": ys2, "value": vals2})
+
+        low = min(v for v in vals2 if v == v)  # NaN-safe min
+        high = max(v for v in vals2 if v == v)
+
+        mapper = LinearColorMapper(palette="Viridis256", low=low, high=high)
+
+        fig = figure(  # type: ignore[call-arg]
+            width=900,
+            height=500,
+            x_range=FactorRange(factors=x_vals),
+            y_range=FactorRange(factors=list(reversed(y_vals))),
+            tools="hover,save",
+            tooltips=[(x, "@x"), (y, "@y"), (value, "@value{0.00}")],
+        )
+        fig.rect(
+            x="x",
+            y="y",
+            width=1,
+            height=1,
+            source=source,
+            fill_color=transform("value", mapper),
+            line_color=None,
+        )
+        color_bar = ColorBar(
+            color_mapper=mapper,
+            ticker=BasicTicker(desired_num_ticks=10),
+            width=12,
+        )
+        fig.add_layout(color_bar, "right")
+        fig.xaxis.major_label_orientation = 1.0
         _apply_theme(fig, self.result, f"Heatmap: {value}")
         return fig
 
     def matrix(self) -> Any:
-        """Render a scatter matrix (pairs plot) using Plotly.
+        """Render a scatter matrix (pairs plot) using Bokeh.
 
         Returns:
-            A Plotly Figure object.
+            A Bokeh ``gridplot`` object.
         """
         import polars.selectors as cs
-        import plotly.express as px
+        from bokeh.layouts import gridplot
+        from bokeh.plotting import figure
 
         df = self.result.df()
         key_col = self.result.key_cols[0]
-        hover_cols = [c for c in df.columns if c not in ("geometry", "geom")]
-        df_num = df.select(cs.numeric() | cs.by_name(key_col))
-        hover_cols = df_num.columns
+        df_num = df.select(cs.numeric() | cs.by_name(key_col)).to_pandas()
+        num_cols = [c for c in df_num.columns if c != key_col]
 
-        fig = px.scatter_matrix(
-            df_num.to_pandas(), color=key_col, hover_data=hover_cols, opacity=0.7
-        )
-        _apply_theme(fig, self.result, "Scatter Matrix")
-        return fig
+        entities = df_num[key_col].unique()
+        figs: list[list[Any]] = []
+
+        for row_col in num_cols:
+            row: list[Any] = []
+            for col_col in num_cols:
+                fig = figure(  # type: ignore[call-arg]
+                    width=200,
+                    height=200,
+                    x_axis_label=col_col if row_col == num_cols[-1] else "",
+                    y_axis_label=row_col if col_col == num_cols[0] else "",
+                    tools="pan,wheel_zoom,reset",
+                )
+                for i, entity in enumerate(entities):
+                    sub = df_num[df_num[key_col] == entity]
+                    fig.scatter(
+                        x=sub[col_col].tolist(),
+                        y=sub[row_col].tolist(),
+                        color=_color_for(i),
+                        size=4,
+                        alpha=0.6,
+                        legend_label=str(entity)
+                        if row_col == num_cols[0] and col_col == num_cols[0]
+                        else "",
+                    )
+                row.append(fig)
+            figs.append(row)
+
+        grid = gridplot(figs)
+        return grid
