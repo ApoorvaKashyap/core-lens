@@ -220,11 +220,27 @@ class TestResultAggregate:
         with pytest.raises(ValueError, match="not supported on static"):
             result.aggregate(pl.mean("ndvi_mean"))
 
-    def test_aggregate_temporal_by_on_annual_raises(self, entity_cls: Any) -> None:
+    def test_aggregate_by_year_on_annual_succeeds(self, entity_cls: Any) -> None:
+        df = pl.DataFrame(
+            {
+                "mws_id": ["1", "1"],
+                "year": [2021, 2022],
+                "ndvi_mean": [0.4, 0.5],
+            }
+        )
+        result = _make_result(entity_cls(), resolution=Resolution.ANNUAL, data=df)
+        agg = result.aggregate(pl.mean("ndvi_mean"), by="year")
+
+        assert "year" in agg.df().columns
+        assert "mws_id" in agg.df().columns
+
+    def test_aggregate_fortnightly_only_by_on_annual_raises(
+        self, entity_cls: Any
+    ) -> None:
         result = _make_result(entity_cls(), resolution=Resolution.ANNUAL)
 
         with pytest.raises(ValueError, match="requires data at fortnightly resolution"):
-            result.aggregate(pl.mean("ndvi_mean"), by="year")
+            result.aggregate(pl.mean("ndvi_mean"), by="month")
 
     def test_aggregate_unknown_by_raises(self, entity_cls: Any) -> None:
         result = _make_result(entity_cls())
@@ -232,10 +248,8 @@ class TestResultAggregate:
         with pytest.raises(ValueError, match="Unknown grouping"):
             result.aggregate(pl.mean("ndvi_mean"), by="quarter")
 
-    @pytest.mark.parametrize(
-        "by", ["year", "month", "year_month", "season", "season_year"]
-    )
-    def test_all_fortnightly_by_keys_accepted(self, entity_cls: Any, by: Any) -> None:
+    @pytest.mark.parametrize("by", ["month", "year_month", "season", "season_year"])
+    def test_fortnightly_only_by_keys_accepted(self, entity_cls: Any, by: Any) -> None:
         df = pl.DataFrame(
             {
                 "mws_id": ["1"],

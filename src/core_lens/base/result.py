@@ -15,8 +15,9 @@ if TYPE_CHECKING:
     from core_lens.base.namespaces.stats import StatsNamespace
     from core_lens.base.namespaces.plot import PlotNamespace
 
-_FORTNIGHTLY_ONLY_BY = {"year", "month", "year_month", "season", "season_year"}
-_VALID_BY = {None} | _FORTNIGHTLY_ONLY_BY
+_FORTNIGHTLY_ONLY_BY = {"month", "year_month", "season", "season_year"}
+_ANNUAL_OR_FORTNIGHTLY_BY = {"year"}
+_VALID_BY = {None} | _FORTNIGHTLY_ONLY_BY | _ANNUAL_OR_FORTNIGHTLY_BY
 
 
 class Result:
@@ -194,7 +195,11 @@ class Result:
              - ❌
              - ✅
              - ✅
-           * - ``"year"`` / ``"month"`` / ``"year_month"`` / ``"season"`` / ``"season_year"``
+           * - ``"year"``
+             - ❌
+             - ✅
+             - ✅
+           * - ``"month"`` / ``"year_month"`` / ``"season"`` / ``"season_year"``
              - ❌
              - ❌
              - ✅
@@ -203,7 +208,9 @@ class Result:
             *exprs: One or more Polars aggregation expressions
                 (e.g. ``pl.mean("ndvi")``, ``pl.max("rainfall")``).
             by: Grouping dimension.  ``None`` collapses all rows to one.
-                Temporal groupings (``"year"``, ``"month"``, ``"year_month"``,
+                ``"year"`` groups by entity + year and is valid for both
+                annual and fortnightly resolution.
+                Other temporal groupings (``"month"``, ``"year_month"``,
                 ``"season"``, ``"season_year"``) require
                 ``resolution="fortnightly"``.
 
