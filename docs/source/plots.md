@@ -1,8 +1,8 @@
 # Visualisation and Plots
 
-The `result.plot` namespace provides integrated plotting capabilities. Spatial plots use **Lonboard** for high-performance interactive maps, while charts and timeseries use **Plotly**.
+The `result.plot` namespace provides integrated plotting capabilities. Spatial plots use **Lonboard** for high-performance interactive maps, while charts and timeseries use **Bokeh**.
 
-Plot methods return plot objects (like a Plotly Figure or Lonboard Map) which can be displayed in Jupyter notebooks or exported.
+Plot methods return plot objects (like a Bokeh Figure or Lonboard Map) which can be displayed using `bokeh.io.show` or exported via `bokeh.io.save`.
 
 ## Choropleth Maps
 
@@ -18,9 +18,11 @@ map_view = res.plot.choropleth(column="ndvi")
 Plot timeseries data. You can aggregate the data or plot the top N entities individually.
 
 ```python
+from bokeh.io import show
+
 # Aggregate timeseries
 fig_agg = res.plot.timeseries(x="year", y="ndvi", aggregate=True)
-fig_agg.show()
+show(fig_agg)
 
 # Timeseries for top entities
 fig_top = res.plot.timeseries(x="year", y=["ndvi", "rainfall"], top_n=5)

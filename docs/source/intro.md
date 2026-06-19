@@ -12,4 +12,4 @@ CoreLens provides a unified interface over microwatersheds, administrative bound
 - **Pluggable Entities**: Built-in support for standard units (MWS, Tehsil) with a simple plugin architecture for adding new domain entities.
 - **Temporal & Seasonal Awareness**: Native support for agronomic seasons (Kharif, Rabi, Zaid) and time-range filtering.
 - **Spatial Statistics & Analysis**: Built-in methods for anomaly detection, spatial similarity, temporal correlation, and hypothesis testing.
-- **Interactive Visualisation**: Generate interactive maps using Lonboard and timeseries/scatter plots using Plotly directly from results.
+- **Interactive Visualisation**: Generate interactive maps using Lonboard and timeseries/scatter plots using Bokeh directly from results.

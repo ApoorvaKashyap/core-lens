@@ -31,7 +31,7 @@ derived_res = res_annual.derive(
     pl.when(pl.col("rainfall") < 500).then(1).otherwise(0)
 )
 
-# 2. Aggregate (temporal grouping requires fortnightly resolution)
+# 2. Aggregate (temporal grouping like "month" requires fortnightly, but "year" works on annual too)
 res_fortnightly = aoi.mws.fortnightly
 monthly_avg = res_fortnightly.aggregate(pl.mean("ndvi"), by="month")
 seasonal_avg = res_fortnightly.aggregate(pl.mean("ndvi"), by="season_year")
