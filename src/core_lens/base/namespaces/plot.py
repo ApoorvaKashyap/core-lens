@@ -261,9 +261,8 @@ class PlotNamespace:
         y_col = y_cols[0]
 
         def _make_fig(pdf: Any, title: str) -> "BokehFigure":
-            tooltips = [
-                (c, f"@{{{c}}}") for c in pdf.columns if c not in ("geometry", "geom")
-            ]
+            hover_cols = [c for c in pdf.columns if c not in ("geometry", "geom")]
+            tooltips = [(c, f"@{{{c}}}") for c in hover_cols]
             fig = figure(  # type: ignore[call-arg]
                 width=900,
                 height=400,
@@ -274,6 +273,13 @@ class PlotNamespace:
             )
             fig.xaxis.axis_label_text_font = "Inter, sans-serif"
             fig.yaxis.axis_label_text_font = "Inter, sans-serif"
+
+            from bokeh.models import ColumnDataSource
+
+            def _src(row: Any) -> ColumnDataSource:
+                return ColumnDataSource(
+                    {c: row[c].tolist() for c in hover_cols if c in row.columns}
+                )
 
             if subplot_col and subplot_col in pdf.columns:
                 # One sub-panel per unique subplot_col value via colour coding.
@@ -287,16 +293,19 @@ class PlotNamespace:
                         row = sub[sub[key_col] == entity] if entity is not None else sub
                         color = _color_for(vi * len(entities) + ei)
                         label = f"{entity} ({val})" if entity is not None else str(val)
+                        source = _src(row)
                         fig.line(
-                            x=row[x].tolist(),
-                            y=row[y_col].tolist(),
+                            x=x,
+                            y=y_col,
+                            source=source,
                             color=color,
                             legend_label=label,
                             line_width=2,
                         )
                         fig.scatter(
-                            x=row[x].tolist(),
-                            y=row[y_col].tolist(),
+                            x=x,
+                            y=y_col,
+                            source=source,
                             color=color,
                             size=5,
                         )
@@ -304,26 +313,35 @@ class PlotNamespace:
                 for i, entity in enumerate(pdf[key_col].unique()):
                     row = pdf[pdf[key_col] == entity]
                     color = _color_for(i)
+                    source = _src(row)
                     fig.line(
-                        x=row[x].tolist(),
-                        y=row[y_col].tolist(),
+                        x=x,
+                        y=y_col,
+                        source=source,
                         color=color,
                         legend_label=str(entity),
                         line_width=2,
                     )
                     fig.scatter(
-                        x=row[x].tolist(), y=row[y_col].tolist(), color=color, size=5
+                        x=x,
+                        y=y_col,
+                        source=source,
+                        color=color,
+                        size=5,
                     )
             else:
+                source = _src(pdf)
                 fig.line(
-                    x=pdf[x].tolist(),
-                    y=pdf[y_col].tolist(),
+                    x=x,
+                    y=y_col,
+                    source=source,
                     color=_color_for(0),
                     line_width=2,
                 )
                 fig.scatter(
-                    x=pdf[x].tolist(),
-                    y=pdf[y_col].tolist(),
+                    x=x,
+                    y=y_col,
+                    source=source,
                     color=_color_for(0),
                     size=5,
                 )
@@ -407,6 +425,8 @@ class PlotNamespace:
         df_pd = df.to_pandas()
 
         def _make_scatter(y_col: str) -> "BokehFigure":
+            from bokeh.models import ColumnDataSource
+
             fig = figure(  # type: ignore[call-arg]
                 width=800,
                 height=450,
@@ -417,9 +437,13 @@ class PlotNamespace:
             )
             for i, entity in enumerate(df_pd[key_col].unique()):
                 row = df_pd[df_pd[key_col] == entity]
+                source = ColumnDataSource(
+                    {c: row[c].tolist() for c in hover_cols if c in row.columns}
+                )
                 fig.scatter(
-                    x=row[x].tolist(),
-                    y=row[y_col].tolist(),
+                    x=x,
+                    y=y_col,
+                    source=source,
                     color=_color_for(i),
                     legend_label=str(entity),
                     size=8,
