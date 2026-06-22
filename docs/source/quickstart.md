@@ -34,6 +34,12 @@ aoi = AoI(
     tehsil="Pangi"
 )
 
+# Or scope it directly to a specific list of entity IDs
+aoi_specific = AoI(
+    data_root="/path/to/data",
+    mws_id=["13_001", "13_002"]
+)
+
 # You can now access entities scoped to this AoI:
 mws_view = aoi.mws
 
