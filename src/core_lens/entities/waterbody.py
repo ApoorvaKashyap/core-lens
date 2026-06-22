@@ -26,7 +26,3 @@ class WaterbodyEntity(BaseEntity):
     @property
     def annual_path(self) -> str | None:
         return "waterbodies/annual"
-
-    @property
-    def fortnightly_path(self) -> str | None:
-        return "waterbodies/fortnightly"
