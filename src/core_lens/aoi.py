@@ -247,6 +247,7 @@ class AoI:
 
         layers = []
 
+        # Base layer: single AoI boundary (one Shapely geom — GeoPandas is fine here).
         aoi_gdf = gpd.GeoDataFrame(geometry=[self.geometry], crs="EPSG:4326")
         base_layer = lonboard.PolygonLayer.from_geopandas(
             aoi_gdf,
@@ -261,33 +262,19 @@ class AoI:
             if hasattr(overlay, "has_geometry") and not overlay.has_geometry:
                 overlay = overlay.with_geometry()
 
-            if hasattr(overlay, "gdf"):
-                gdf = overlay.gdf()
+            if hasattr(overlay, "entity") and hasattr(overlay, "data"):
+                # --- Direct Polars → GeoArrow → Lonboard (no Shapely, no GeoPandas) ---
+                from core_lens.base.namespaces.plot import _wkb_to_arrow_table
 
-                # Lonboard PolygonLayer only supports Polygon and MultiPolygon.
-                # Extract polygon parts from GeometryCollections rather than dropping them.
-                def _extract_polygons(geom: Any) -> Any:
-                    if geom is None:
-                        return None
-                    if geom.geom_type in ("Polygon", "MultiPolygon"):
-                        return geom
-                    if geom.geom_type == "GeometryCollection":
-                        from shapely.geometry import MultiPolygon
-
-                        polys = [
-                            g
-                            for g in getattr(geom, "geoms", [])
-                            if g.geom_type in ("Polygon", "MultiPolygon")
-                        ]
-                        if polys:
-                            return MultiPolygon(polys)
-                    return None
-
-                gdf["geometry"] = gdf.geometry.apply(_extract_polygons)
-                gdf = gdf[gdf.geometry.notna()].copy()
-
-                overlay_layer = lonboard.PolygonLayer.from_geopandas(
-                    gdf,
+                geom_col = overlay.entity.geometry_col
+                key_cols = (
+                    list(overlay.key_cols) if hasattr(overlay, "key_cols") else []
+                )
+                arrow_table = _wkb_to_arrow_table(
+                    overlay.data, geom_col, extra_cols=key_cols
+                )
+                overlay_layer = lonboard.PolygonLayer(
+                    arrow_table,
                     get_fill_color=[255, 0, 0, 100],
                     get_line_color=[255, 0, 0, 200],
                     line_width_min_pixels=1,

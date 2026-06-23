@@ -55,6 +55,7 @@ spatial = [
 viz = [
     "core-lens[core]",
     "lonboard>=0.16.0,<1",
+    "geoarrow-rust-core>=0.3.0",
     "matplotlib>=3.10.9,<4",
     "bokeh>=3.6.0,<4",
 ]

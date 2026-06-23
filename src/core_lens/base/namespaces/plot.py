@@ -45,6 +45,110 @@ _PALETTE = [
 ]
 
 
+def _wkb_to_arrow_table(
+    df: Any,
+    geom_col: str,
+    extra_cols: list[str] | None = None,
+) -> Any:
+    """Convert a Polars DataFrame with a WKB geometry column to a GeoArrow PyArrow Table.
+
+    Uses ``geoarrow.rust.core.from_wkb`` — a zero-copy C extension bundled
+    transitively by lonboard via ``geoarrow-rust-core``.  No Shapely objects
+    are ever instantiated for the common case (Polygon / MultiPolygon rows).
+
+    GeometryCollection rows are handled by extracting their polygon parts via
+    Shapely, matching the behaviour of the previous GeoPandas code path.  Because
+    GeometryCollections are rare in practice the Shapely overhead is bounded.
+
+    WKB type byte encoding (after the 1-byte endian flag):
+        1=Point, 2=LineString, 3=Polygon, 4=MultiPoint, 5=MultiLineString,
+        6=MultiPolygon, 7=GeometryCollection.
+
+    Args:
+        df: A Polars DataFrame containing the WKB binary column.
+        geom_col: Name of the WKB binary column in *df*.\
+        extra_cols: Additional columns to include in the output table.
+
+    Returns:
+        An ``arro3.core.Table`` whose geometry column is GeoArrow-typed.
+    """
+    import geoarrow.rust.core as ga
+    import polars as pl
+
+    keep = [geom_col] + (extra_cols or [])
+    df = df.select([c for c in keep if c in df.columns])
+
+    def _wkb_geom_type(b: bytes) -> int:
+        """Return the WKB geometry type integer (1-7), or 0 on invalid input."""
+        if not b or len(b) < 5:
+            return 0
+        endian = b[0]  # 1 = little-endian, 0 = big-endian
+        raw = int.from_bytes(b[1:5], "little" if endian == 1 else "big")
+        return raw & 0xFFFF  # strip ISO Z/M/SRID flags
+
+    geom_type_series = df[geom_col].map_elements(_wkb_geom_type, return_dtype=pl.Int32)
+
+    # --- Fast path: pure Polygon / MultiPolygon rows (no Shapely) ---
+    poly_mask = geom_type_series.is_in([3, 6])
+    df_poly = df.filter(poly_mask)
+
+    # --- Slow path: GeometryCollection rows — extract polygon parts via Shapely ---
+    gc_mask = geom_type_series == 7
+    df_gc = df.filter(gc_mask)
+
+    if df_gc.height > 0:
+        import shapely.wkb as swkb
+        from shapely.geometry import MultiPolygon
+
+        repaired_rows: list[dict[str, Any]] = []
+        other_cols = [c for c in df_gc.columns if c != geom_col]
+
+        for row in df_gc.iter_rows(named=True):
+            raw_wkb = row[geom_col]
+            geom = swkb.loads(raw_wkb)
+            polys = [
+                g
+                for g in getattr(geom, "geoms", [])
+                if g.geom_type in ("Polygon", "MultiPolygon")
+            ]
+            if not polys:
+                continue
+            merged = MultiPolygon(polys) if len(polys) > 1 else polys[0]
+            new_row = {geom_col: swkb.dumps(merged)}
+            for col in other_cols:
+                new_row[col] = row[col]
+            repaired_rows.append(new_row)
+
+        if repaired_rows:
+            schema = {geom_col: pl.Binary}
+            for col in other_cols:
+                schema[col] = df_gc[col].dtype
+            df_gc_repaired = pl.DataFrame(repaired_rows, schema=schema)
+            df_poly = pl.concat([df_poly, df_gc_repaired], how="diagonal")
+
+    import arro3.core as ac
+
+    if df_poly.height == 0:
+        # Return an empty table with the correct schema rather than crashing.
+        arrow_table = df_poly.to_arrow()
+        return ac.Table.from_arrow(arrow_table)
+
+    arrow_table = df_poly.to_arrow()
+    wkb_col = arrow_table.column(geom_col).combine_chunks()
+    geo_col = ga.from_wkb(wkb_col)
+
+    idx = arrow_table.schema.get_field_index(geom_col)
+    schema = arrow_table.schema.remove(idx)
+
+    tbl_cols = [ac.ChunkedArray(arrow_table.column(c)) for c in schema.names]
+    tbl_cols.insert(idx, ac.ChunkedArray([ac.Array(geo_col)]))
+    names = list(schema.names)
+    names.insert(idx, geom_col)
+
+    tbl = ac.Table.from_arrays(tbl_cols, names=names)
+    return tbl
+
+
 def _color_for(index: int) -> str:
     """Get a color from the palette by index.
 
@@ -137,64 +241,52 @@ class PlotNamespace:
         subplot_col = subplot_on.value if subplot_on is not None else None
 
         res = self.result if self.result.has_geometry else self.result.with_geometry()
-        gdf = res.gdf()
 
-        if column not in gdf.columns:
+        if column not in res.columns:
             raise ValueError(f"Column {column!r} not found in Result.")
 
-        if subplot_col is not None and subplot_col not in gdf.columns:
+        if subplot_col is not None and subplot_col not in res.columns:
             raise ValueError(
                 f"PlotNamespace.choropleth: subplot_on column {subplot_col!r} not found "
                 "in Result. Ensure fortnightly data is materialised and temporal columns "
                 "are present (they are added automatically by the materialisation layer)."
             )
 
-        # Lonboard PolygonLayer only supports Polygon and MultiPolygon.
-        # Extract polygon parts from GeometryCollections rather than dropping them.
-        def _extract_polygons(geom: Any) -> Any:
-            if geom is None:
-                return None
-            if geom.geom_type in ("Polygon", "MultiPolygon"):
-                return geom
-            if geom.geom_type == "GeometryCollection":
-                from shapely.geometry import MultiPolygon
-
-                polys = [
-                    g
-                    for g in getattr(geom, "geoms", [])
-                    if g.geom_type in ("Polygon", "MultiPolygon")
-                ]
-                if polys:
-                    return MultiPolygon(polys)
-            return None
-
-        gdf["geometry"] = gdf.geometry.apply(_extract_polygons)
-        gdf = gdf[gdf.geometry.notna()].copy()
-
         import matplotlib as mpl
         import numpy as np
+        import polars as pl
+
+        geom_col = res.entity.geometry_col
+        extra = [column] + (res.key_cols or [])
+        if subplot_col is not None:
+            extra.append(subplot_col)
+
+        df = res.data
 
         if subplot_col is not None:
-            # Render the most-recent/first unique value of subplot_on so that the
-            # map is still useful.  True multi-panel subplots are not supported by
-            # Lonboard's single-Map API.
-            unique_vals = sorted(gdf[subplot_col].to_list())
+            # Render most-recent unique value of subplot_on only.
+            # True multi-panel subplots not supported by Lonboard's single-Map API.
+            unique_vals = sorted(df[subplot_col].drop_nulls().unique().to_list())
             if unique_vals:
-                gdf = gdf[gdf[subplot_col] == unique_vals[-1]].copy()
+                df = df.filter(pl.col(subplot_col) == unique_vals[-1])
 
-        values = np.asarray(gdf[column])
+        # --- Direct Polars → GeoArrow → Lonboard path (zero Shapely, zero GeoPandas) ---
+        arrow_table = _wkb_to_arrow_table(df, geom_col, extra_cols=extra)
+
+        # Extract colormap values from the already-filtered arrow_table.
+        # arrow_table has the same row order as df post-filter, so indices align.
+        values = np.asarray(arrow_table.column(column).to_pylist())
         v_min, v_max = np.nanmin(values), np.nanmax(values)
-        if v_max > v_min:
-            norm_values = (values - v_min) / (v_max - v_min)
-        else:
-            norm_values = np.zeros_like(values)
+        norm_values = (
+            (values - v_min) / (v_max - v_min)
+            if v_max > v_min
+            else np.zeros_like(values)
+        )
 
         cmap = mpl.colormaps["plasma"]
 
-        import geopandas as gpd
-
-        layer = lonboard.PolygonLayer.from_geopandas(
-            gpd.GeoDataFrame(gdf),
+        layer = lonboard.PolygonLayer(
+            arrow_table,
             get_fill_color=apply_continuous_cmap(norm_values, cmap),
         )
         return lonboard.Map(layers=[layer])
