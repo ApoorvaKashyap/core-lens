@@ -100,14 +100,14 @@ def scan_with_key_filter(
     Returns:
         A ``pl.LazyFrame`` ready to be ``.collect()``-ed.
     """
-    lf = pl.scan_parquet(path)
+    lf = pl.scan_parquet(path, hive_partitioning=True)
 
     # Use an inner join to filter the parquet file down to the exact requested keys.
     # This avoids building a massive literal expression tree (which consumes gigabytes
     # of RAM) that occurs when passing large lists to pl.col().is_in().
-    lf = lf.join(key_values.lazy(), on=key_cols, how="inner")
-
     if time_expr is not None:
         lf = lf.filter(time_expr)
+
+    lf = lf.join(key_values.lazy(), on=key_cols, how="semi")
 
     return lf

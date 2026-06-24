@@ -197,7 +197,7 @@ def exact_spatial_filter(
     full_df = (
         pl.scan_parquet(static_path)
         .select(key_cols + [geometry_col])
-        .join(candidates.select(key_cols).lazy(), on=key_cols, how="inner")
+        .join(candidates.select(key_cols).lazy(), on=key_cols, how="semi")
         .collect()
     )
 

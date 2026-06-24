@@ -148,7 +148,7 @@ class Result:
         geo_df = collect_lf(
             pl.scan_parquet(static_path)
             .select(key_cols + [geom_col])
-            .join(self.data.select(key_cols).unique().lazy(), on=key_cols, how="inner")
+            .join(self.data.select(key_cols).lazy(), on=key_cols, how="semi")
         )
 
         joined = self.data.join(geo_df, on=key_cols, how="left")
