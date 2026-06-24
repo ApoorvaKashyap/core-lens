@@ -77,26 +77,37 @@ def build_bbox_index(
             + "Cannot compute bounds from separate lat/lon columns without bbox hints."
         )
 
-    df = pl.read_parquet(static_path, columns=cols_to_read)
-    geom_series = df[geometry_col]
+    import pyarrow.parquet as pq  # type: ignore[import-untyped]
 
-    geom_array = geom_series.to_numpy()
+    pf = pq.ParquetFile(static_path)
+    chunks = []
 
-    if geometry_type == "wkb":
-        geoms = shapely.from_wkb(geom_array)
-    else:
-        geoms = shapely.from_wkt(geom_array)
+    for batch in pf.iter_batches(batch_size=25_000, columns=cols_to_read):
+        batch_df = pl.from_arrow(batch)
+        assert isinstance(batch_df, pl.DataFrame)
 
-    if len(geoms) > 0:
-        bnds = shapely.bounds(geoms)
-        return df.select(key_cols).with_columns(
-            pl.Series("minx", bnds[:, 0], dtype=pl.Float64),
-            pl.Series("miny", bnds[:, 1], dtype=pl.Float64),
-            pl.Series("maxx", bnds[:, 2], dtype=pl.Float64),
-            pl.Series("maxy", bnds[:, 3], dtype=pl.Float64),
-        )
+        geom_array = batch_df.get_column(geometry_col).to_numpy()
 
-    return df.select(key_cols).with_columns(
+        if geometry_type == "wkb":
+            geoms = shapely.from_wkb(geom_array)
+        else:
+            geoms = shapely.from_wkt(geom_array)
+
+        if len(geoms) > 0:
+            bnds = shapely.bounds(geoms)
+            chunk = batch_df.select(key_cols).with_columns(
+                pl.Series("minx", bnds[:, 0], dtype=pl.Float64),
+                pl.Series("miny", bnds[:, 1], dtype=pl.Float64),
+                pl.Series("maxx", bnds[:, 2], dtype=pl.Float64),
+                pl.Series("maxy", bnds[:, 3], dtype=pl.Float64),
+            )
+            chunks.append(chunk)
+
+    if chunks:
+        return pl.concat(chunks)
+
+    empty_df = pl.read_parquet(static_path, columns=key_cols)
+    return empty_df.with_columns(
         pl.Series("minx", [], dtype=pl.Float64),
         pl.Series("miny", [], dtype=pl.Float64),
         pl.Series("maxx", [], dtype=pl.Float64),
