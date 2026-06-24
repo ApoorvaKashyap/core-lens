@@ -230,6 +230,8 @@ def exact_spatial_filter(
             if inter_area / entity_area >= threshold:
                 hit_indices.append(i)
 
+    del geoms  # free all decoded Shapely geometries before assembling result
+
     matched: pl.DataFrame = full_df[hit_indices].select(key_cols)
     return matched
 

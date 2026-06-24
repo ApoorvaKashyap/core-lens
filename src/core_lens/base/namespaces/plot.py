@@ -78,15 +78,16 @@ def _wkb_to_arrow_table(
     keep = [geom_col] + (extra_cols or [])
     df = df.select([c for c in keep if c in df.columns])
 
-    def _wkb_geom_type(b: bytes) -> int:
-        """Return the WKB geometry type integer (1-7), or 0 on invalid input."""
-        if not b or len(b) < 5:
-            return 0
-        endian = b[0]  # 1 = little-endian, 0 = big-endian
-        raw = int.from_bytes(b[1:5], "little" if endian == 1 else "big")
-        return raw & 0xFFFF  # strip ISO Z/M/SRID flags
-
-    geom_type_series = df[geom_col].map_elements(_wkb_geom_type, return_dtype=pl.Int32)
+    # WKB type detection: slice byte 1 (skip endian flag) — single byte covers
+    # all standard types 1-7.  bin.slice returns BinaryView in this Polars build
+    # which cannot be cast to UInt8 directly, so we extract the int value via
+    # map_elements on the already-sliced 1-byte series (no endian logic, no
+    # int.from_bytes on 4 bytes — still much cheaper than the original path).
+    geom_type_series = (
+        df[geom_col]
+        .bin.slice(1, 1)
+        .map_elements(lambda b: b[0] if b else 0, return_dtype=pl.UInt8)
+    )
 
     # --- Fast path: pure Polygon / MultiPolygon rows (no Shapely) ---
     poly_mask = geom_type_series.is_in([3, 6])
@@ -134,6 +135,9 @@ def _wkb_to_arrow_table(
         return ac.Table.from_arrow(arrow_table)
 
     arrow_table = df_poly.to_arrow()
+    del (
+        df_poly
+    )  # free Polars WKB buffer before PyArrow combine_chunks() allocates its copy
     wkb_col = arrow_table.column(geom_col).combine_chunks()
     geo_col = ga.from_wkb(wkb_col)
 
