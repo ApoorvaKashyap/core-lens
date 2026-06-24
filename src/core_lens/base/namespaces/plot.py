@@ -460,7 +460,9 @@ class PlotNamespace:
         unique_entities = entity_df[key_col].unique()
         if len(unique_entities) > top_n:
             entities = unique_entities.limit(top_n).to_list()
-            entity_df = entity_df.filter(pl.col(key_col).is_in(entities))
+            entity_df = entity_df.join(
+                pl.DataFrame({key_col: entities}), on=key_col, how="inner"
+            )
         entity_pdf = entity_df.to_pandas()
 
         fig_entity = _make_fig(entity_pdf, f"Timeseries — {y_col} (Per Entity)")
@@ -512,7 +514,7 @@ class PlotNamespace:
         unique_entities = df[key_col].unique()
         if len(unique_entities) > top_n:
             entities = unique_entities.limit(top_n).to_list()
-            df = df.filter(pl.col(key_col).is_in(entities))
+            df = df.join(pl.DataFrame({key_col: entities}), on=key_col, how="inner")
 
         df_pd = df.to_pandas()
 
@@ -583,7 +585,7 @@ class PlotNamespace:
         unique_entities = df[key_col].unique()
         if len(unique_entities) > top_n:
             entities = unique_entities.limit(top_n).to_list()
-            df = df.filter(pl.col(key_col).is_in(entities))
+            df = df.join(pl.DataFrame({key_col: entities}), on=key_col, how="inner")
 
         df_pd = df.to_pandas()
 

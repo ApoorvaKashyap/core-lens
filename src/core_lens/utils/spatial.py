@@ -182,17 +182,13 @@ def exact_spatial_filter(
     if candidates.is_empty():
         return candidates.select(key_cols)
 
-    # Build a filter expression to read only the candidate rows.
-    full_df = pl.read_parquet(static_path, columns=key_cols + [geometry_col])
-
-    # Filter to candidate keys.
-    if len(key_cols) == 1:
-        key = key_cols[0]
-        candidate_keys = candidates[key].to_list()
-        full_df = full_df.filter(pl.col(key).is_in(candidate_keys))
-    else:
-        # Composite key: join on all key columns.
-        full_df = full_df.join(candidates.select(key_cols), on=key_cols, how="inner")
+    # Build a lazy scan and push down an inner join to load only required geometries.
+    full_df = (
+        pl.scan_parquet(static_path)
+        .select(key_cols + [geometry_col])
+        .join(candidates.select(key_cols).lazy(), on=key_cols, how="inner")
+        .collect()
+    )
 
     geom_array = full_df[geometry_col].to_numpy()
     if geometry_type == "wkb":

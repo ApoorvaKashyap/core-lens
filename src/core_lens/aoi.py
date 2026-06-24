@@ -360,7 +360,7 @@ class AoI:
                 or col in candidate.schema_profile.extra_static_cols
             ):
                 if isinstance(val, list):
-                    filter_expr = filter_expr & pl.col(col).is_in(val)
+                    lf = lf.join(pl.LazyFrame({col: val}), on=col, how="inner")
                 else:
                     filter_expr = filter_expr & (pl.col(col) == val)
 
