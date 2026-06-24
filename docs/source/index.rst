@@ -21,5 +21,6 @@ Provides a unified interface over microwatershed hydrology, administrative bound
    queries
    stats
    plots
+   export
    plugins
    autoapi/index

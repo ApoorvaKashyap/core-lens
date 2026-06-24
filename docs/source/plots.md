@@ -1,6 +1,6 @@
 # Visualisation and Plots
 
-The `result.plot` namespace provides integrated plotting capabilities. Spatial plots use **Lonboard** for high-performance interactive maps, while charts and timeseries use **Bokeh**.
+The `result.plot` namespace provides integrated plotting capabilities. Spatial plots use **Lonboard** for high-performance interactive maps (achieved via zero-copy GeoArrow memory mapping directly from Polars, bypassing GeoPandas), while charts and timeseries use **Bokeh**.
 
 Plot methods return plot objects (like a Bokeh Figure or Lonboard Map) which can be displayed using `bokeh.io.show` or exported via `bokeh.io.save`.
 
