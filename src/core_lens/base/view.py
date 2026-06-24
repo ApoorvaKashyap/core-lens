@@ -376,7 +376,27 @@ class View:
                 from core_lens.aoi import SeasonConfig
 
                 season_cfg = self._season_config or SeasonConfig()
-                time_expr = resolve_time_filter(self.time_filter, time_col, season_cfg)
+
+                # Detect whether the time column is an integer year column so
+                # _date_range_expr can branch at expression-build time (avoids
+                # the cast-to-string + runtime when/then triple-copy).
+                try:
+                    pq_schema = pl.read_parquet_schema(abs_path)
+                    _time_dtype = pq_schema.get(time_col)
+                    _is_year_col = _time_dtype is not None and _time_dtype in (
+                        pl.Int32,
+                        pl.Int64,
+                        pl.UInt32,
+                        pl.UInt16,
+                    )
+                except Exception:
+                    _is_year_col = False
+
+                # Pass as a private hint inside the filter dict (non-mutating copy).
+                _tf = dict(self.time_filter)
+                if "start" in _tf and "end" in _tf:
+                    _tf["_is_year_col"] = _is_year_col
+                time_expr = resolve_time_filter(_tf, time_col, season_cfg)
 
         lf = scan_with_key_filter(
             path=abs_path,

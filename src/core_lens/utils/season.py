@@ -47,7 +47,12 @@ def resolve_time_filter(
         end = time_filter["end"]
         assert isinstance(start, str)
         assert isinstance(end, str)
-        return _date_range_expr(time_col, start, end)
+        # _is_year_col is injected by _materialise when the parquet schema is
+        # available.  When absent (e.g. direct test calls) pass None so that
+        # _date_range_expr uses its runtime when/then fallback.
+        _raw = time_filter.get("_is_year_col")
+        is_year_col: bool | None = bool(_raw) if _raw is not None else None
+        return _date_range_expr(time_col, start, end, is_year_col=is_year_col)
 
     if "season" in time_filter:
         season_name = time_filter["season"]
@@ -64,16 +69,25 @@ def resolve_time_filter(
     )
 
 
-def _date_range_expr(time_col: str, start: str, end: str) -> pl.Expr:
+def _date_range_expr(
+    time_col: str,
+    start: str,
+    end: str,
+    is_year_col: bool | None = None,
+) -> pl.Expr:
     """Return a Polars expression for an inclusive ISO-8601 date range.
 
-    Handles both ``pl.Date`` and ``pl.Int``/``pl.Int64`` time columns (year
-    integers stored as integers rather than dates).
+    When ``is_year_col`` is known (``True`` / ``False``) branches at *build
+    time* — no runtime copies of the column.  When ``None`` (caller has no
+    schema info) falls back to a ``when/then`` that handles both integer-year
+    and Date columns at runtime.
 
     Args:
         time_col: Name of the time column.
         start: ISO-8601 start date string (``"YYYY-MM-DD"``).
         end: ISO-8601 end date string (``"YYYY-MM-DD"``).
+        is_year_col: ``True`` → integer calendar-year column; ``False`` →
+            ``pl.Date`` column; ``None`` → unknown, use runtime detection.
 
     Returns:
         A Polars expression.
@@ -82,25 +96,25 @@ def _date_range_expr(time_col: str, start: str, end: str) -> pl.Expr:
     end_date = datetime.date.fromisoformat(end)
     col = pl.col(time_col)
 
-    # We use cast to string to avoid ComputeError when the column is an integer,
-    # but still allow exact date comparison.
-    # For integer year columns (e.g., 2020), cast to string yields "2020".
-    # For date columns, cast to string yields "2020-01-01".
-    # So we compare strings directly! Lexicographical string comparison works perfectly for ISO-8601 dates and 4-digit years.
-    # For year integers, "2020" >= "2020-01-01" is False.
-    # Wait, "2020" < "2020-01-01". So if it's an integer, "2020" will not be between "2020-01-01" and "2023-12-31" because "2020" is less than "2020-01-01".
-    # To fix this, we can extract the year for the integer comparison using a regex or length check.
-    # Better: check the length of the casted string. If 4, it's a year.
+    if is_year_col is True:
+        # Integer year column — compare year integers directly, no string cast.
+        return col.is_between(start_date.year, end_date.year)
+
+    if is_year_col is False:
+        # Date column — compare against date literals directly.
+        return col.is_between(pl.lit(start_date), pl.lit(end_date))
+
+    # is_year_col is None — dtype unknown (e.g. direct test call without schema).
+    # Use a runtime when/then that handles both representations.
     s_col = col.cast(pl.String)
-    is_year_int = s_col.str.len_bytes() == 4
-
-    # Use strict=False so "2020-01-01" casts to null instead of raising ComputeError
-    year_expr = s_col.cast(pl.Int32, strict=False).is_between(
-        start_date.year, end_date.year
+    is_year_like = s_col.str.len_bytes() == 4
+    return (
+        pl.when(is_year_like)
+        .then(
+            col.cast(pl.Int32, strict=False).is_between(start_date.year, end_date.year)
+        )
+        .otherwise(col.is_between(pl.lit(start_date), pl.lit(end_date)))
     )
-    date_expr = s_col.is_between(pl.lit(start), pl.lit(end))
-
-    return pl.when(is_year_int).then(year_expr).otherwise(date_expr)
 
 
 def _season_expr(
@@ -227,17 +241,43 @@ def add_temporal_columns(
         df = df.with_columns(exprs)
 
     # --- season / season_year -----------------------------------------------
-    # Built via a Python map so SeasonConfig's exact date ranges are used.
-    # This is the only correct way to handle year-crossing seasons like rabi.
+    # Vectorized via Polars when/then on MM-DD string — no Python loop,
+    # no .to_list(), no Python date objects per row.
     if "season" not in existing or "season_year" not in existing:
-        season_labels = [season_config.season_for(d) for d in df[time_col].to_list()]
+        date_col = pl.col(time_col)
+        md = (
+            date_col.dt.month().cast(pl.String).str.pad_start(2, "0")
+            + pl.lit("-")
+            + date_col.dt.day().cast(pl.String).str.pad_start(2, "0")
+        )
+        k_start, k_end = season_config.kharif
+        r_start, r_end = season_config.rabi
+        z_start, z_end = season_config.zaid
+
+        def _md_between(expr: pl.Expr, start: str, end: str) -> pl.Expr:
+            """True when *expr* (MM-DD string) falls within [start, end], handling year rollover."""
+            if start <= end:
+                # is_between with bare strings → column-name lookup; use pl.lit().
+                return expr.is_between(pl.lit(start), pl.lit(end))
+            # Year-crossing: e.g. rabi 11-01 → 03-31
+            return (expr >= pl.lit(start)) | (expr <= pl.lit(end))
+
+        season_expr = (
+            pl.when(_md_between(md, k_start, k_end))
+            .then(pl.lit("kharif"))
+            .when(_md_between(md, r_start, r_end))
+            .then(pl.lit("rabi"))
+            .otherwise(pl.lit("zaid"))
+            .alias("season")
+        )
+
         if "season" not in existing:
-            df = df.with_columns(pl.Series("season", season_labels, dtype=pl.String))
+            df = df.with_columns(season_expr)
         if "season_year" not in existing:
-            years = df["year"].to_list()
-            season_year_labels = [f"{s}_{y}" for s, y in zip(season_labels, years)]
             df = df.with_columns(
-                pl.Series("season_year", season_year_labels, dtype=pl.String)
+                (pl.col("season") + pl.lit("_") + pl.col("year").cast(pl.String)).alias(
+                    "season_year"
+                )
             )
 
     return df
