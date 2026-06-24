@@ -77,12 +77,12 @@ def build_bbox_index(
             + "Cannot compute bounds from separate lat/lon columns without bbox hints."
         )
 
-    import pyarrow.parquet as pq  # type: ignore[import-untyped]
+    import pyarrow.dataset as ds  # type: ignore[import-untyped]
 
-    pf = pq.ParquetFile(static_path)
+    dataset = ds.dataset(static_path)
     chunks = []
 
-    for batch in pf.iter_batches(batch_size=25_000, columns=cols_to_read):
+    for batch in dataset.to_batches(columns=cols_to_read, batch_size=25_000):
         batch_df = pl.from_arrow(batch)
         assert isinstance(batch_df, pl.DataFrame)
 
