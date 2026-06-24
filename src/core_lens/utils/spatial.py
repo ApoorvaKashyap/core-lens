@@ -6,11 +6,10 @@ import pathlib
 from typing import TYPE_CHECKING, Any
 
 import polars as pl
-import shapely.wkb as swkb
-import shapely.wkt as swkt
+import shapely
 
 if TYPE_CHECKING:
-    import shapely
+    pass
 
 
 def resolve_path(path: str) -> str:
@@ -81,19 +80,27 @@ def build_bbox_index(
     df = pl.read_parquet(static_path, columns=cols_to_read)
     geom_series = df[geometry_col]
 
-    if geometry_type == "wkb":
-        geoms = [swkb.loads(v) for v in geom_series.to_list()]
-    else:
-        geoms = [swkt.loads(v) for v in geom_series.to_list()]
+    geom_array = geom_series.to_numpy()
 
-    bounds = [g.bounds for g in geoms]
-    minx, miny, maxx, maxy = zip(*bounds) if bounds else ([], [], [], [])
+    if geometry_type == "wkb":
+        geoms = shapely.from_wkb(geom_array)
+    else:
+        geoms = shapely.from_wkt(geom_array)
+
+    if len(geoms) > 0:
+        bnds = shapely.bounds(geoms)
+        return df.select(key_cols).with_columns(
+            pl.Series("minx", bnds[:, 0], dtype=pl.Float64),
+            pl.Series("miny", bnds[:, 1], dtype=pl.Float64),
+            pl.Series("maxx", bnds[:, 2], dtype=pl.Float64),
+            pl.Series("maxy", bnds[:, 3], dtype=pl.Float64),
+        )
 
     return df.select(key_cols).with_columns(
-        pl.Series("minx", list(minx), dtype=pl.Float64),
-        pl.Series("miny", list(miny), dtype=pl.Float64),
-        pl.Series("maxx", list(maxx), dtype=pl.Float64),
-        pl.Series("maxy", list(maxy), dtype=pl.Float64),
+        pl.Series("minx", [], dtype=pl.Float64),
+        pl.Series("miny", [], dtype=pl.Float64),
+        pl.Series("maxx", [], dtype=pl.Float64),
+        pl.Series("maxy", [], dtype=pl.Float64),
     )
 
 
@@ -187,11 +194,11 @@ def exact_spatial_filter(
         # Composite key: join on all key columns.
         full_df = full_df.join(candidates.select(key_cols), on=key_cols, how="inner")
 
-    geom_series = full_df[geometry_col].to_list()
+    geom_array = full_df[geometry_col].to_numpy()
     if geometry_type == "wkb":
-        geoms = [swkb.loads(v) for v in geom_series]
+        geoms = shapely.from_wkb(geom_array)
     else:
-        geoms = [swkt.loads(v) for v in geom_series]
+        geoms = shapely.from_wkt(geom_array)
 
     if relationship == "centroid":
         # Centroid mode: entity centroid must lie within the AoI geometry.
@@ -209,10 +216,10 @@ def exact_spatial_filter(
         hit_indices = []
         for i in intersect_idx:
             entity_geom = geoms[i]
-            entity_area = entity_geom.area
+            entity_area = entity_geom.area  # pyright: ignore[reportAttributeAccessIssue]
             if entity_area == 0.0:
                 continue
-            inter_area = entity_geom.intersection(aoi_geometry).area
+            inter_area = entity_geom.intersection(aoi_geometry).area  # pyright: ignore[reportAttributeAccessIssue]
             if inter_area / entity_area >= threshold:
                 hit_indices.append(i)
 
@@ -267,15 +274,24 @@ def execute_spatial_join(
     other_df = pl.read_parquet(other_static, columns=other_cols)
 
     # Decode other geometries.
-    other_geom_series = other_df[other_geom_col].to_list()
+    other_geom_array = other_df[other_geom_col].to_numpy()
     if other_geom_type == "wkb":
-        other_geoms = [swkb.loads(v) for v in other_geom_series]
+        other_geoms = shapely.from_wkb(other_geom_array)
     else:
-        other_geoms = [swkt.loads(v) for v in other_geom_series]
+        other_geoms = shapely.from_wkt(other_geom_array)
 
     # Build STRtree from other entity geometries.
     other_tree = shapely.STRtree(other_geoms)
-    other_df_np = other_df.to_pandas()  # for row-level indexing during agg
+
+    # Only convert the columns we actually need to aggregate to Pandas, avoiding
+    # a massive memory copy of the WKB geometry strings and unused keys.
+    agg_cols_only = [
+        c for c in agg.keys() if c not in ("count", "area") and c in other_df.columns
+    ]
+    if agg_cols_only:
+        other_df_np = other_df.select(agg_cols_only).to_pandas()
+    else:
+        other_df_np = None
 
     # Decode primary geometries.
     if primary_geom_col not in primary_df.columns:
@@ -285,18 +301,28 @@ def execute_spatial_join(
             "with_geometry() first."
         )
 
-    primary_geom_series = primary_df[primary_geom_col].to_list()
+    primary_geom_array = primary_df[primary_geom_col].to_numpy()
     if primary_geom_type == "wkb":
-        primary_geoms = [swkb.loads(v) for v in primary_geom_series]
+        primary_geoms = shapely.from_wkb(primary_geom_array)
     else:
-        primary_geoms = [swkt.loads(v) for v in primary_geom_series]
+        primary_geoms = shapely.from_wkt(primary_geom_array)
 
     # For each primary entity, find overlapping other entities and aggregate.
     result_rows: list[dict[str, Any]] = []
     primary_keys = primary_df.select(primary_key_cols).to_dicts()
 
+    # Vectorized STRtree query over all primary geometries at once
+    # Returns a 2D array of shape (2, N): [[primary_indices], [other_indices]]
+    idx_pairs = other_tree.query(primary_geoms, predicate="intersects")
+
+    from collections import defaultdict
+
+    hits_by_primary = defaultdict(list)
+    for p_idx, o_idx in zip(idx_pairs[0], idx_pairs[1]):
+        hits_by_primary[p_idx].append(o_idx)
+
     for i, (pgeom, pkey) in enumerate(zip(primary_geoms, primary_keys)):
-        hit_idx = other_tree.query(pgeom, predicate="intersects").tolist()
+        hit_idx = hits_by_primary.get(i, [])
         row: dict[str, Any] = dict(pkey)
 
         if not hit_idx:
@@ -306,7 +332,10 @@ def execute_spatial_join(
             result_rows.append(row)
             continue
 
-        matched_other = other_df_np.iloc[hit_idx]
+        if other_df_np is not None:
+            matched_other = other_df_np.iloc[hit_idx]
+        else:
+            matched_other = None
 
         for col, fn in agg.items():
             out_col = f"{other_entity_name}_{col}"
@@ -314,10 +343,10 @@ def execute_spatial_join(
                 row[out_col] = len(hit_idx)
             elif fn == "area":
                 # Sum of intersection areas (geographic, approx).
-                total = sum(pgeom.intersection(other_geoms[j]).area for j in hit_idx)
+                total = sum(pgeom.intersection(other_geoms[j]).area for j in hit_idx)  # pyright: ignore[reportAttributeAccessIssue]
                 row[out_col] = total
-            elif col in matched_other.columns:
-                vals = matched_other[col].dropna().values
+            elif matched_other is not None and col in matched_other.columns:
+                vals = matched_other[col].dropna()
                 if fn == "mean":
                     row[out_col] = float(vals.mean()) if len(vals) else None
                 elif fn == "sum":

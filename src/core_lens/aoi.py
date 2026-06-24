@@ -319,7 +319,6 @@ class AoI:
             ValueError: If the filters match zero rows.
         """
         import shapely.ops as sops
-        import shapely.wkb as swkb
 
         # Find the registered entity whose key_col or known attribute column
         # matches one of the filter keys.
@@ -373,7 +372,9 @@ class AoI:
                 f"in {candidate.static_path!r}."
             )
 
-        geoms = [swkb.loads(row) for row in df[geom_col].to_list()]
+        import shapely
+
+        geoms = shapely.from_wkb(df[geom_col].to_numpy())
         return sops.unary_union(geoms) if len(geoms) > 1 else geoms[0]
 
     @classmethod

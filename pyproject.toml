@@ -108,3 +108,6 @@ explicit = true
 [tool.uv.sources]
 cudf-cu13 = { index = "nvidia" }
 cudf-polars-cu13 = { index = "nvidia" }
+
+[tool.coverage.run]
+source = ["src/core_lens"]

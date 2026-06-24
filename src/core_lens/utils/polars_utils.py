@@ -102,16 +102,10 @@ def scan_with_key_filter(
     """
     lf = pl.scan_parquet(path)
 
-    if len(key_cols) == 1:
-        key = key_cols[0]
-        values = key_values[key].to_list()
-        lf = lf.filter(pl.col(key).is_in(values))
-    else:
-        # Composite key: filter each column independently. A small over-selection
-        # is acceptable because the subsequent join at collect time is exact.
-        for key in key_cols:
-            values = key_values[key].to_list()
-            lf = lf.filter(pl.col(key).is_in(values))
+    # Use an inner join to filter the parquet file down to the exact requested keys.
+    # This avoids building a massive literal expression tree (which consumes gigabytes
+    # of RAM) that occurs when passing large lists to pl.col().is_in().
+    lf = lf.join(key_values.lazy(), on=key_cols, how="inner")
 
     if time_expr is not None:
         lf = lf.filter(time_expr)
