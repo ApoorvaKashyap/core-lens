@@ -67,10 +67,10 @@ class SeasonConfig:
         """Return the season name for a given date.
 
         Args:
-            d: The date to classify.
+            d (date): The date to classify.
 
         Returns:
-            ``"kharif"``, ``"rabi"``, or ``"zaid"``.
+            str: ``"kharif"``, ``"rabi"``, or ``"zaid"``.
         """
         md = f"{d.month:02d}-{d.day:02d}"
         for name in ("kharif", "rabi", "zaid"):
@@ -155,16 +155,16 @@ class AoI:
         """Resolve the AoI boundary and scope all registered entities.
 
         Args:
-            data_root: Path to the root data directory.  Prepended to every
+            data_root (str): Path to the root data directory.  Prepended to every
                 relative entity path that does not start with ``/`` or a URI
                 scheme.
-            bbox: Bounding box as ``(minx, miny, maxx, maxy)`` in WGS-84.
+            bbox (tuple[float, float, float, float] | None, optional): Bounding box as ``(minx, miny, maxx, maxy)`` in WGS-84.
                 Mutually exclusive with ``geometry`` and ``entity_kwargs``.
-            geometry: Arbitrary Shapely geometry.  Used as-is.  Mutually
+            geometry (shapely.Geometry | None, optional): Arbitrary Shapely geometry.  Used as-is.  Mutually
                 exclusive with ``bbox`` and ``entity_kwargs``.
-            seasons: :class:`SeasonConfig` override.  Defaults to the library
+            seasons (SeasonConfig | None, optional): :class:`SeasonConfig` override.  Defaults to the library
                 agronomic defaults.
-            **entity_kwargs: Named filter pairs that identify the boundary,
+            **entity_kwargs (str | list[str]): Named filter pairs that identify the boundary,
                 e.g. ``tehsil="Pangi"``, ``district="Chamba"``,
                 ``state="Himachal Pradesh"``, ``mws_id="13_551"``.
                 Mutually exclusive with ``bbox`` and ``geometry``.
@@ -219,7 +219,7 @@ class AoI:
         """The season name for today's date under the AoI's SeasonConfig.
 
         Returns:
-            ``"kharif"``, ``"rabi"``, or ``"zaid"``.
+            str: ``"kharif"``, ``"rabi"``, or ``"zaid"``.
         """
         return self.seasons.season_for(date.today())
 
@@ -228,7 +228,7 @@ class AoI:
         """The current calendar year.
 
         Returns:
-            Current year as an integer.
+            int: Current year as an integer.
         """
         return date.today().year
 
@@ -236,11 +236,11 @@ class AoI:
         """Render an interactive Lonboard map of the AoI and its entity layers.
 
         Args:
-            overlay: An optional :class:`~core_lens.base.result.Result` to
+            overlay (Result | None, optional): An optional :class:`~core_lens.base.result.Result` to
                 overlay on the map.
 
         Returns:
-            A Lonboard Map object.
+            Any: A Lonboard Map object.
         """
         import lonboard
         import geopandas as gpd
@@ -309,10 +309,10 @@ class AoI:
         the unique matching row).
 
         Args:
-            entity_kwargs: Column–value pairs used to identify the boundary.
+            entity_kwargs (dict[str, str | list[str]]): Column–value pairs used to identify the boundary.
 
         Returns:
-            The union of all matching entity geometries as a Shapely object.
+            shapely.Geometry: The union of all matching entity geometries as a Shapely object.
 
         Raises:
             :class:`~core_lens.base.EntityValidationError`: If no registered entity can satisfy the filters.
@@ -391,7 +391,7 @@ class AoI:
         :class:`AoI` is instantiated (when ``data_root`` is known).
 
         Args:
-            entity_cls: A concrete subclass of
+            entity_cls (type[BaseEntity]): A concrete subclass of
                 :class:`~core_lens.base.entity.BaseEntity`.
 
         Raises:
@@ -417,7 +417,7 @@ class AoI:
         Primarily useful in tests where a clean registry is needed between runs.
 
         Args:
-            entity_cls: The entity class to remove.
+            entity_cls (type[BaseEntity]): The entity class to remove.
         """
         name = _entity_name(entity_cls)
         _REGISTRY.pop(name, None)
@@ -427,7 +427,7 @@ class AoI:
         """Return the names of all currently registered entities.
 
         Returns:
-            A sorted list of entity name strings.
+            list[str]: A sorted list of entity name strings.
         """
         return sorted(_REGISTRY)
 

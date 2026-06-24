@@ -23,9 +23,9 @@ def parquet(result: "Result", path: str | pathlib.Path, **kwargs: Any) -> None:
     This function uses Polars to write the underlying data frame.
 
     Args:
-        result: The Result object to export.
-        path: Destination path for the Parquet file.
-        **kwargs: Additional options to pass to Polars `write_parquet`.
+        result (Result): The Result object to export.
+        path (str | pathlib.Path): Destination path for the Parquet file.
+        **kwargs (Any): Additional options to pass to Polars `write_parquet`.
 
     Raises:
         TypeError: If the Result object has geometry.
@@ -47,9 +47,9 @@ def json(result: "Result", path: str | pathlib.Path, **kwargs: Any) -> None:
     This function uses Polars to write the underlying data frame.
 
     Args:
-        result: The Result object to export.
-        path: Destination path for the JSON file.
-        **kwargs: Additional options to pass to Polars `write_json`.
+        result (Result): The Result object to export.
+        path (str | pathlib.Path): Destination path for the JSON file.
+        **kwargs (Any): Additional options to pass to Polars `write_json`.
 
     Raises:
         TypeError: If the Result object has geometry.
@@ -71,9 +71,9 @@ def csv(result: "Result", path: str | pathlib.Path, **kwargs: Any) -> None:
     This function uses Polars to write the underlying data frame.
 
     Args:
-        result: The Result object to export.
-        path: Destination path for the CSV file.
-        **kwargs: Additional options to pass to Polars `write_csv`.
+        result (Result): The Result object to export.
+        path (str | pathlib.Path): Destination path for the CSV file.
+        **kwargs (Any): Additional options to pass to Polars `write_csv`.
 
     Raises:
         TypeError: If the Result object has geometry.
@@ -95,9 +95,9 @@ def geoparquet(result: "Result", path: str | pathlib.Path, **kwargs: Any) -> Non
     This function uses DuckDB to write the data frame with spatial extensions.
 
     Args:
-        result: The Result object to export.
-        path: Destination path for the GeoParquet file.
-        **kwargs: Additional options to pass to DuckDB's COPY statement.
+        result (Result): The Result object to export.
+        path (str | pathlib.Path): Destination path for the GeoParquet file.
+        **kwargs (Any): Additional options to pass to DuckDB's COPY statement.
 
     Example:
         >>> from core_lens.export import geoparquet
@@ -165,9 +165,9 @@ def geojson(result: "Result", path: str | pathlib.Path, **kwargs: Any) -> None:
     This function uses DuckDB to write the data frame with spatial extensions.
 
     Args:
-        result: The Result object to export.
-        path: Destination path for the GeoJSON file.
-        **kwargs: Additional options to pass to DuckDB's COPY statement.
+        result (Result): The Result object to export.
+        path (str | pathlib.Path): Destination path for the GeoJSON file.
+        **kwargs (Any): Additional options to pass to DuckDB's COPY statement.
 
     Example:
         >>> from core_lens.export import geojson

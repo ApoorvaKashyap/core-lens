@@ -78,7 +78,7 @@ class Result:
         """Return the underlying ``pl.DataFrame``.
 
         Returns:
-            The materialised data frame.
+            pl.DataFrame: The materialised data frame.
         """
         return self.data
 
@@ -89,7 +89,7 @@ class Result:
         :meth:`with_geometry` first on non-static results.
 
         Returns:
-            A ``geopandas.GeoDataFrame`` built from :attr:`data`.
+            gpd.GeoDataFrame: A ``geopandas.GeoDataFrame`` built from :attr:`data`.
 
         Raises:
             TypeError: If :attr:`has_geometry` is ``False``.
@@ -118,7 +118,7 @@ class Result:
         are responsible for collecting and wrapping the output themselves.
 
         Returns:
-            A lazy frame backed by :attr:`data`.
+            pl.LazyFrame: A lazy frame backed by :attr:`data`.
         """
         return self.data.lazy()
 
@@ -134,7 +134,7 @@ class Result:
         ``result.plot.choropleth()``.
 
         Returns:
-            A new :class:`Result` with the geometry column merged in and
+            Result: A new :class:`Result` with the geometry column merged in and
             ``has_geometry=True``.  If ``has_geometry`` is already ``True``,
             returns ``self`` unchanged.
         """
@@ -164,11 +164,11 @@ class Result:
                   .derive("drought_flag", pl.when(pl.col("rainfall") < 500).then(1).otherwise(0))
 
         Args:
-            name: Name for the new column.
-            expr: A Polars expression that evaluates to the column values.
+            name (str): Name for the new column.
+            expr (pl.Expr): A Polars expression that evaluates to the column values.
 
         Returns:
-            A new :class:`Result` with ``name`` appended to :attr:`data`.
+            Result: A new :class:`Result` with ``name`` appended to :attr:`data`.
         """
         new_data = self.data.with_columns(expr.alias(name))
         return self._replace(data=new_data)
@@ -201,9 +201,9 @@ class Result:
              - ✅
 
         Args:
-            *exprs: One or more Polars aggregation expressions
+            *exprs (pl.Expr): One or more Polars aggregation expressions
                 (e.g. ``pl.mean("ndvi")``, ``pl.max("rainfall")``).
-            by: Grouping dimension.  ``None`` collapses all rows to one.
+            by (str | None, optional): Grouping dimension.  ``None`` collapses all rows to one.
                 ``"year"`` groups by entity + year and is valid for both
                 annual and fortnightly resolution.
                 Other temporal groupings (``"month"``, ``"year_month"``,
@@ -211,7 +211,7 @@ class Result:
                 ``resolution="fortnightly"``.
 
         Returns:
-            A new :class:`Result` whose ``data`` is the aggregated frame.
+            Result: A new :class:`Result` whose ``data`` is the aggregated frame.
 
         Raises:
             ValueError: If ``by`` is incompatible with :attr:`resolution`, or
@@ -257,6 +257,9 @@ class Result:
             result.stats.describe()
             result.stats.correlate(["ndvi", "rainfall"], method="spearman")
             result.stats.anomaly("ndvi", mode="cross_sectional", method="zscore")
+
+        Returns:
+            StatsNamespace: The statistical analysis namespace.
         """
         from core_lens.base.namespaces.stats import StatsNamespace
 
@@ -272,6 +275,9 @@ class Result:
 
             result.plot.choropleth("ndvi")
             result.plot.timeseries(x="year", y="rainfall")
+
+        Returns:
+            PlotNamespace: The visualisation namespace.
         """
         from core_lens.base.namespaces.plot import PlotNamespace
 

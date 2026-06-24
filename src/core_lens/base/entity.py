@@ -84,7 +84,7 @@ class BaseEntity(ABC):
         """Initialise the entity with an optional data root directory.
 
         Args:
-            data_root: Absolute path to the root data directory.  When
+            data_root (pathlib.Path | None, optional): Absolute path to the root data directory.  When
                 supplied, relative :attr:`static_path`, :attr:`annual_path`,
                 and :attr:`fortnightly_path` values are resolved against this
                 directory.  Defaults to ``None``, in which case relative paths
@@ -100,10 +100,10 @@ class BaseEntity(ABC):
         otherwise against the current working directory.
 
         Args:
-            path: A filesystem path, absolute or relative.
+            path (str): A filesystem path, absolute or relative.
 
         Returns:
-            An absolute path string.
+            str: An absolute path string.
 
         Raises:
             FileNotFoundError: If the resolved path does not exist.
@@ -131,7 +131,7 @@ class BaseEntity(ABC):
         ``[\"mws_id\"]``), but the contract allows composite keys for plugins.
 
         Returns:
-            A list of column name strings present in the static file.
+            list[str]: A list of column name strings present in the static file.
         """
 
     @property
@@ -143,7 +143,7 @@ class BaseEntity(ABC):
         (WKB bytes, WKT string, or a native geometry column).
 
         Returns:
-            The column name as a string.
+            str: The column name as a string.
         """
 
     @property
@@ -156,7 +156,7 @@ class BaseEntity(ABC):
         ``FileNotFoundError`` is raised if the file does not exist.
 
         Returns:
-            A path string.
+            str: A path string.
         """
 
     @property
@@ -168,7 +168,7 @@ class BaseEntity(ABC):
         :class:`EntityValidationError` is raised.
 
         Returns:
-            A path string, or ``None`` if the entity has no annual data.
+            str | None: A path string, or ``None`` if the entity has no annual data.
         """
         return None
 
@@ -181,7 +181,7 @@ class BaseEntity(ABC):
         :class:`EntityValidationError` is raised.
 
         Returns:
-            A path string, or ``None`` if the entity has no fortnightly data.
+            str | None: A path string, or ``None`` if the entity has no fortnightly data.
         """
         return None
 
@@ -194,7 +194,7 @@ class BaseEntity(ABC):
         instead of relying on detection.
 
         Returns:
-            A fully-validated :class:`~core_lens.schema.profile.SchemaProfile`.
+            SchemaProfile: A fully-validated :class:`~core_lens.schema.profile.SchemaProfile`.
         """
         if not hasattr(self, "_schema_profile"):
             from core_lens.schema.detection import detect
@@ -247,7 +247,7 @@ class BaseEntity(ABC):
                 are resolved as entity-name lookups.
 
         Returns:
-            A lazy :class:`~core_lens.base.view.View` with resolved key pairs.
+            View: A lazy :class:`~core_lens.base.view.View` with resolved key pairs.
 
         Raises:
             ValueError: If a kwarg cannot be resolved as either an attribute
@@ -354,21 +354,21 @@ class BaseEntity(ABC):
         refines with a Shapely STRtree exact-relationship check.
 
         Args:
-            geometry: A Shapely geometry representing the spatial extent.
-            bbox: Bounding box as ``(minx, miny, maxx, maxy)`` in WGS-84.
+            geometry (shapely.Geometry | None, optional): A Shapely geometry representing the spatial extent.
+            bbox (tuple[float, float, float, float] | None, optional): Bounding box as ``(minx, miny, maxx, maxy)`` in WGS-84.
                 Converted to a ``shapely.geometry.box`` internally.
-            relationship: Spatial relationship mode.
+            relationship (str, optional): Spatial relationship mode.
 
                 * ``"centroid"`` (default) — entity centroid must lie within
                   the geometry.
                 * ``"area"`` — intersection area / entity area must exceed
                   ``threshold``.
 
-            threshold: Area coverage threshold for ``"area"`` mode (0–1).
+            threshold (float, optional): Area coverage threshold for ``"area"`` mode (0–1).
                 Default 0.5.
 
         Returns:
-            A lazy :class:`~core_lens.base.view.View` scoped to the given
+            View: A lazy :class:`~core_lens.base.view.View` scoped to the given
             spatial extent.
 
         Raises:
@@ -411,15 +411,15 @@ class BaseEntity(ABC):
         Joined columns are namespaced as ``{entity_name}_{column_name}``.
 
         Args:
-            other: The secondary :class:`BaseEntity` whose columns will be
+            other (BaseEntity): The secondary :class:`BaseEntity` whose columns will be
                 joined and aggregated onto ``self``.
-            agg: Mapping of ``{column: aggregation}`` specifying which columns
+            agg (dict[str, str]): Mapping of ``{column: aggregation}`` specifying which columns
                 from ``other`` to bring in and how to aggregate them.  Valid
                 aggregation strings are ``\"area\"``, ``\"count\"``, ``\"mean\"``,
                 ``\"sum\"``, ``\"min\"``, and ``\"max\"``.
 
         Returns:
-            A lazy :class:`~core_lens.base.view.View` with the join spec
+            View: A lazy :class:`~core_lens.base.view.View` with the join spec
             recorded for deferred execution.
         """
         from core_lens.base.view import View

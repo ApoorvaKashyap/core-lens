@@ -87,10 +87,10 @@ class View:
         the static file's attribute columns.  Multiple arguments are AND-ed.
 
         Args:
-            **kwargs: Arbitrary column–value pairs to filter on.
+            **kwargs (Any): Arbitrary column–value pairs to filter on.
 
         Returns:
-            A new lazy :class:`View` with the narrowed keys.
+            View: A new lazy :class:`View` with the narrowed keys.
         """
         static = self.entity._resolve(self.entity.static_path)
 
@@ -127,13 +127,13 @@ class View:
         refines with a Shapely STRtree exact-relationship check.
 
         Args:
-            geometry: A Shapely geometry representing the spatial extent.
-            bbox: Bounding box as ``(minx, miny, maxx, maxy)`` in WGS-84.
-            relationship: ``"centroid"`` (default) or ``"area"`` mode.
-            threshold: Area coverage threshold for ``"area"`` mode.  Default 0.5.
+            geometry (shapely.Geometry | None, optional): A Shapely geometry representing the spatial extent.
+            bbox (tuple[float, float, float, float] | None, optional): Bounding box as ``(minx, miny, maxx, maxy)`` in WGS-84.
+            relationship (str, optional): ``"centroid"`` (default) or ``"area"`` mode.
+            threshold (float, optional): Area coverage threshold for ``"area"`` mode.  Default 0.5.
 
         Returns:
-            A new lazy :class:`View` scoped to the given spatial extent.
+            View: A new lazy :class:`View` scoped to the given spatial extent.
 
         Raises:
             ValueError: If neither ``geometry`` nor ``bbox`` is provided.
@@ -184,13 +184,13 @@ class View:
         materialisation time (``.static``, ``.annual``, or ``.fortnightly``).
 
         Args:
-            other: The secondary :class:`BaseEntity` whose columns will be
+            other (BaseEntity): The secondary :class:`BaseEntity` whose columns will be
                 joined and aggregated onto ``self``.
-            agg: Mapping of ``{column: aggregation}`` specifying which columns
+            agg (dict[str, str]): Mapping of ``{column: aggregation}`` specifying which columns
                 from ``other`` to bring in and how to aggregate them.
 
         Returns:
-            A new lazy :class:`View` with the join spec recorded.
+            View: A new lazy :class:`View` with the join spec recorded.
         """
         if self.join_spec is not None:
             raise ValueError("View already has a pending spatial_join.")
@@ -235,16 +235,16 @@ class View:
         via predicate pushdown on the Parquet scan.
 
         Args:
-            start: Start of the date range (ISO-8601).  Required in date range
+            start (str | None, optional): Start of the date range (ISO-8601).  Required in date range
                 mode; must be ``None`` in season mode.
-            end: End of the date range (ISO-8601).  Required in date range
+            end (str | None, optional): End of the date range (ISO-8601).  Required in date range
                 mode; must be ``None`` in season mode.
-            season: A :class:`~core_lens.base.view.Season` enum value. Activates season mode.
-            year: Year or inclusive year range to restrict the season filter.
+            season (Season | None, optional): A :class:`~core_lens.base.view.Season` enum value. Activates season mode.
+            year (int | tuple[int, int] | None, optional): Year or inclusive year range to restrict the season filter.
                 Only valid in season mode.  ``"current"`` season ignores this.
 
         Returns:
-            A new :class:`View` with :attr:`time_filter` set.
+            View: A new :class:`View` with :attr:`time_filter` set.
 
         Raises:
             ValueError: If the arguments are inconsistent (e.g. mixing date
@@ -300,7 +300,7 @@ class View:
         a GeoParquet carrying geometry for every entity instance.
 
         Returns:
-            A :class:`~core_lens.base.result.Result` with
+            Result: A :class:`~core_lens.base.result.Result` with
             ``resolution="static"`` and ``has_geometry=True``.
 
         Raises:
@@ -314,7 +314,7 @@ class View:
         """Materialise the annual Parquet file and return a :class:`~core_lens.base.result.Result`.
 
         Returns:
-            A :class:`~core_lens.base.result.Result` with
+            Result: A :class:`~core_lens.base.result.Result` with
             ``resolution="annual"`` and ``has_geometry=False``.
 
         Raises:
@@ -327,7 +327,7 @@ class View:
         """Materialise the fortnightly Parquet file and return a :class:`~core_lens.base.result.Result`.
 
         Returns:
-            A :class:`~core_lens.base.result.Result` with
+            Result: A :class:`~core_lens.base.result.Result` with
             ``resolution="fortnightly"`` and ``has_geometry=False``.
 
         Raises:

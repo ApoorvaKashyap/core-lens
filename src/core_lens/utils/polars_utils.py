@@ -12,6 +12,9 @@ def _gpu_available() -> bool:
 
     The result is cached after the first call so subsequent invocations are
     effectively free.
+
+    Returns:
+        bool: True if GPU is available.
     """
     global _GPU_AVAILABLE
     if _GPU_AVAILABLE is None:
@@ -47,10 +50,10 @@ def collect_lf(lf: pl.LazyFrame) -> pl.DataFrame:
     path can occasionally change row ordering in ways that break those joins.
 
     Args:
-        lf: The lazy frame to collect.
+        lf (pl.LazyFrame): The lazy frame to collect.
 
     Returns:
-        A materialised ``pl.DataFrame``.
+        pl.DataFrame: A materialised ``pl.DataFrame``.
     """
     global _GPU_AVAILABLE
     if _gpu_available():
@@ -90,15 +93,15 @@ def scan_with_key_filter(
        also pushed down if the Parquet file carries column statistics.
 
     Args:
-        path: Absolute path to a Parquet file.
-        key_cols: Column name(s) that form the entity's unique key.
-        key_values: A narrow ``pl.DataFrame`` containing only the key
+        path (str): Absolute path to a Parquet file.
+        key_cols (list[str]): Column name(s) that form the entity's unique key.
+        key_values (pl.DataFrame): A narrow ``pl.DataFrame`` containing only the key
             column(s) with the exact values to retain.
-        time_expr: An optional Polars filter expression for the time column,
+        time_expr (pl.Expr | None, optional): An optional Polars filter expression for the time column,
             as produced by :func:`~core_lens.utils.season.resolve_time_filter`.
 
     Returns:
-        A ``pl.LazyFrame`` ready to be ``.collect()``-ed.
+        pl.LazyFrame: A ``pl.LazyFrame`` ready to be ``.collect()``-ed.
     """
     lf = pl.scan_parquet(path, hive_partitioning=True)
 

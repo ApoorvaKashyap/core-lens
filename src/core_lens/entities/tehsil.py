@@ -15,18 +15,30 @@ class TehsilEntity(BaseEntity):
 
     @property
     def key_cols(self) -> list[str]:
+        """Returns:
+        list[str]: The key columns for the entity.
+        """
         return ["id"]
 
     @property
     def geometry_col(self) -> str:
+        """Returns:
+        str: The geometry column name.
+        """
         return "geom"
 
     @property
     def static_path(self) -> str:
+        """Returns:
+        str: The relative path to the static data.
+        """
         return "tehsil/static/tehsil.parquet"
 
     @property
     def schema_profile(self) -> SchemaProfile:
+        """Returns:
+        SchemaProfile: The hardcoded schema profile.
+        """
         if not hasattr(self, "_schema_profile"):
             self._schema_profile = SchemaProfile(
                 key_cols=["id"],

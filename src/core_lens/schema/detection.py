@@ -66,14 +66,14 @@ def detect(
       and time columns are accounted for.
 
     Args:
-        static_path: Path to the static GeoParquet file.
-        key_cols: Entity key column name(s), as declared on the entity.
-        geometry_col: Geometry column name, as declared on the entity.
-        annual_path: Path to the annual Parquet file, or ``None``.
-        fortnightly_path: Path to the fortnightly Parquet file, or ``None``.
+        static_path (str): Path to the static GeoParquet file.
+        key_cols (list[str]): Entity key column name(s), as declared on the entity.
+        geometry_col (str): Geometry column name, as declared on the entity.
+        annual_path (str | None, optional): Path to the annual Parquet file, or ``None``.
+        fortnightly_path (str | None, optional): Path to the fortnightly Parquet file, or ``None``.
 
     Returns:
-        A validated :class:`~core_lens.schema.profile.SchemaProfile`.
+        SchemaProfile: A validated :class:`~core_lens.schema.profile.SchemaProfile`.
 
     Raises:
         SchemaDetectionError: If a required column is absent, the geometry

@@ -32,12 +32,13 @@ def resolve_time_filter(
     year-crossing seasons) is matched.
 
     Args:
-        time_filter: The dict stored on :attr:`~core_lens.base.view.View.time_filter`.
-        time_col: Name of the time column in the Parquet file.
-        season_config: The :class:`~core_lens.aoi.SeasonConfig` in effect.
+        time_filter (dict[str, str | int | tuple[int, int] | None]): The dictionary
+            stored on :attr:`~core_lens.base.view.View.time_filter`.
+        time_col (str): Name of the time column in the Parquet file.
+        season_config (SeasonConfig): The :class:`~core_lens.aoi.SeasonConfig` in effect.
 
     Returns:
-        A Polars expression that can be passed to ``.filter()``.
+        pl.Expr: A Polars expression that can be passed to ``.filter()``.
 
     Raises:
         ValueError: If ``time_filter`` has an unrecognised structure.
@@ -83,14 +84,15 @@ def _date_range_expr(
     and Date columns at runtime.
 
     Args:
-        time_col: Name of the time column.
-        start: ISO-8601 start date string (``"YYYY-MM-DD"``).
-        end: ISO-8601 end date string (``"YYYY-MM-DD"``).
-        is_year_col: ``True`` → integer calendar-year column; ``False`` →
-            ``pl.Date`` column; ``None`` → unknown, use runtime detection.
+        time_col (str): Name of the time column.
+        start (str): ISO-8601 start date string (``"YYYY-MM-DD"``).
+        end (str): ISO-8601 end date string (``"YYYY-MM-DD"``).
+        is_year_col (bool | None, optional): ``True`` means integer calendar-year column;
+            ``False`` means ``pl.Date`` column; ``None`` means unknown, use runtime
+            detection. Defaults to ``None``.
 
     Returns:
-        A Polars expression.
+        pl.Expr: A Polars expression.
     """
     start_date = datetime.date.fromisoformat(start)
     end_date = datetime.date.fromisoformat(end)
@@ -131,14 +133,14 @@ def _season_expr(
     are included.
 
     Args:
-        time_col: Name of the time column.
-        season_name: One of ``"kharif"``, ``"rabi"``, ``"zaid"``.
-        year: Single year, ``(from_year, to_year)`` inclusive tuple, or ``None``
-            to match all years.
-        season_config: The :class:`~core_lens.aoi.SeasonConfig` in effect.
+        time_col (str): Name of the time column.
+        season_name (str): One of ``"kharif"``, ``"rabi"``, ``"zaid"``.
+        year (int | tuple[int, int] | None): Single year, ``(from_year, to_year)``
+            inclusive tuple, or ``None`` to match all years.
+        season_config (SeasonConfig): The :class:`~core_lens.aoi.SeasonConfig` in effect.
 
     Returns:
-        A Polars expression.
+        pl.Expr: A Polars expression.
     """
     start_md, end_md = getattr(season_config, season_name)
     year_crossing = start_md > end_md
@@ -173,11 +175,30 @@ def _season_expr(
 
 
 def _parse_md(md: str) -> tuple[int, int]:
+    """Parse a month-day string into integer month and day.
+
+    Args:
+        md (str): A month-day string in ``"MM-DD"`` format.
+
+    Returns:
+        tuple[int, int]: A tuple containing ``(month, day)`` as integers.
+    """
     month, day = md.split("-")
     return int(month), int(day)
 
 
 def _year_bounds(year: int | tuple[int, int] | None) -> tuple[int, int]:
+    """Resolve a year input into a lower and upper bound tuple.
+
+    When ``year`` is ``None``, a wide range covering past and future data is used.
+
+    Args:
+        year (int | tuple[int, int] | None): A single year, an inclusive
+            tuple of years, or ``None``.
+
+    Returns:
+        tuple[int, int]: A tuple containing ``(from_year, to_year)``.
+    """
     # When year is None use a wide range covering past and future data.
     if year is None:
         return 1900, 2100
@@ -196,7 +217,7 @@ def add_temporal_columns(
     Adds the five columns that :meth:`~core_lens.base.result.Result.aggregate`
     accepts as ``by`` values.  Called by the materialisation layer
     (:meth:`~core_lens.base.view.View._materialise`) immediately after collect
-    for every fortnightly ``Result``.
+    for every fortnightly :class:`~core_lens.base.result.Result`.
 
     Columns added (if not already present):
 
@@ -210,13 +231,13 @@ def add_temporal_columns(
     untouched — this prevents overwriting data the entity itself may supply.
 
     Args:
-        df: The collected fortnightly ``pl.DataFrame``.
-        time_col: Name of the date/datetime column to derive from.
-        season_config: The :class:`~core_lens.aoi.SeasonConfig` in effect,
+        df (pl.DataFrame): The collected fortnightly DataFrame.
+        time_col (str): Name of the date/datetime column to derive from.
+        season_config (SeasonConfig): The :class:`~core_lens.aoi.SeasonConfig` in effect,
             used to map each date to its season name.
 
     Returns:
-        A new ``pl.DataFrame`` with the temporal grouping columns appended.
+        pl.DataFrame: A new DataFrame with the temporal grouping columns appended.
     """
     existing = set(df.columns)
 
@@ -255,7 +276,16 @@ def add_temporal_columns(
         z_start, z_end = season_config.zaid
 
         def _md_between(expr: pl.Expr, start: str, end: str) -> pl.Expr:
-            """True when *expr* (MM-DD string) falls within [start, end], handling year rollover."""
+            """Evaluate if a month-day string expression falls within a range.
+
+            Args:
+                expr (pl.Expr): The month-day string expression to evaluate.
+                start (str): The start month-day string in ``"MM-DD"`` format.
+                end (str): The end month-day string in ``"MM-DD"`` format.
+
+            Returns:
+                pl.Expr: A Polars boolean expression handling year rollover.
+            """
             if start <= end:
                 # is_between with bare strings → column-name lookup; use pl.lit().
                 return expr.is_between(pl.lit(start), pl.lit(end))

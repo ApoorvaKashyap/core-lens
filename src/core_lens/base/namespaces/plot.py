@@ -220,13 +220,13 @@ class PlotNamespace:
         automatically via :meth:`~core_lens.base.result.Result.with_geometry`.
 
         Args:
-            column: The column to use for colour mapping.
-            subplot_on: Optional temporal dimension to split data across.
+            column (str): The column to use for colour mapping.
+            subplot_on (SubplotOn | None, optional): Optional temporal dimension to split data across.
                 A :class:`~core_lens.base.namespaces.plot.SubplotOn` enum value. When set, one layer is rendered per unique
                 value of ``subplot_on`` in the data.
 
         Returns:
-            A Lonboard Map object.
+            lonboard.Map: A Lonboard Map object.
 
         Raises:
             ValueError: If ``column`` or ``subplot_on`` column not found in data.
@@ -311,16 +311,16 @@ class PlotNamespace:
         plain :class:`bokeh.plotting.figure`.
 
         Args:
-            x: The temporal column to plot on the x-axis.
-            y: The value column(s) to plot on the y-axis.
+            x (str | None, optional): The temporal column to plot on the x-axis.
+            y (str | list[str] | None, optional): The value column(s) to plot on the y-axis.
                 If ``None``, all numeric columns (except ``x``) are used.
-            subplot_on: Optional temporal dimension to split data across.
+            subplot_on (SubplotOn | str | None, optional): Optional temporal dimension to split data across.
                 A :class:`~core_lens.base.namespaces.plot.SubplotOn` enum value or string.
-            top_n: Maximum number of entities rendered in per-entity view.
-            aggregate: If ``True``, renders only the aggregated mean view.
+            top_n (int, optional): Maximum number of entities rendered in per-entity view.
+            aggregate (bool, optional): If ``True``, renders only the aggregated mean view.
 
         Returns:
-            A Bokeh Tabs object (or a single Figure when ``aggregate=True``).
+            Any: A Bokeh Tabs object (or a single Figure when ``aggregate=True``).
         """
         import polars as pl
         import polars.selectors as cs
@@ -486,12 +486,12 @@ class PlotNamespace:
         """Render a scatter plot using Bokeh.
 
         Args:
-            x: The column to plot on the x-axis.
-            y: The column(s) to plot on the y-axis. If None, auto-selects all numeric.
-            top_n: Maximum number of entities to plot.
+            x (str | None, optional): The column to plot on the x-axis.
+            y (str | list[str] | None, optional): The column(s) to plot on the y-axis. If None, auto-selects all numeric.
+            top_n (int, optional): Maximum number of entities to plot.
 
         Returns:
-            A Bokeh Figure or Tabs object.
+            Any: A Bokeh Figure or Tabs object.
         """
         import polars as pl
         import polars.selectors as cs
@@ -562,11 +562,11 @@ class PlotNamespace:
         """Render a distribution (histogram) plot using Bokeh.
 
         Args:
-            x: The column(s) to plot the distribution for. If None, auto-selects all numeric.
-            top_n: Maximum number of entities to include.
+            x (str | list[str] | None, optional): The column(s) to plot the distribution for. If None, auto-selects all numeric.
+            top_n (int, optional): Maximum number of entities to include.
 
         Returns:
-            A Bokeh Figure or Tabs object.
+            Any: A Bokeh Figure or Tabs object.
         """
         import numpy as np
         import pandas as pd
@@ -631,11 +631,11 @@ class PlotNamespace:
         """Render a correlation heatmap using Bokeh.
 
         Args:
-            columns: Optional list of columns to correlate. Defaults to all numeric.
-            top_n: Maximum number of entities to include (currently unused).
+            columns (list[str] | None, optional): Optional list of columns to correlate. Defaults to all numeric.
+            top_n (int, optional): Maximum number of entities to include (currently unused).
 
         Returns:
-            A Bokeh Figure object.
+            Any: A Bokeh Figure object.
         """
         import polars.selectors as cs
         from bokeh.models import BasicTicker, ColumnDataSource, LinearColorMapper
@@ -708,13 +708,13 @@ class PlotNamespace:
         """Render a heatmap using Bokeh.
 
         Args:
-            x: The column for the x-axis.
-            y: The column for the y-axis.
-            value: The column for the colour values.
-            top_n: Maximum number of entities to include (currently unused).
+            x (str | None, optional): The column for the x-axis.
+            y (str | None, optional): The column for the y-axis.
+            value (str | None, optional): The column for the colour values.
+            top_n (int, optional): Maximum number of entities to include (currently unused).
 
         Returns:
-            A Bokeh Figure object.
+            Any: A Bokeh Figure object.
         """
         from bokeh.models import (
             BasicTicker,
@@ -789,7 +789,7 @@ class PlotNamespace:
         """Render a scatter matrix (pairs plot) using Bokeh.
 
         Returns:
-            A Bokeh ``gridplot`` object.
+            Any: A Bokeh ``gridplot`` object.
         """
         import polars.selectors as cs
         from bokeh.layouts import gridplot

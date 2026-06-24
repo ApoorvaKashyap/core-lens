@@ -75,10 +75,10 @@ class SchemaProfile(BaseModel):
         """Load a schema profile from a JSON file.
 
         Args:
-            path: Path to the JSON configuration file.
+            path (str | pathlib.Path): Path to the JSON configuration file.
 
         Returns:
-            A new :class:`SchemaProfile` instance.
+            SchemaProfile: A new :class:`SchemaProfile` instance.
 
         Raises:
             ValueError: If the file is not valid JSON.

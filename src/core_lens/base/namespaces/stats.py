@@ -170,12 +170,12 @@ class StatsNamespace:
         """Per-column or per-entity descriptive statistics.
 
         Args:
-            columns: Numeric columns to describe. Defaults to all numeric cols.
-            by: ``"column"`` (one row per column, design default) or
+            columns (list[str] | None, optional): Numeric columns to describe. Defaults to all numeric cols.
+            by (str, optional): ``"column"`` (one row per column, design default) or
                 ``"entity"`` (one row per entity with mean/std per column).
 
         Returns:
-            New :class:`~core_lens.base.result.Result` with descriptive stats.
+            Result: New :class:`~core_lens.base.result.Result` with descriptive stats.
 
         Raises:
             ValueError: If ``by`` is not ``\"column\"`` or ``\"entity\"``.
@@ -227,12 +227,12 @@ class StatsNamespace:
         """Pairwise correlations between columns.
 
         Args:
-            columns: At least 2 column names.
-            method: A :class:`~core_lens.base.namespaces.stats.CorrelateMethod` enum value.
-            across: ``"entity"`` or ``"time"`` — recorded in metadata only.
+            columns (list[str]): At least 2 column names.
+            method (CorrelateMethod, optional): A :class:`~core_lens.base.namespaces.stats.CorrelateMethod` enum value.
+            across (str, optional): ``"entity"`` or ``"time"`` — recorded in metadata only.
 
         Returns:
-            Result whose data has columns
+            Result: Result whose data has columns
             ``column_a | column_b | correlation | p_value``.
 
         Raises:
@@ -296,16 +296,16 @@ class StatsNamespace:
         """Hypothesis test in three modes: group-based, period-based, single-sample.
 
         Args:
-            column: Numeric column to test.
-            groups: Categorical column to split groups on.
-            periods: List of ``(from_year, to_year)`` period tuples.
-            against: Reference value for a one-sample test.
-            method: A :class:`~core_lens.base.namespaces.stats.TestMethod` enum value.
+            column (str): Numeric column to test.
+            groups (str | None, optional): Categorical column to split groups on.
+            periods (list[tuple[int, int]] | None, optional): List of ``(from_year, to_year)`` period tuples.
+            against (float | None, optional): Reference value for a one-sample test.
+            method (TestMethod | None, optional): A :class:`~core_lens.base.namespaces.stats.TestMethod` enum value.
                 Auto-selected via Shapiro-Wilk if ``None``.
-            significance_level: Alpha level for ``significant`` flag (default 0.05).
+            significance_level (float, optional): Alpha level for ``significant`` flag (default 0.05).
 
         Returns:
-            Result whose data has per-group descriptive stats
+            Result: Result whose data has per-group descriptive stats
             ``group | n | mean | std | median`` and
             ``metadata`` with ``statistic``, ``p_value``, ``significant``.
 
@@ -447,13 +447,13 @@ class StatsNamespace:
         """Change between two time periods per entity.
 
         Args:
-            column: Value column to compute change for.
-            from_period: Start year/period integer.
-            to_period: End year/period integer.
-            method: A :class:`~core_lens.base.namespaces.stats.ChangeMethod` enum value.
+            column (str): Value column to compute change for.
+            from_period (int): Start year/period integer.
+            to_period (int): End year/period integer.
+            method (ChangeMethod, optional): A :class:`~core_lens.base.namespaces.stats.ChangeMethod` enum value.
 
         Returns:
-            For *absolute* / *percentage*: data has
+            Result: For *absolute* / *percentage*: data has
             ``key_col | value_from | value_to | change | pct_change``.
             For *trend*: ``key_col | slope | r_squared | direction``.
 
@@ -550,15 +550,15 @@ class StatsNamespace:
         """Anomaly detection in cross-sectional or timeseries mode.
 
         Args:
-            column: Value column to analyse.
-            mode: ``"cross_sectional"`` or ``"timeseries"``.
-            method: An :class:`~core_lens.base.namespaces.stats.AnomalyCrossMethod` or :class:`~core_lens.base.namespaces.stats.AnomalyTsMethod` enum value.
-            baseline: ``(from_year, to_year)`` inclusive.  Required for
+            column (str): Value column to analyse.
+            mode (str): ``"cross_sectional"`` or ``"timeseries"``.
+            method (AnomalyCrossMethod | AnomalyTsMethod): An :class:`~core_lens.base.namespaces.stats.AnomalyCrossMethod` or :class:`~core_lens.base.namespaces.stats.AnomalyTsMethod` enum value.
+            baseline (tuple[int, int] | None, optional): ``(from_year, to_year)`` inclusive.  Required for
                 timeseries; optional for cross-sectional.
-            threshold: Sigma / score threshold for anomaly flag (default 2.0).
+            threshold (float, optional): Sigma / score threshold for anomaly flag (default 2.0).
 
         Returns:
-            Result whose data has ``key_col | anomaly_score | is_anomaly``
+            Result: Result whose data has ``key_col | anomaly_score | is_anomaly``
             (cross-sectional) or ``key_col | year | anomaly_score | is_anomaly``
             (timeseries, baseline period excluded).
 

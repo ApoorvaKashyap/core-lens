@@ -16,10 +16,10 @@ def resolve_path(path: str) -> str:
     """Return an absolute path string, resolving relative paths against cwd.
 
     Args:
-        path: A filesystem path, absolute or relative.
+        path (str): A filesystem path, absolute or relative.
 
     Returns:
-        An absolute path string.
+        str: An absolute path string.
 
     Raises:
         FileNotFoundError: If the resolved path does not exist.
@@ -51,15 +51,15 @@ def build_bbox_index(
     is decoded and bounds are computed via Shapely.
 
     Args:
-        static_path: Absolute path to the static GeoParquet file.
-        key_cols: Column name(s) that form the entity's unique key.
-        bbox_cols: Four-column ``(minx, miny, maxx, maxy)`` tuple if the
+        static_path (str): Absolute path to the static GeoParquet file.
+        key_cols (list[str]): Column name(s) that form the entity's unique key.
+        bbox_cols (tuple[str, str, str, str] | None): Four-column ``(minx, miny, maxx, maxy)`` tuple if the
             static file carries pre-computed bounding boxes, otherwise ``None``.
-        geometry_col: Name of the geometry column.
-        geometry_type: One of ``"wkb"``, ``"wkt"``, or ``"latlon"``.
+        geometry_col (str): Name of the geometry column.
+        geometry_type (str): One of ``"wkb"``, ``"wkt"``, or ``"latlon"``.
 
     Returns:
-        A ``pl.DataFrame`` with columns ``(*key_cols, minx, miny, maxx, maxy)``.
+        pl.DataFrame: A ``pl.DataFrame`` with columns ``(*key_cols, minx, miny, maxx, maxy)``.
     """
     if bbox_cols is not None:
         cols_to_read = key_cols + list(bbox_cols)
@@ -126,12 +126,12 @@ def bbox_intersects_geometry(
     :func:`exact_spatial_filter`.
 
     Args:
-        index_df: The in-memory index DataFrame with ``minx, miny, maxx, maxy``
+        index_df (pl.DataFrame): The in-memory index DataFrame with ``minx, miny, maxx, maxy``
             columns produced by :func:`build_bbox_index`.
-        geometry: Any Shapely geometry representing the area of interest.
+        geometry (shapely.Geometry): Any Shapely geometry representing the area of interest.
 
     Returns:
-        The subset of ``index_df`` whose rows overlap the geometry bounds.
+        pl.DataFrame: The subset of ``index_df`` whose rows overlap the geometry bounds.
     """
     gminx, gminy, gmaxx, gmaxy = geometry.bounds  # type: ignore[attr-defined]
     return index_df.filter(
@@ -158,25 +158,25 @@ def exact_spatial_filter(
     each geometry, and tests for the requested spatial relationship.
 
     Args:
-        candidates: The DataFrame from :func:`bbox_intersects_geometry` —
+        candidates (pl.DataFrame): The DataFrame from :func:`bbox_intersects_geometry` —
             only the key columns are used here; the bbox columns are ignored.
-        static_path: Absolute path to the static GeoParquet file.
-        key_cols: Column name(s) that form the entity's unique key.
-        geometry_col: Name of the geometry column in the static file.
-        geometry_type: One of ``"wkb"`` or ``"wkt"``.
-        aoi_geometry: The Area of Interest geometry to test against.
-        relationship: Spatial relationship mode.
+        static_path (str): Absolute path to the static GeoParquet file.
+        key_cols (list[str]): Column name(s) that form the entity's unique key.
+        geometry_col (str): Name of the geometry column in the static file.
+        geometry_type (str): One of ``"wkb"`` or ``"wkt"``.
+        aoi_geometry (shapely.Geometry): The Area of Interest geometry to test against.
+        relationship (str, optional): Spatial relationship mode.
 
             * ``"centroid"`` (default) — entity centroid must lie **within**
               ``aoi_geometry``.
             * ``"area"`` — fraction of the entity's area covered by the
               intersection must exceed ``threshold``.
 
-        threshold: Minimum intersection-to-entity area ratio used in
+        threshold (float, optional): Minimum intersection-to-entity area ratio used in
             ``"area"`` mode.  Ignored in ``"centroid"`` mode.  Default 0.5.
 
     Returns:
-        A ``pl.DataFrame`` containing only the key columns for entities that
+        pl.DataFrame: A ``pl.DataFrame`` containing only the key columns for entities that
         satisfy the spatial relationship.
 
     Raises:
@@ -252,21 +252,21 @@ def execute_spatial_join(
     named ``{other_entity_name}_{column_name}`` to avoid clashes.
 
     Args:
-        primary_df: The primary entity DataFrame (must contain
+        primary_df (pl.DataFrame): The primary entity DataFrame (must contain
             ``primary_geom_col`` unless geometry is in a separate column).
-        primary_key_cols: Key column(s) of the primary entity.
-        primary_geom_col: Name of the WKB geometry column in ``primary_df``.
-        primary_geom_type: Geometry encoding — ``"wkb"`` or ``"wkt"``.
-        other_entity: A :class:`~core_lens.base.entity.BaseEntity` instance
+        primary_key_cols (list[str]): Key column(s) of the primary entity.
+        primary_geom_col (str): Name of the WKB geometry column in ``primary_df``.
+        primary_geom_type (str): Geometry encoding — ``"wkb"`` or ``"wkt"``.
+        other_entity (BaseEntity): A :class:`~core_lens.base.entity.BaseEntity` instance
             to join against.
-        agg: Mapping ``{column: aggregation}`` — which columns from
+        agg (dict[str, str]): Mapping ``{column: aggregation}`` — which columns from
             ``other_entity`` to bring in and how to aggregate them.  Valid
             aggregations: ``"count"``, ``"mean"``, ``"sum"``, ``"min"``,
             ``"max"``, ``"area"``.
-        other_entity_name: Used to prefix result column names.
+        other_entity_name (str): Used to prefix result column names.
 
     Returns:
-        ``primary_df`` with additional columns
+        pl.DataFrame: ``primary_df`` with additional columns
         ``{other_entity_name}_{col}`` appended for each ``agg`` entry.
     """
     import shapely
