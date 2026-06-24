@@ -23,6 +23,15 @@ def _make_view(entity: Any, entity_name: str = "minimalmws") -> View:
     return View(keys=keys, entity=entity, entity_name=entity_name)
 
 
+class TestViewWhere:
+    def test_view_where(self, entity_cls_full: Any) -> None:
+        view = _make_view(entity_cls_full())
+        view.keys = pl.DataFrame({"mws_id": ["13_001"]})
+        result = view.where(district="TestDistrict")
+        assert result.keys.height > 0
+        assert result.entity is view.entity
+
+
 class TestViewConstruction:
     def test_stores_all_fields(self, entity_cls: Any) -> None:
         entity = entity_cls()
@@ -274,6 +283,73 @@ class TestViewMaterialisation:
         new_view = view.between("2020-01-01", "2022-12-31")
 
         assert new_view.join_spec == join_spec
+
+    def test_spatial_join_raises_if_already_joined(self, entity_cls: Any) -> None:
+        join_spec = {"other": entity_cls(), "agg": {"district": "count"}}
+        view = View(
+            keys=pl.DataFrame({"mws_id": []}, schema={"mws_id": pl.String}),
+            entity=entity_cls(),
+            entity_name="minimalmws",
+            join_spec=join_spec,
+        )
+        with pytest.raises(ValueError, match="already has a pending spatial_join"):
+            view.spatial_join(entity_cls(), {"district": "count"})
+
+    def test_spatial_join_fetches_geometry_if_missing(
+        self, entity_cls_full: Any
+    ) -> None:
+        import sys
+        import os
+
+        conftest_dir = os.path.dirname(__file__)
+        if conftest_dir not in sys.path:
+            sys.path.insert(0, conftest_dir)
+        from conftest import (
+            _make_static_parquet,
+            _make_annual_parquet,
+            _make_entity_cls,
+        )
+        import tempfile
+        import pathlib
+
+        with tempfile.TemporaryDirectory() as td:
+            sp = pathlib.Path(td) / "static.parquet"
+            ap = pathlib.Path(td) / "annual.parquet"
+            _make_static_parquet(sp)
+            _make_annual_parquet(ap)
+            full_cls = _make_entity_cls(sp, annual=ap)
+            full_entity = full_cls()
+            keys = full_entity._index.select(full_entity.key_cols)
+
+            view = View(
+                keys=keys,
+                entity=full_entity,
+                entity_name="minimalmws",
+                join_spec={"other": full_entity, "agg": {"district": "count"}},
+            )
+            # Annual does not have geometry natively, so it must fetch it
+            result = view.annual
+
+            joined_cols = [
+                c for c in result.data.columns if c.startswith("minimalmws_")
+            ]
+            assert joined_cols
+
+    def test_is_year_col_exception(
+        self, entity_cls_full: Any, monkeypatch: Any
+    ) -> None:
+        # Cause an exception inside pl.read_parquet_schema in _materialise
+        keys = pl.DataFrame({"mws_id": ["13_001"]})
+        view = View(keys=keys, entity=entity_cls_full(), entity_name="minimalmws")
+
+        def mock_schema(*args: Any, **kwargs: Any) -> Any:
+            raise Exception("Force exception")
+
+        monkeypatch.setattr(pl, "read_parquet_schema", mock_schema)
+        res = view.annual
+        # It should fallback gracefully and return data (if pl.scan_parquet works without schema)
+        # But wait, scan_parquet doesn't need schema, so it should load.
+        assert res is not None
 
 
 class TestFortnightlyTemporalColumns:

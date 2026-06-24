@@ -256,3 +256,38 @@ def test_choropleth_subplot_on(dummy_result: Result) -> None:
     res = dummy_result._replace(data=df)
     m = res.plot.choropleth("value", subplot_on=SubplotOn.YEAR)
     assert m is not None
+
+
+def test_choropleth_subplot_on_missing(dummy_result: Result) -> None:
+    with pytest.raises(ValueError, match="not found in Result"):
+        dummy_result.plot.choropleth("value", subplot_on=SubplotOn.YEAR)
+
+
+def test_choropleth_subplot_invalid(dummy_result: Result) -> None:
+    with pytest.raises(ValueError, match="must be a SubplotOn enum"):
+        dummy_result.plot.choropleth("value", subplot_on="year")  # type: ignore
+
+
+def test_timeseries_subplot_on(dummy_result: Result) -> None:
+    df = dummy_result.data.with_columns(
+        [pl.Series("year", [2020, 2021]), pl.Series("month", [1, 2])]
+    )
+    res = dummy_result._replace(data=df)
+    fig = res.plot.timeseries(x="year", y="value", subplot_on=SubplotOn.MONTH)
+    assert fig is not None
+
+
+def test_timeseries_subplot_on_str(dummy_result: Result) -> None:
+    df = dummy_result.data.with_columns(
+        [pl.Series("year", [2020, 2021]), pl.Series("month", [1, 2])]
+    )
+    res = dummy_result._replace(data=df)
+    fig = res.plot.timeseries(x="year", y="value", subplot_on="month")
+    assert fig is not None
+
+
+def test_timeseries_subplot_on_missing(dummy_result: Result) -> None:
+    df = dummy_result.data.with_columns([pl.Series("year", [2020, 2021])])
+    res = dummy_result._replace(data=df)
+    with pytest.raises(ValueError, match="not found in Result"):
+        res.plot.timeseries(x="year", y="value", subplot_on="missing")

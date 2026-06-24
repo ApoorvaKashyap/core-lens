@@ -135,3 +135,107 @@ def test_execute_spatial_join(tmp_path: Any) -> None:
     assert res["other_val"][0] == 15.0
     assert res["other_count"][0] == 2
     assert res["other_area"][0] == 2.0
+
+
+def test_build_bbox_index_empty(tmp_path: Any) -> None:
+    p = tmp_path / "test.parquet"
+    pl.DataFrame(
+        {"id": [], "geom": []}, schema={"id": pl.Int64, "geom": pl.Utf8}
+    ).write_parquet(p)
+    df = build_bbox_index(str(p), ["id"], None, "geom", "wkt")
+    assert df.height == 0
+    assert df.columns == ["id", "minx", "miny", "maxx", "maxy"]
+
+
+def test_exact_spatial_filter_invalid_relationship(tmp_path: Any) -> None:
+    candidates = pl.DataFrame({"id": [1]})
+    with pytest.raises(ValueError, match="Unknown relationship"):
+        exact_spatial_filter(
+            candidates,
+            "path",
+            ["id"],
+            "geom",
+            "wkb",
+            sgeom.Point(0, 0),
+            relationship="invalid",
+        )
+
+
+def test_execute_spatial_join_errors(tmp_path: Any) -> None:
+    from core_lens.utils.spatial import execute_spatial_join
+    from core_lens.schema.profile import SchemaProfile
+
+    class DummyOther:
+        static_path = str(tmp_path / "other.parquet")
+        key_cols = ["oid"]
+        schema_profile = SchemaProfile(
+            key_cols=["oid"],
+            geometry_col="geom",
+            geometry_type="wkt",
+            annual_time_col=None,
+            fortnightly_time_col=None,
+            bbox_cols=None,
+        )
+
+        def _resolve(self, path: str) -> str:
+            return path
+
+    pl.DataFrame({"oid": [1], "val": [10.0], "geom": ["POINT (0 0)"]}).write_parquet(
+        DummyOther.static_path
+    )
+    primary = pl.DataFrame({"pid": [1]})
+    with pytest.raises(ValueError, match="geometry column 'geom' not found"):
+        execute_spatial_join(
+            primary,
+            ["pid"],
+            "geom",
+            "wkt",
+            DummyOther(),
+            agg={},
+            other_entity_name="other",
+        )
+
+
+def test_execute_spatial_join_no_match_and_agg(tmp_path: Any) -> None:
+    from core_lens.utils.spatial import execute_spatial_join
+    from core_lens.schema.profile import SchemaProfile
+
+    class DummyOther:
+        static_path = str(tmp_path / "other.parquet")
+        key_cols = ["oid"]
+        schema_profile = SchemaProfile(
+            key_cols=["oid"],
+            geometry_col="geom",
+            geometry_type="wkt",
+            annual_time_col=None,
+            fortnightly_time_col=None,
+            bbox_cols=None,
+        )
+
+        def _resolve(self, path: str) -> str:
+            return path
+
+    pl.DataFrame(
+        {
+            "oid": [1],
+            "val": [10.0],
+            "val2": [10.0],
+            "val3": [10.0],
+            "geom": ["POINT (10 10)"],
+        }
+    ).write_parquet(DummyOther.static_path)
+    primary = pl.DataFrame({"pid": [1, 2], "geom": ["POINT (0 0)", "POINT (10 10)"]})
+    res = execute_spatial_join(
+        primary,
+        ["pid"],
+        "geom",
+        "wkt",
+        DummyOther(),
+        agg={"val": "sum", "val2": "min", "val3": "max", "count": "count"},
+        other_entity_name="other",
+    )
+    assert res.height == 2
+    assert res["other_val"][0] is None  # No match
+    assert res["other_val"][1] == 10.0  # Match
+    assert res["other_val2"][1] == 10.0
+    assert res["other_val3"][1] == 10.0

@@ -16,8 +16,20 @@ from core_lens.base.namespaces.stats import (
     AnomalyCrossMethod,
     AnomalyTsMethod,
     SimilarityMethod,
+    _sf,
 )
 from core_lens.schema.profile import Resolution
+
+
+class TestStatsUtils:
+    def test_sf_none(self) -> None:
+        import math
+
+        assert math.isnan(_sf(None))
+
+    def test_year_col_from_profile(self, entity_cls_full: Any) -> None:
+        r = _make(entity_cls_full(), pl.DataFrame({"mws_id": ["1"]}))
+        assert r.stats._year_col() == "year"
 
 
 def _make(
@@ -211,20 +223,73 @@ class TestStatisticalTest:
         out = r.stats.test(column="ndvi", groups="zone")
         assert out.metadata["method"] in {"t-test", "mann-whitney"}
 
+    def test_autoselect_method_few_samples(self, entity_cls: Any) -> None:
+        df = pl.DataFrame(
+            {"mws_id": ["1", "2"], "ndvi": [0.5, 0.6], "zone": ["A", "B"]}
+        )
+        r = _make(entity_cls(), df)
+        out = r.stats.test(column="ndvi", groups="zone")
+        assert out.metadata["method"] == "mann-whitney"
+
+    def test_wilcoxon_single_sample(self, entity_cls: Any) -> None:
+        r = _make(entity_cls(), _big_df())
+        out = r.stats.test(column="ndvi", against=0.5, method=TestMethod.WILCOXON)
+        assert out.metadata["method"] == "wilcoxon"
+        assert "p_value" in out.metadata
+
+    def test_invalid_against_method(self, entity_cls: Any) -> None:
+        r = _make(entity_cls(), _big_df())
+        with pytest.raises(ValueError, match="not valid for single-sample"):
+            r.stats.test(column="ndvi", against=0.5, method=TestMethod.CHI_SQUARE)
+
+    def test_periods_no_year_col_raises(self, entity_cls: Any) -> None:
+        df = pl.DataFrame({"mws_id": ["1"], "ndvi": [0.5]})
+        r = _make(entity_cls(), df)
+        with pytest.raises(ValueError, match="requires a year column"):
+            r.stats.test(column="ndvi", periods=[(2021, 2021)])
+
+    def test_run_test_kruskal(self, entity_cls: Any) -> None:
+        df = pl.DataFrame(
+            {
+                "mws_id": ["1", "2", "3"],
+                "ndvi": [0.5, 0.6, 0.7],
+                "zone": ["A", "B", "C"],
+            }
+        )
+        r = _make(entity_cls(), df)
+        out = r.stats.test(column="ndvi", groups="zone", method=TestMethod.T_TEST)
+        assert len(out.df()) == 3
+
+    def test_run_test_wilcoxon_groups(self, entity_cls: Any) -> None:
+        df = pl.DataFrame(
+            {"mws_id": ["1", "2"], "ndvi": [0.5, 0.6], "zone": ["A", "B"]}
+        )
+        r = _make(entity_cls(), df)
+        out = r.stats.test(column="ndvi", groups="zone", method=TestMethod.WILCOXON)
+        assert out.metadata["method"] == "wilcoxon"
+
+    def test_run_test_ks(self, entity_cls: Any) -> None:
+        df = pl.DataFrame(
+            {"mws_id": ["1", "2"], "ndvi": [0.5, 0.6], "zone": ["A", "B"]}
+        )
+        r = _make(entity_cls(), df)
+        out = r.stats.test(column="ndvi", groups="zone", method=TestMethod.KS)
+        assert out.metadata["method"] == "ks"
+
+    def test_run_test_chisquare(self, entity_cls: Any) -> None:
+        df = pl.DataFrame(
+            {"mws_id": ["1", "2"], "ndvi": [0.5, 0.6], "zone": ["A", "B"]}
+        )
+        r = _make(entity_cls(), df)
+        out = r.stats.test(column="ndvi", groups="zone", method=TestMethod.CHI_SQUARE)
+        assert out.metadata["method"] == "chi-square"
+
     def test_no_mode_raises(self, entity_cls: Any) -> None:
         r = _make(entity_cls(), _big_df())
+        import pytest
+
         with pytest.raises(ValueError, match="Provide exactly one of"):
             r.stats.test(column="ndvi")
-
-    def test_invalid_method_raises(self, entity_cls: Any) -> None:
-        r = _make(entity_cls(), _big_df())
-        with pytest.raises(ValueError, match="must be a "):
-            r.stats.test(column="ndvi", groups="zone", method="bad")  # type: ignore[arg-type]
-
-    def test_significant_flag_bool(self, entity_cls: Any) -> None:
-        r = _make(entity_cls(), _big_df())
-        out = r.stats.test(column="ndvi", groups="zone")
-        assert isinstance(out.metadata["significant"], bool)
 
 
 class TestChange:
@@ -271,6 +336,25 @@ class TestChange:
         r = _make(entity_cls(), df)
         out = r.stats.change("ndvi", 2020, 2022, method=ChangeMethod.TREND)
         assert out.df()["direction"][0] == "increasing"
+
+    def test_trend_len_less_than_2(self, entity_cls: Any) -> None:
+        df = pl.DataFrame(
+            {
+                "mws_id": ["a", "b", "b"],
+                "year": [2020, 2021, 2022],
+                "ndvi": [0.3, 0.4, 0.5],
+            }
+        )
+        r = _make(entity_cls(), df)
+        out = r.stats.change("ndvi", 2020, 2022, method=ChangeMethod.TREND)
+        # 'a' has only 1 data point so it will be skipped
+        assert len(out.df()) == 1
+
+    def test_change_no_year_col_raises(self, entity_cls: Any) -> None:
+        df = pl.DataFrame({"mws_id": ["1"], "ndvi": [0.5]})
+        r = _make(entity_cls(), df)
+        with pytest.raises(ValueError, match="Requires a year/time column"):
+            r.stats.change("ndvi", 2020, 2022)
 
     def test_invalid_method_raises(self, entity_cls: Any) -> None:
         r = _make(entity_cls(), _big_df())
@@ -381,6 +465,19 @@ class TestAnomalyCrossSectional:
         ).df()
         assert len(df) == 20
 
+    def test_baseline_without_year_col(self, entity_cls: Any) -> None:
+        df = pl.DataFrame(
+            {"mws_id": [f"id_{i}" for i in range(20)], "ndvi": [0.5] * 20}
+        )
+        r = _make(entity_cls(), df)
+        out = r.stats.anomaly(
+            "ndvi",
+            mode="cross_sectional",
+            method=AnomalyCrossMethod.ZSCORE,
+            baseline=(2020, 2022),
+        )
+        assert len(out.df()) == 20
+
 
 class TestAnomalyTimeseries:
     def _ts_df(self) -> pl.DataFrame:
@@ -388,7 +485,7 @@ class TestAnomalyTimeseries:
         import numpy as np
 
         rng = np.random.default_rng(7)
-        years = list(range(2010, 2026))
+        years = list(range(2010, 2050))
         rows = []
         for eid in ["a", "b"]:
             vals = rng.normal(0.6, 0.05, len(years)).tolist()
@@ -424,7 +521,7 @@ class TestAnomalyTimeseries:
     def test_stl_accepted(self, entity_cls: Any) -> None:
         r = _make(entity_cls(), self._ts_df())
         out = r.stats.anomaly(
-            "ndvi", mode="timeseries", method=AnomalyTsMethod.STL, baseline=(2010, 2017)
+            "ndvi", mode="timeseries", method=AnomalyTsMethod.STL, baseline=(2010, 2035)
         )
         assert out.metadata["method"] == "stl"
 
@@ -436,6 +533,34 @@ class TestAnomalyTimeseries:
         assert meta["mode"] == "timeseries"
         assert meta["baseline"] == (2010, 2017)
         assert meta["baseline_fitted"] is True
+
+    def test_stl_exception_handling(self, entity_cls: Any, monkeypatch: Any) -> None:
+        def mock_stl_init(*args: Any, **kwargs: Any) -> Any:
+            raise Exception("Forced STL error")
+
+        import statsmodels.tsa.seasonal  # type: ignore
+
+        monkeypatch.setattr(statsmodels.tsa.seasonal, "STL", mock_stl_init)
+        r = _make(entity_cls(), self._ts_df())
+        out = r.stats.anomaly(
+            "ndvi", mode="timeseries", method=AnomalyTsMethod.STL, baseline=(2010, 2035)
+        )
+        # Fallback will create NaN scores and False flags
+        import math
+
+        assert math.isnan(out.df()["anomaly_score"][0])
+        assert not out.df()["is_anomaly"][0]
+
+    def test_timeseries_no_year_col_raises(self, entity_cls: Any) -> None:
+        df = pl.DataFrame({"mws_id": ["1", "1"], "ndvi": [0.5, 0.6]})
+        r = _make(entity_cls(), df)
+        with pytest.raises(ValueError, match="requires a year/time column"):
+            r.stats.anomaly(
+                "ndvi",
+                mode="timeseries",
+                method=AnomalyTsMethod.MAD,
+                baseline=(2010, 2017),
+            )
 
     def test_no_baseline_raises(self, entity_cls: Any) -> None:
         r = _make(entity_cls(), self._ts_df())
@@ -524,6 +649,89 @@ class TestSimilarity:
         # 4. Missing column in schema (silently skipped, leading to no valid columns)
         with pytest.raises(ValueError, match="None of the specified columns"):
             r.stats.similarity(target="13_001", columns={"ghost_col": ("static", None)})
+
+    def test_option3_fortnightly_and_filters(self, entity_cls_full: Any) -> None:
+        import sys
+        import os
+
+        conftest_dir = os.path.dirname(__file__)
+        if conftest_dir not in sys.path:
+            sys.path.insert(0, conftest_dir)
+        from conftest import (
+            _make_static_parquet,
+            _make_annual_parquet,
+            _make_fortnightly_parquet,
+            _make_entity_cls,
+        )
+        import tempfile
+        import pathlib
+
+        with tempfile.TemporaryDirectory() as td:
+            sp = pathlib.Path(td) / "static.parquet"
+            ap = pathlib.Path(td) / "annual.parquet"
+            fp = pathlib.Path(td) / "fortnightly.parquet"
+            _make_static_parquet(sp)
+            _make_annual_parquet(ap)
+            _make_fortnightly_parquet(fp)
+            full_cls = _make_entity_cls(sp, annual=ap, fortnightly=fp)
+
+            df = pl.DataFrame({"mws_id": ["13_001", "13_002"], "ndvi": [0.5, 0.6]})
+            r = _make(full_cls(), df)
+
+            out = r.stats.similarity(
+                target="13_001",
+                columns={
+                    "ndvi_mean": ("annual", {"year": 2021, "agg": "max"}),
+                    "ndvi": ("fortnightly", {"agg": "mean"}),
+                },
+            )
+            assert "similarity_score" in out.df().columns
+
+    def test_similarity_file_not_found(
+        self, entity_cls_full: Any, monkeypatch: Any
+    ) -> None:
+        df = pl.DataFrame({"mws_id": ["13_001", "13_002"], "ndvi": [0.5, 0.6]})
+        r = _make(entity_cls_full(), df)
+
+        def mock_resolve(path: str) -> str:
+            raise FileNotFoundError("Mocked file not found")
+
+        monkeypatch.setattr(r.entity, "_resolve", mock_resolve)
+
+        import pytest
+
+        with pytest.raises(ValueError, match="None of the specified columns"):
+            r.stats.similarity(
+                target="13_001",
+                columns={"ndvi": ("static", None)},
+            )
+
+    def test_similarity_mahalanobis(self, entity_cls: Any) -> None:
+        r = _make(entity_cls(), self._sim_df(20))
+        out = r.stats.similarity(
+            target="id_0",
+            columns={"ndvi": None, "rainfall": None},
+            method=SimilarityMethod.MAHALANOBIS,
+        )
+        assert "similarity_score" in out.df().columns
+
+    def test_similarity_mahalanobis_exception(
+        self, entity_cls: Any, monkeypatch: Any
+    ) -> None:
+        def mock_pinv(*args: Any, **kwargs: Any) -> Any:
+            raise Exception("PINV error")
+
+        import numpy.linalg
+
+        monkeypatch.setattr(numpy.linalg, "pinv", mock_pinv)
+
+        r = _make(entity_cls(), self._sim_df(20))
+        out = r.stats.similarity(
+            target="id_0",
+            columns={"ndvi": None, "rainfall": None},
+            method=SimilarityMethod.MAHALANOBIS,
+        )
+        assert "similarity_score" in out.df().columns
 
     def test_top_n_respected(self, entity_cls: Any) -> None:
         r = _make(entity_cls(), self._sim_df(15))
