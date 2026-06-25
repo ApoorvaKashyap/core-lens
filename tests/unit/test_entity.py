@@ -48,9 +48,17 @@ class TestEntityWhere:
         ).write_parquet(district_path)
 
         class CustomDistrictEntity(BaseEntity):
-            key_cols = ["district_id"]
-            geometry_col = "geometry"
-            static_path = str(district_path)
+            @property
+            def key_cols(self) -> list[str]:
+                return ["district_id"]
+
+            @property
+            def geometry_col(self) -> str:
+                return "geometry"
+
+            @property
+            def static_path(self) -> str:
+                return str(district_path)
 
             @property
             def schema_profile(self) -> Any:
