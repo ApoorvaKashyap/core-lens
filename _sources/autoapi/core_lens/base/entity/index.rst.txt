@@ -1,0 +1,272 @@
+core_lens.base.entity
+=====================
+
+.. py:module:: core_lens.base.entity
+
+.. autoapi-nested-parse::
+
+   Base entity contract for core_lens.
+
+   All entities — built-in or plugin — must subclass :class:`BaseEntity` and
+   implement its abstract interface.  Concrete implementations live in
+   ``core_lens.entities.*`` (built-ins) or in third-party packages (plugins).
+
+   Plugin authors import from the public surface::
+
+       from core_lens.base import BaseEntity
+
+
+
+Exceptions
+----------
+
+.. autoapisummary::
+
+   core_lens.base.entity.EntityValidationError
+
+
+Classes
+-------
+
+.. autoapisummary::
+
+   core_lens.base.entity.BaseEntity
+
+
+Module Contents
+---------------
+
+.. py:class:: BaseEntity(data_root: pathlib.Path | None = None)
+
+   Bases: :py:obj:`abc.ABC`
+
+
+   Abstract base class for every entity in the core_lens plugin system.
+
+   An entity represents a geospatial primitive (e.g. microwatershed, village,
+   district) backed by one or more Parquet/GeoParquet files.  Entities are
+   *descriptors* — they carry path and schema metadata but hold no per-row
+   state themselves.  Row-level data lives in :class:`~core_lens.base.view.View`
+   and :class:`~core_lens.base.result.Result`.
+
+   Subclasses **must** implement:
+
+   * :attr:`key_cols`      — column(s) that uniquely identify one entity instance
+   * :attr:`geometry_col`  — geometry column name in the static GeoParquet file
+   * :attr:`static_path`   — path to the static GeoParquet file (mandatory).
+                             May be relative; resolved against ``data_root`` when
+                             the entity is instantiated by :class:`~core_lens.aoi.AoI`.
+
+   Subclasses **may** override:
+
+   * :attr:`annual_path`       — path to the annual time-series Parquet file
+   * :attr:`fortnightly_path`  — path to the fortnightly time-series Parquet file
+   * :attr:`schema_profile`    — override auto-detection by returning an
+                                 explicit :class:`~core_lens.schema.profile.SchemaProfile`
+
+   ``where``, ``spatial_filter``, ``spatial_join``, and ``schema_profile`` are
+   all implemented on this base class.  Subclasses only need to declare paths
+   and keys.
+
+   Plugin example::
+
+       from core_lens.base import BaseEntity
+
+       class ForestEntity(BaseEntity):
+           key_cols     = ["forest_patch_id"]
+           geometry_col = "geometry"
+           static_path  = "forest/static.geoparquet"  # relative to AoI data_root
+           annual_path  = "forest/annual.parquet"
+
+       AoI.register(ForestEntity)
+
+   Validation rules enforced at :meth:`AoI` instantiation time (relative paths)
+   or at :meth:`AoI.register` time (absolute paths):
+
+   1. ``static_path`` exists and is readable.
+   2. ``key_cols`` are present and unique in the static file.
+   3. ``geometry_col`` is present and contains valid geometries.
+   4. ``annual_path`` and ``fortnightly_path`` exist if declared.
+
+   Any failure raises :class:`~core_lens.base.entity.EntityValidationError`.
+
+
+   .. py:property:: key_cols
+      :type: list[str]
+
+      :abstractmethod:
+
+
+      Columns that uniquely identify one instance of this entity.
+
+      For built-in entities this is always a single-element list (e.g.
+      ``["mws_id"]``), but the contract allows composite keys for plugins.
+
+      :returns: A list of column name strings present in the static file.
+      :rtype: list[str]
+
+
+   .. py:property:: geometry_col
+      :type: str
+
+      :abstractmethod:
+
+
+      Name of the geometry column in the static GeoParquet file.
+
+      The column must contain a geometry type understood by GeoPandas
+      (WKB bytes, WKT string, or a native geometry column).
+
+      :returns: The column name as a string.
+      :rtype: str
+
+
+   .. py:property:: static_path
+      :type: str
+
+      :abstractmethod:
+
+
+      Absolute filesystem path to the static GeoParquet file.
+
+      The path must be absolute.  If a relative path is provided it is
+      resolved against the current working directory at first use.  A
+      ``FileNotFoundError`` is raised if the file does not exist.
+
+      :returns: A path string.
+      :rtype: str
+
+
+   .. py:property:: annual_path
+      :type: str | None
+
+
+      Path to the annual time-series Parquet file, or ``None``.
+
+      Override in subclasses that carry annual temporal data.  If declared,
+      the file must exist at :meth:`AoI.register` time or
+      :class:`EntityValidationError` is raised.
+
+      :returns: A path string, or ``None`` if the entity has no annual data.
+      :rtype: str | None
+
+
+   .. py:property:: fortnightly_path
+      :type: str | None
+
+
+      Path to the fortnightly time-series Parquet file, or ``None``.
+
+      Override in subclasses that carry fortnightly temporal data.  If
+      declared, the file must exist at :meth:`AoI.register` time or
+      :class:`EntityValidationError` is raised.
+
+      :returns: A path string, or ``None`` if the entity has no fortnightly data.
+      :rtype: str | None
+
+
+   .. py:property:: schema_profile
+      :type: core_lens.schema.profile.SchemaProfile
+
+
+      Validated schema descriptor for this entity's data files.
+
+      Auto-detected from Parquet file metadata on first access and cached on
+      the instance.  Override in subclasses to provide an explicit profile
+      instead of relying on detection.
+
+      :returns: A fully-validated :class:`~core_lens.schema.profile.SchemaProfile`.
+      :rtype: SchemaProfile
+
+
+   .. py:method:: where(**kwargs: Any) -> core_lens.base.view.View
+
+      Return a lazy :class:`~core_lens.base.view.View` filtered by attributes.
+
+      Each keyword argument is interpreted **attribute-first**: if the kwarg
+      key exists as a column in the static file the filter is applied
+      directly.  If a kwarg key does *not* exist as a column it is resolved
+      as a registered entity name and the matching entity's geometry is used
+      for a spatial filter (e.g. ``district="Shimla"`` finds all MWS whose
+      centroid falls within Shimla district).
+
+      Multiple attribute kwargs are AND-ed.  Multiple spatial-entity kwargs
+      are AND-ed via sequential spatial filters.
+
+      :param \*\*kwargs: Column–value pairs to filter on.  Unknown column names
+                         are resolved as entity-name lookups.
+
+      :returns: A lazy :class:`~core_lens.base.view.View` with resolved key pairs.
+      :rtype: View
+
+      :raises ValueError: If a kwarg cannot be resolved as either an attribute
+          column or a registered entity name.
+
+
+
+   .. py:method:: spatial_filter(geometry: shapely.Geometry | None = None, bbox: tuple[float, float, float, float] | None = None, relationship: str = 'centroid', threshold: float = 0.5) -> core_lens.base.view.View
+
+      Return a lazy :class:`~core_lens.base.view.View` filtered by geometry.
+
+      Uses the in-memory bbox index for a fast rectangular pre-filter, then
+      refines with a Shapely STRtree exact-relationship check.
+
+      :param geometry: A Shapely geometry representing the spatial extent.
+      :type geometry: shapely.Geometry | None, optional
+      :param bbox: Bounding box as ``(minx, miny, maxx, maxy)`` in WGS-84.
+                   Converted to a ``shapely.geometry.box`` internally.
+      :type bbox: tuple[float, float, float, float] | None, optional
+      :param relationship: Spatial relationship mode.
+
+                           * ``"centroid"`` (default) — entity centroid must lie within
+                             the geometry.
+                           * ``"area"`` — intersection area / entity area must exceed
+                             ``threshold``.
+      :type relationship: str, optional
+      :param threshold: Area coverage threshold for ``"area"`` mode (0–1).
+                        Default 0.5.
+      :type threshold: float, optional
+
+      :returns: A lazy :class:`~core_lens.base.view.View` scoped to the given
+                spatial extent.
+      :rtype: View
+
+      :raises ValueError: If neither ``geometry`` nor ``bbox`` is provided.
+
+
+
+   .. py:method:: spatial_join(other: BaseEntity, agg: dict[str, str]) -> core_lens.base.view.View
+
+      Return a lazy :class:`~core_lens.base.view.View` with a cross-entity join pending.
+
+      The join is recorded in the View's ``join_spec`` and computed only at
+      materialisation time (``.static``, ``.annual``, or ``.fortnightly``).
+      Joined columns are namespaced as ``{entity_name}_{column_name}``.
+
+      :param other: The secondary :class:`BaseEntity` whose columns will be
+                    joined and aggregated onto ``self``.
+      :type other: BaseEntity
+      :param agg: Mapping of ``{column: aggregation}`` specifying which columns
+                  from ``other`` to bring in and how to aggregate them.  Valid
+                  aggregation strings are ``"area"``, ``"count"``, ``"mean"``,
+                  ``"sum"``, ``"min"``, and ``"max"``.
+      :type agg: dict[str, str]
+
+      :returns: A lazy :class:`~core_lens.base.view.View` with the join spec
+                recorded for deferred execution.
+      :rtype: View
+
+
+
+.. py:exception:: EntityValidationError
+
+   Bases: :py:obj:`Exception`
+
+
+   Raised when an entity fails validation at :meth:`AoI.register` time.
+
+   The message will describe exactly which check failed (missing file, absent
+   key column, invalid geometry column, etc.) to give plugin authors
+   actionable feedback.
+
+

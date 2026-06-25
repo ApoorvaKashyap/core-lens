@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+<html lang="en" data-accent-color="violet" data-content_root="../../../../">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"><title>core_lens.base.entity - CoreLens documentation</title><link rel="index" title="Index" href="../../../../genindex.html" /><link rel="search" title="Search" href="../../../../search.html" /><link rel="next" title="core_lens.base.namespaces" href="../namespaces/index.html" /><link rel="prev" title="core_lens.base" href="../index.html" /><script>
+    function setColorMode(t){let e=document.documentElement;e.setAttribute("data-color-mode",t);let a=window.matchMedia&&window.matchMedia("(prefers-color-scheme: dark)").matches,s=t;"auto"===t&&(s=a?"dark":"light"),"light"===s?(e.classList.remove("dark"),e.classList.add("light")):(e.classList.remove("light"),e.classList.add("dark"))}
+    setColorMode(localStorage._theme||"auto");
+  </script><link rel="stylesheet" type="text/css" href="../../../../_static/pygments.css?v=e1a1ceaf" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/shibuya.css?v=9454f7d5" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/graphviz.css?v=4ae1632d" />
+    <link media="print" rel="stylesheet" type="text/css" href="../../../../_static/print.css?v=20ff2c19" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --sy-f-text: "Inter", var(--sy-f-sys), var(--sy-f-cjk), sans-serif;
+  --sy-f-heading: "Inter", var(--sy-f-sys), var(--sy-f-cjk), sans-serif;
+}
+</style>
+    
+  <meta property="og:type" content="website"/><meta property="og:title" content="core_lens.base.entity"/>
+    <meta name="twitter:card" content="summary"/>
+  </head>
+<body><div class="sy-head">
+  <div class="sy-head-blur"></div>
+  <div class="sy-head-inner sy-container mx-auto">
+    <a class="sy-head-brand" href="../../../../index.html">
+      
+      
+      <strong>CoreLens</strong>
+    </a>
+    <div class="sy-head-nav" id="head-nav">
+      <nav class="sy-head-links"></nav>
+      <div class="sy-head-extra flex items-center print:hidden"><form class="searchbox flex items-center" action="../../../../search.html" method="get">
+  <input type="text" name="q" placeholder="Search" />
+  <kbd>/</kbd>
+</form><div class="sy-head-socials"></div></div>
+    </div>
+    <div class="sy-head-actions flex items-center shrink-0 print:hidden"><button class="js-theme theme-switch flex items-center"
+data-aria-auto="Switch to light color mode"
+data-aria-light="Switch to dark color mode"
+data-aria-dark="Switch to auto color mode">
+<i class="i-lucide theme-icon"></i>
+</button><button class="md:hidden flex items-center js-menu" aria-label="Menu" type="button" aria-controls="head-nav" aria-expanded="false">
+        <div class="hamburger">
+          <span class="hamburger_1"></span>
+          <span class="hamburger_2"></span>
+          <span class="hamburger_3"></span>
+        </div>
+      </button>
+    </div>
+  </div>
+</div>
+<div class="sy-page sy-container flex mx-auto">
+  <aside id="lside" class="sy-lside md:w-72 md:shrink-0 print:hidden">
+    <div class="sy-lside-inner md:sticky">
+      <div class="sy-scrollbar p-6">
+        <div class="globaltoc" data-expand-depth="0"><p class="caption" role="heading" aria-level="3"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../../../../intro.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../quickstart.html">Quickstart</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../concepts.html">Core Concepts</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../queries.html">Example Queries</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../stats.html">Statistical Analysis</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../plots.html">Visualisation and Plots</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../export.html">Data Export</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../plugins.html">Plugin System</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="../../../index.html">API Reference</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="../../index.html">core_lens</a><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="../../aoi/index.html">core_lens.aoi</a></li>
+<li class="toctree-l3 current"><a class="reference internal" href="../index.html">core_lens.base</a><ul class="current">
+<li class="toctree-l4 current"><a class="current reference internal" href="#">core_lens.base.entity</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../namespaces/index.html">core_lens.base.namespaces</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../result/index.html">core_lens.base.result</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../view/index.html">core_lens.base.view</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../../entities/index.html">core_lens.entities</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../../entities/mws/index.html">core_lens.entities.mws</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../entities/tehsil/index.html">core_lens.entities.tehsil</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../entities/waterbody/index.html">core_lens.entities.waterbody</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../../export/index.html">core_lens.export</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../../export/formats/index.html">core_lens.export.formats</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../../schema/index.html">core_lens.schema</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../../schema/detection/index.html">core_lens.schema.detection</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../schema/profile/index.html">core_lens.schema.profile</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../../utils/index.html">core_lens.utils</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../../utils/polars_utils/index.html">core_lens.utils.polars_utils</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../utils/season/index.html">core_lens.utils.season</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../utils/spatial/index.html">core_lens.utils.spatial</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+        </div>
+      </div>
+    </div>
+  </aside>
+  <div class="lside-overlay js-menu" role="button" aria-label="Close left sidebar" aria-controls="lside" aria-expanded="false"></div>
+  <aside id="rside" class="sy-rside pb-3 w-64 shrink-0 order-last">
+    <button class="rside-close js-menu xl:hidden" aria-label="Close Table of Contents" type="button" aria-controls="rside" aria-expanded="false">
+      <i class="i-lucide close"></i>
+    </button>
+    <div class="sy-scrollbar sy-rside-inner px-6 xl:top-16 xl:sticky xl:pl-0 pt-6 pb-4"><div class="localtoc"><h3>On this page</h3><ul>
+<li><a class="reference internal" href="#exceptions">Exceptions</a></li>
+<li><a class="reference internal" href="#classes">Classes</a></li>
+<li><a class="reference internal" href="#module-contents">Module Contents</a><ul>
+<li><a class="reference internal" href="#core_lens.base.entity.BaseEntity"><code class="docutils literal notranslate"><span class="pre">BaseEntity</span></code></a><ul>
+<li><a class="reference internal" href="#core_lens.base.entity.BaseEntity.key_cols"><code class="docutils literal notranslate">key_cols</span></code></a></li>
+<li><a class="reference internal" href="#core_lens.base.entity.BaseEntity.geometry_col"><code class="docutils literal notranslate">geometry_col</span></code></a></li>
+<li><a class="reference internal" href="#core_lens.base.entity.BaseEntity.static_path"><code class="docutils literal notranslate">static_path</span></code></a></li>
+<li><a class="reference internal" href="#core_lens.base.entity.BaseEntity.annual_path"><code class="docutils literal notranslate">annual_path</span></code></a></li>
+<li><a class="reference internal" href="#core_lens.base.entity.BaseEntity.fortnightly_path"><code class="docutils literal notranslate">fortnightly_path</span></code></a></li>
+<li><a class="reference internal" href="#core_lens.base.entity.BaseEntity.schema_profile"><code class="docutils literal notranslate">schema_profile</span></code></a></li>
+<li><a class="reference internal" href="#core_lens.base.entity.BaseEntity.where"><code class="docutils literal notranslate">where()</span></code></a></li>
+<li><a class="reference internal" href="#core_lens.base.entity.BaseEntity.spatial_filter"><code class="docutils literal notranslate">spatial_filter()</span></code></a></li>
+<li><a class="reference internal" href="#core_lens.base.entity.BaseEntity.spatial_join"><code class="docutils literal notranslate">spatial_join()</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#core_lens.base.entity.EntityValidationError"><code class="docutils literal notranslate"><span class="pre">EntityValidationError</span></code></a></li>
+</ul>
+</li>
+</ul>
+</div><div id="ethical-ad-placement" data-ea-publisher="readthedocs"></div></div>
+  </aside>
+  <div class="rside-overlay js-menu" role="button" aria-label="Close Table of Contents" aria-controls="rside" aria-expanded="false"></div>
+  <main class="sy-main w-full max-sm:max-w-full print:pt-6">
+<div class="sy-breadcrumbs" role="navigation">
+  <div class="sy-breadcrumbs-inner flex items-center">
+    <div class="md:hidden mr-3">
+      <button class="js-menu" aria-label="Menu" type="button" aria-controls="lside" aria-expanded="false">
+        <i class="i-lucide menu"></i>
+      </button>
+    </div>
+    <ol class="flex-1" itemscope itemtype="https://schema.org/BreadcrumbList"><li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+        <a itemprop="item" href="../../../../index.html"><span itemprop="name">CoreLens</span></a>
+        <span>/</span>
+        <meta itemprop="position" content="1" />
+      </li><li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+        <a itemprop="item" href="../../../index.html"><span itemprop="name">API Reference</span></a>
+        <span>/</span>
+        <meta itemprop="position" content="2" />
+      </li><li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+        <a itemprop="item" href="../../index.html"><span itemprop="name">core_lens</span></a>
+        <span>/</span>
+        <meta itemprop="position" content="3" />
+      </li><li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+        <a itemprop="item" href="../index.html"><span itemprop="name">core_lens.base</span></a>
+        <span>/</span>
+        <meta itemprop="position" content="4" />
+      </li><li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+        <strong itemprop="name">core_lens.base.entity</strong>
+        <meta itemprop="position" content="5" />
+      </li></ol>
+    <div class="xl:hidden ml-1">
+      <button class="js-menu" aria-label="Show table of contents" type="button" aria-controls="rside"
+        aria-expanded="false">
+        <i class="i-lucide outdent"></i>
+      </button>
+    </div>
+  </div>
+</div><div class="flex flex-col break-words justify-between">
+      <div class="relative min-w-0 max-w-6xl px-6 pb-6 pt-8 xl:px-12">
+  <article class="yue" role="main">
+          <section id="module-core_lens.base.entity">
+<span id="core-lens-base-entity"></span><h1>core_lens.base.entity<a class="headerlink" href="#module-core_lens.base.entity" title="Link to this heading">¶</a></h1>
+<p>Base entity contract for core_lens.</p>
+<p>All entities — built-in or plugin — must subclass <a class="reference internal" href="#core_lens.base.entity.BaseEntity" title="core_lens.base.entity.BaseEntity"><code class="xref py py-class docutils literal notranslate"><span class="pre">BaseEntity</span></code></a> and
+implement its abstract interface.  Concrete implementations live in
+<code class="docutils literal notranslate"><span class="pre">core_lens.entities.*</span></code> (built-ins) or in third-party packages (plugins).</p>
+<p>Plugin authors import from the public surface:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span data-line="1"><span class="kn">from</span><span class="w"> </span><span class="nn">core_lens.base</span><span class="w"> </span><span class="kn">import</span> <span class="n">BaseEntity</span>
+</span></pre></div>
+</div>
+<section id="exceptions">
+<h2>Exceptions<a class="headerlink" href="#exceptions" title="Link to this heading">¶</a></h2>
+<div class="table-wrapper autosummary longtable docutils container">
+<table class="autosummary longtable docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#core_lens.base.entity.EntityValidationError" title="core_lens.base.entity.EntityValidationError"><code class="xref py py-obj docutils literal notranslate"><span class="pre">EntityValidationError</span></code></a></p></td>
+<td><p>Raised when an entity fails validation at <code class="xref py py-meth docutils literal notranslate"><span class="pre">AoI.register()</span></code> time.</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+<section id="classes">
+<h2>Classes<a class="headerlink" href="#classes" title="Link to this heading">¶</a></h2>
+<div class="table-wrapper autosummary longtable docutils container">
+<table class="autosummary longtable docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#core_lens.base.entity.BaseEntity" title="core_lens.base.entity.BaseEntity"><code class="xref py py-obj docutils literal notranslate"><span class="pre">BaseEntity</span></code></a></p></td>
+<td><p>Abstract base class for every entity in the core_lens plugin system.</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+<section id="module-contents">
+<h2>Module Contents<a class="headerlink" href="#module-contents" title="Link to this heading">¶</a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="core_lens.base.entity.BaseEntity">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">core_lens.base.entity.</span></span><span class="sig-name descname"><span class="pre">BaseEntity</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data_root</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">pathlib.Path</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#core_lens.base.entity.BaseEntity" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-obj docutils literal notranslate"><span class="pre">abc.ABC</span></code></p>
+<p>Abstract base class for every entity in the core_lens plugin system.</p>
+<p>An entity represents a geospatial primitive (e.g. microwatershed, village,
+district) backed by one or more Parquet/GeoParquet files.  Entities are
+<em>descriptors</em> — they carry path and schema metadata but hold no per-row
+state themselves.  Row-level data lives in <a class="reference internal" href="../view/index.html#core_lens.base.view.View" title="core_lens.base.view.View"><code class="xref py py-class docutils literal notranslate"><span class="pre">View</span></code></a>
+and <a class="reference internal" href="../result/index.html#core_lens.base.result.Result" title="core_lens.base.result.Result"><code class="xref py py-class docutils literal notranslate"><span class="pre">Result</span></code></a>.</p>
+<p>Subclasses <strong>must</strong> implement:</p>
+<ul class="simple">
+<li><p><a class="reference internal" href="#core_lens.base.entity.BaseEntity.key_cols" title="core_lens.base.entity.BaseEntity.key_cols"><code class="xref py py-attr docutils literal notranslate"><span class="pre">key_cols</span></code></a>      — column(s) that uniquely identify one entity instance</p></li>
+<li><p><a class="reference internal" href="#core_lens.base.entity.BaseEntity.geometry_col" title="core_lens.base.entity.BaseEntity.geometry_col"><code class="xref py py-attr docutils literal notranslate"><span class="pre">geometry_col</span></code></a>  — geometry column name in the static GeoParquet file</p></li>
+<li><dl class="simple">
+<dt><a class="reference internal" href="#core_lens.base.entity.BaseEntity.static_path" title="core_lens.base.entity.BaseEntity.static_path"><code class="xref py py-attr docutils literal notranslate"><span class="pre">static_path</span></code></a>   — path to the static GeoParquet file (mandatory).</dt><dd><p>May be relative; resolved against <code class="docutils literal notranslate"><span class="pre">data_root</span></code> when
+the entity is instantiated by <a class="reference internal" href="../../aoi/index.html#core_lens.aoi.AoI" title="core_lens.aoi.AoI"><code class="xref py py-class docutils literal notranslate"><span class="pre">AoI</span></code></a>.</p>
+</dd>
+</dl>
+</li>
+</ul>
+<p>Subclasses <strong>may</strong> override:</p>
+<ul class="simple">
+<li><p><a class="reference internal" href="#core_lens.base.entity.BaseEntity.annual_path" title="core_lens.base.entity.BaseEntity.annual_path"><code class="xref py py-attr docutils literal notranslate"><span class="pre">annual_path</span></code></a>       — path to the annual time-series Parquet file</p></li>
+<li><p><a class="reference internal" href="#core_lens.base.entity.BaseEntity.fortnightly_path" title="core_lens.base.entity.BaseEntity.fortnightly_path"><code class="xref py py-attr docutils literal notranslate"><span class="pre">fortnightly_path</span></code></a>  — path to the fortnightly time-series Parquet file</p></li>
+<li><dl class="simple">
+<dt><a class="reference internal" href="#core_lens.base.entity.BaseEntity.schema_profile" title="core_lens.base.entity.BaseEntity.schema_profile"><code class="xref py py-attr docutils literal notranslate"><span class="pre">schema_profile</span></code></a>    — override auto-detection by returning an</dt><dd><p>explicit <a class="reference internal" href="../../schema/profile/index.html#core_lens.schema.profile.SchemaProfile" title="core_lens.schema.profile.SchemaProfile"><code class="xref py py-class docutils literal notranslate"><span class="pre">SchemaProfile</span></code></a></p>
+</dd>
+</dl>
+</li>
+</ul>
+<p><code class="docutils literal notranslate"><span class="pre">where</span></code>, <code class="docutils literal notranslate"><span class="pre">spatial_filter</span></code>, <code class="docutils literal notranslate"><span class="pre">spatial_join</span></code>, and <code class="docutils literal notranslate"><span class="pre">schema_profile</span></code> are
+all implemented on this base class.  Subclasses only need to declare paths
+and keys.</p>
+<p>Plugin example:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span data-line="1"><span class="kn">from</span><span class="w"> </span><span class="nn">core_lens.base</span><span class="w"> </span><span class="kn">import</span> <span class="n">BaseEntity</span>
+</span><span data-line="2">
+</span><span data-line="3"><span class="k">class</span><span class="w"> </span><span class="nc">ForestEntity</span><span class="p">(</span><span class="n">BaseEntity</span><span class="p">):</span>
+</span><span data-line="4">    <span class="n">key_cols</span>     <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;forest_patch_id&quot;</span><span class="p">]</span>
+</span><span data-line="5">    <span class="n">geometry_col</span> <span class="o">=</span> <span class="s2">&quot;geometry&quot;</span>
+</span><span data-line="6">    <span class="n">static_path</span>  <span class="o">=</span> <span class="s2">&quot;forest/static.geoparquet&quot;</span>  <span class="c1"># relative to AoI data_root</span>
+</span><span data-line="7">    <span class="n">annual_path</span>  <span class="o">=</span> <span class="s2">&quot;forest/annual.parquet&quot;</span>
+</span><span data-line="8">
+</span><span data-line="9"><span class="n">AoI</span><span class="o">.</span><span class="n">register</span><span class="p">(</span><span class="n">ForestEntity</span><span class="p">)</span>
+</span></pre></div>
+</div>
+<p>Validation rules enforced at <code class="xref py py-meth docutils literal notranslate"><span class="pre">AoI()</span></code> instantiation time (relative paths)
+or at <code class="xref py py-meth docutils literal notranslate"><span class="pre">AoI.register()</span></code> time (absolute paths):</p>
+<ol class="arabic simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">static_path</span></code> exists and is readable.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">key_cols</span></code> are present and unique in the static file.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">geometry_col</span></code> is present and contains valid geometries.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">annual_path</span></code> and <code class="docutils literal notranslate"><span class="pre">fortnightly_path</span></code> exist if declared.</p></li>
+</ol>
+<p>Any failure raises <a class="reference internal" href="#core_lens.base.entity.EntityValidationError" title="core_lens.base.entity.EntityValidationError"><code class="xref py py-class docutils literal notranslate"><span class="pre">EntityValidationError</span></code></a>.</p>
+<dl class="py property">
+<dt class="sig sig-object py" id="core_lens.base.entity.BaseEntity.key_cols">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">key_cols</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span><a class="headerlink" href="#core_lens.base.entity.BaseEntity.key_cols" title="Link to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Abstractmethod<span class="colon">:</span></dt>
+<dd class="field-odd"><p></p></dd>
+</dl>
+<p>Columns that uniquely identify one instance of this entity.</p>
+<p>For built-in entities this is always a single-element list (e.g.
+<code class="docutils literal notranslate"><span class="pre">[&quot;mws_id&quot;]</span></code>), but the contract allows composite keys for plugins.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>A list of column name strings present in the static file.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>list[str]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="core_lens.base.entity.BaseEntity.geometry_col">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">geometry_col</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">str</span></span><a class="headerlink" href="#core_lens.base.entity.BaseEntity.geometry_col" title="Link to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Abstractmethod<span class="colon">:</span></dt>
+<dd class="field-odd"><p></p></dd>
+</dl>
+<p>Name of the geometry column in the static GeoParquet file.</p>
+<p>The column must contain a geometry type understood by GeoPandas
+(WKB bytes, WKT string, or a native geometry column).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>The column name as a string.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>str</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="core_lens.base.entity.BaseEntity.static_path">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">static_path</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">str</span></span><a class="headerlink" href="#core_lens.base.entity.BaseEntity.static_path" title="Link to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Abstractmethod<span class="colon">:</span></dt>
+<dd class="field-odd"><p></p></dd>
+</dl>
+<p>Absolute filesystem path to the static GeoParquet file.</p>
+<p>The path must be absolute.  If a relative path is provided it is
+resolved against the current working directory at first use.  A
+<code class="docutils literal notranslate"><span class="pre">FileNotFoundError</span></code> is raised if the file does not exist.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>A path string.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>str</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="core_lens.base.entity.BaseEntity.annual_path">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">annual_path</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><a class="headerlink" href="#core_lens.base.entity.BaseEntity.annual_path" title="Link to this definition">¶</a></dt>
+<dd><p>Path to the annual time-series Parquet file, or <code class="docutils literal notranslate"><span class="pre">None</span></code>.</p>
+<p>Override in subclasses that carry annual temporal data.  If declared,
+the file must exist at <code class="xref py py-meth docutils literal notranslate"><span class="pre">AoI.register()</span></code> time or
+<a class="reference internal" href="#core_lens.base.entity.EntityValidationError" title="core_lens.base.entity.EntityValidationError"><code class="xref py py-class docutils literal notranslate"><span class="pre">EntityValidationError</span></code></a> is raised.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>A path string, or <code class="docutils literal notranslate"><span class="pre">None</span></code> if the entity has no annual data.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>str | None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="core_lens.base.entity.BaseEntity.fortnightly_path">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">fortnightly_path</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><a class="headerlink" href="#core_lens.base.entity.BaseEntity.fortnightly_path" title="Link to this definition">¶</a></dt>
+<dd><p>Path to the fortnightly time-series Parquet file, or <code class="docutils literal notranslate"><span class="pre">None</span></code>.</p>
+<p>Override in subclasses that carry fortnightly temporal data.  If
+declared, the file must exist at <code class="xref py py-meth docutils literal notranslate"><span class="pre">AoI.register()</span></code> time or
+<a class="reference internal" href="#core_lens.base.entity.EntityValidationError" title="core_lens.base.entity.EntityValidationError"><code class="xref py py-class docutils literal notranslate"><span class="pre">EntityValidationError</span></code></a> is raised.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>A path string, or <code class="docutils literal notranslate"><span class="pre">None</span></code> if the entity has no fortnightly data.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>str | None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="core_lens.base.entity.BaseEntity.schema_profile">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">schema_profile</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference internal" href="../../schema/profile/index.html#core_lens.schema.profile.SchemaProfile" title="core_lens.schema.profile.SchemaProfile"><span class="pre">core_lens.schema.profile.SchemaProfile</span></a></span><a class="headerlink" href="#core_lens.base.entity.BaseEntity.schema_profile" title="Link to this definition">¶</a></dt>
+<dd><p>Validated schema descriptor for this entity’s data files.</p>
+<p>Auto-detected from Parquet file metadata on first access and cached on
+the instance.  Override in subclasses to provide an explicit profile
+instead of relying on detection.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>A fully-validated <a class="reference internal" href="../../schema/profile/index.html#core_lens.schema.profile.SchemaProfile" title="core_lens.schema.profile.SchemaProfile"><code class="xref py py-class docutils literal notranslate"><span class="pre">SchemaProfile</span></code></a>.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference internal" href="../../schema/profile/index.html#core_lens.schema.profile.SchemaProfile" title="core_lens.schema.profile.SchemaProfile">SchemaProfile</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="core_lens.base.entity.BaseEntity.where">
+<span class="sig-name descname"><span class="pre">where</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Any</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="../view/index.html#core_lens.base.view.View" title="core_lens.base.view.View"><span class="pre">core_lens.base.view.View</span></a></span></span><a class="headerlink" href="#core_lens.base.entity.BaseEntity.where" title="Link to this definition">¶</a></dt>
+<dd><p>Return a lazy <a class="reference internal" href="../view/index.html#core_lens.base.view.View" title="core_lens.base.view.View"><code class="xref py py-class docutils literal notranslate"><span class="pre">View</span></code></a> filtered by attributes.</p>
+<p>Each keyword argument is interpreted <strong>attribute-first</strong>: if the kwarg
+key exists as a column in the static file the filter is applied
+directly.  If a kwarg key does <em>not</em> exist as a column it is resolved
+as a registered entity name and the matching entity’s geometry is used
+for a spatial filter (e.g. <code class="docutils literal notranslate"><span class="pre">district=&quot;Shimla&quot;</span></code> finds all MWS whose
+centroid falls within Shimla district).</p>
+<p>Multiple attribute kwargs are AND-ed.  Multiple spatial-entity kwargs
+are AND-ed via sequential spatial filters.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>**kwargs</strong> – Column–value pairs to filter on.  Unknown column names
+are resolved as entity-name lookups.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>A lazy <a class="reference internal" href="../view/index.html#core_lens.base.view.View" title="core_lens.base.view.View"><code class="xref py py-class docutils literal notranslate"><span class="pre">View</span></code></a> with resolved key pairs.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference internal" href="../view/index.html#core_lens.base.view.View" title="core_lens.base.view.View">View</a></p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>ValueError</strong> – If a kwarg cannot be resolved as either an attribute
+column or a registered entity name.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="core_lens.base.entity.BaseEntity.spatial_filter">
+<span class="sig-name descname"><span class="pre">spatial_filter</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">geometry</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">shapely.Geometry</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bbox</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">float</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">float</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">float</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">relationship</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'centroid'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">threshold</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.5</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="../view/index.html#core_lens.base.view.View" title="core_lens.base.view.View"><span class="pre">core_lens.base.view.View</span></a></span></span><a class="headerlink" href="#core_lens.base.entity.BaseEntity.spatial_filter" title="Link to this definition">¶</a></dt>
+<dd><p>Return a lazy <a class="reference internal" href="../view/index.html#core_lens.base.view.View" title="core_lens.base.view.View"><code class="xref py py-class docutils literal notranslate"><span class="pre">View</span></code></a> filtered by geometry.</p>
+<p>Uses the in-memory bbox index for a fast rectangular pre-filter, then
+refines with a Shapely STRtree exact-relationship check.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>geometry</strong> (<em>shapely.Geometry</em><em> | </em><em>None</em><em>, </em><em>optional</em>) – A Shapely geometry representing the spatial extent.</p></li>
+<li><p><strong>bbox</strong> (<em>tuple</em><em>[</em><em>float</em><em>, </em><em>float</em><em>, </em><em>float</em><em>, </em><em>float</em><em>] </em><em>| </em><em>None</em><em>, </em><em>optional</em>) – Bounding box as <code class="docutils literal notranslate"><span class="pre">(minx,</span> <span class="pre">miny,</span> <span class="pre">maxx,</span> <span class="pre">maxy)</span></code> in WGS-84.
+Converted to a <code class="docutils literal notranslate"><span class="pre">shapely.geometry.box</span></code> internally.</p></li>
+<li><p><strong>relationship</strong> (<em>str</em><em>, </em><em>optional</em>) – <p>Spatial relationship mode.</p>
+<ul>
+<li><p><code class="docutils literal notranslate"><span class="pre">&quot;centroid&quot;</span></code> (default) — entity centroid must lie within
+the geometry.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">&quot;area&quot;</span></code> — intersection area / entity area must exceed
+<code class="docutils literal notranslate"><span class="pre">threshold</span></code>.</p></li>
+</ul>
+</p></li>
+<li><p><strong>threshold</strong> (<em>float</em><em>, </em><em>optional</em>) – Area coverage threshold for <code class="docutils literal notranslate"><span class="pre">&quot;area&quot;</span></code> mode (0–1).
+Default 0.5.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>A lazy <a class="reference internal" href="../view/index.html#core_lens.base.view.View" title="core_lens.base.view.View"><code class="xref py py-class docutils literal notranslate"><span class="pre">View</span></code></a> scoped to the given
+spatial extent.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference internal" href="../view/index.html#core_lens.base.view.View" title="core_lens.base.view.View">View</a></p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>ValueError</strong> – If neither <code class="docutils literal notranslate"><span class="pre">geometry</span></code> nor <code class="docutils literal notranslate"><span class="pre">bbox</span></code> is provided.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="core_lens.base.entity.BaseEntity.spatial_join">
+<span class="sig-name descname"><span class="pre">spatial_join</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">other</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#core_lens.base.entity.BaseEntity" title="core_lens.base.entity.BaseEntity"><span class="pre">BaseEntity</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">agg</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="../view/index.html#core_lens.base.view.View" title="core_lens.base.view.View"><span class="pre">core_lens.base.view.View</span></a></span></span><a class="headerlink" href="#core_lens.base.entity.BaseEntity.spatial_join" title="Link to this definition">¶</a></dt>
+<dd><p>Return a lazy <a class="reference internal" href="../view/index.html#core_lens.base.view.View" title="core_lens.base.view.View"><code class="xref py py-class docutils literal notranslate"><span class="pre">View</span></code></a> with a cross-entity join pending.</p>
+<p>The join is recorded in the View’s <code class="docutils literal notranslate"><span class="pre">join_spec</span></code> and computed only at
+materialisation time (<code class="docutils literal notranslate"><span class="pre">.static</span></code>, <code class="docutils literal notranslate"><span class="pre">.annual</span></code>, or <code class="docutils literal notranslate"><span class="pre">.fortnightly</span></code>).
+Joined columns are namespaced as <code class="docutils literal notranslate"><span class="pre">{entity_name}_{column_name}</span></code>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>other</strong> (<a class="reference internal" href="#core_lens.base.entity.BaseEntity" title="core_lens.base.entity.BaseEntity"><em>BaseEntity</em></a>) – The secondary <a class="reference internal" href="#core_lens.base.entity.BaseEntity" title="core_lens.base.entity.BaseEntity"><code class="xref py py-class docutils literal notranslate"><span class="pre">BaseEntity</span></code></a> whose columns will be
+joined and aggregated onto <code class="docutils literal notranslate"><span class="pre">self</span></code>.</p></li>
+<li><p><strong>agg</strong> (<em>dict</em><em>[</em><em>str</em><em>, </em><em>str</em><em>]</em>) – Mapping of <code class="docutils literal notranslate"><span class="pre">{column:</span> <span class="pre">aggregation}</span></code> specifying which columns
+from <code class="docutils literal notranslate"><span class="pre">other</span></code> to bring in and how to aggregate them.  Valid
+aggregation strings are <code class="docutils literal notranslate"><span class="pre">&quot;area&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;count&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;mean&quot;</span></code>,
+<code class="docutils literal notranslate"><span class="pre">&quot;sum&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;min&quot;</span></code>, and <code class="docutils literal notranslate"><span class="pre">&quot;max&quot;</span></code>.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>A lazy <a class="reference internal" href="../view/index.html#core_lens.base.view.View" title="core_lens.base.view.View"><code class="xref py py-class docutils literal notranslate"><span class="pre">View</span></code></a> with the join spec
+recorded for deferred execution.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference internal" href="../view/index.html#core_lens.base.view.View" title="core_lens.base.view.View">View</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py exception">
+<dt class="sig sig-object py" id="core_lens.base.entity.EntityValidationError">
+<span class="property"><span class="k"><span class="pre">exception</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">core_lens.base.entity.</span></span><span class="sig-name descname"><span class="pre">EntityValidationError</span></span><a class="headerlink" href="#core_lens.base.entity.EntityValidationError" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-obj docutils literal notranslate"><span class="pre">Exception</span></code></p>
+<p>Raised when an entity fails validation at <code class="xref py py-meth docutils literal notranslate"><span class="pre">AoI.register()</span></code> time.</p>
+<p>The message will describe exactly which check failed (missing file, absent
+key column, invalid geometry column, etc.) to give plugin authors
+actionable feedback.</p>
+</dd></dl>
+
+</section>
+</section>
+
+        </article><button class="back-to-top" type="button">
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+    <path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8v12z"></path>
+  </svg>
+  <span>Back to top</span>
+</button><div class="navigation flex print:hidden"><div class="navigation-prev">
+    <a href="../index.html">
+      <i class="i-lucide chevron-left"></i>
+      <div class="page-info">
+        <span>Previous</span><div class="title">core_lens.base</div></div>
+    </a>
+  </div><div class="navigation-next">
+    <a href="../namespaces/index.html">
+      <div class="page-info">
+        <span>Next</span>
+        <div class="title">core_lens.base.namespaces</div>
+      </div>
+      <i class="i-lucide chevron-right"></i>
+    </a>
+  </div></div></div>
+    </div>
+  </main>
+</div>
+<footer class="sy-foot">
+  <div class="sy-foot-inner sy-container mx-auto">
+    <div class="sy-foot-reserved md:flex justify-between items-center">
+      <div class="sy-foot-copyright"><p>2026, Apoorva Kashyap</p>
+  
+  <p>
+    Made with
+    
+    <a href="https://www.sphinx-doc.org/">Sphinx</a> and
+    
+    <a href="https://shibuya.lepture.com">Shibuya theme</a>.
+  </p>
+</div>
+      <div class="sy-foot-socials"></div>
+    </div>
+  </div>
+</footer>
+      <script src="../../../../_static/documentation_options.js?v=5929fcd5"></script>
+      <script src="../../../../_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="../../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
+      <script src="../../../../_static/clipboard.min.js?v=a7894cd8"></script>
+      <script src="../../../../_static/copybutton.js?v=f281be69"></script>
+      <script src="../../../../_static/shibuya.js?v=50760d75"></script></body>
+</html>

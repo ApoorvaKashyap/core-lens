@@ -1,0 +1,153 @@
+core_lens.utils.spatial
+=======================
+
+.. py:module:: core_lens.utils.spatial
+
+.. autoapi-nested-parse::
+
+   Spatial helpers for in-memory index construction and geometry filtering.
+
+
+
+Functions
+---------
+
+.. autoapisummary::
+
+   core_lens.utils.spatial.resolve_path
+   core_lens.utils.spatial.build_bbox_index
+   core_lens.utils.spatial.bbox_intersects_geometry
+   core_lens.utils.spatial.exact_spatial_filter
+   core_lens.utils.spatial.execute_spatial_join
+
+
+Module Contents
+---------------
+
+.. py:function:: resolve_path(path: str) -> str
+
+   Return an absolute path string, resolving relative paths against cwd.
+
+   :param path: A filesystem path, absolute or relative.
+   :type path: str
+
+   :returns: An absolute path string.
+   :rtype: str
+
+   :raises FileNotFoundError: If the resolved path does not exist.
+
+
+.. py:function:: build_bbox_index(static_path: str, key_cols: list[str], bbox_cols: tuple[str, str, str, str] | None, geometry_col: str, geometry_type: str) -> polars.DataFrame
+
+   Build the in-memory ``(key_cols..., minx, miny, maxx, maxy)`` index.
+
+   Reads the static GeoParquet file using only the key and spatial columns —
+   no attribute data is pulled into memory.  If pre-computed bbox columns are
+   present in the file they are read directly; otherwise the geometry column
+   is decoded and bounds are computed via Shapely.
+
+   :param static_path: Absolute path to the static GeoParquet file.
+   :type static_path: str
+   :param key_cols: Column name(s) that form the entity's unique key.
+   :type key_cols: list[str]
+   :param bbox_cols: Four-column ``(minx, miny, maxx, maxy)`` tuple if the
+                     static file carries pre-computed bounding boxes, otherwise ``None``.
+   :type bbox_cols: tuple[str, str, str, str] | None
+   :param geometry_col: Name of the geometry column.
+   :type geometry_col: str
+   :param geometry_type: One of ``"wkb"``, ``"wkt"``, or ``"latlon"``.
+   :type geometry_type: str
+
+   :returns: A ``pl.DataFrame`` with columns ``(*key_cols, minx, miny, maxx, maxy)``.
+   :rtype: pl.DataFrame
+
+
+.. py:function:: bbox_intersects_geometry(index_df: polars.DataFrame, geometry: shapely.Geometry) -> polars.DataFrame
+
+   Return the index rows whose bounding box overlaps ``geometry``'s bounds.
+
+   This is a fast rectangular pre-filter in pure Polars — no STRtree.  It
+   returns a superset of the exact result, which is then refined by
+   :func:`exact_spatial_filter`.
+
+   :param index_df: The in-memory index DataFrame with ``minx, miny, maxx, maxy``
+                    columns produced by :func:`build_bbox_index`.
+   :type index_df: pl.DataFrame
+   :param geometry: Any Shapely geometry representing the area of interest.
+   :type geometry: shapely.Geometry
+
+   :returns: The subset of ``index_df`` whose rows overlap the geometry bounds.
+   :rtype: pl.DataFrame
+
+
+.. py:function:: exact_spatial_filter(candidates: polars.DataFrame, static_path: str, key_cols: list[str], geometry_col: str, geometry_type: str, aoi_geometry: shapely.Geometry, relationship: str = 'centroid', threshold: float = 0.5) -> polars.DataFrame
+
+   Refine a bbox candidate set to rows that match ``aoi_geometry``.
+
+   Reads only the key and geometry columns for the candidate rows, decodes
+   each geometry, and tests for the requested spatial relationship.
+
+   :param candidates: The DataFrame from :func:`bbox_intersects_geometry` —
+                      only the key columns are used here; the bbox columns are ignored.
+   :type candidates: pl.DataFrame
+   :param static_path: Absolute path to the static GeoParquet file.
+   :type static_path: str
+   :param key_cols: Column name(s) that form the entity's unique key.
+   :type key_cols: list[str]
+   :param geometry_col: Name of the geometry column in the static file.
+   :type geometry_col: str
+   :param geometry_type: One of ``"wkb"`` or ``"wkt"``.
+   :type geometry_type: str
+   :param aoi_geometry: The Area of Interest geometry to test against.
+   :type aoi_geometry: shapely.Geometry
+   :param relationship: Spatial relationship mode.
+
+                        * ``"centroid"`` (default) — entity centroid must lie **within**
+                          ``aoi_geometry``.
+                        * ``"area"`` — fraction of the entity's area covered by the
+                          intersection must exceed ``threshold``.
+   :type relationship: str, optional
+   :param threshold: Minimum intersection-to-entity area ratio used in
+                     ``"area"`` mode.  Ignored in ``"centroid"`` mode.  Default 0.5.
+   :type threshold: float, optional
+
+   :returns: A ``pl.DataFrame`` containing only the key columns for entities that
+             satisfy the spatial relationship.
+   :rtype: pl.DataFrame
+
+   :raises ValueError: If ``relationship`` is not one of the valid options.
+
+
+.. py:function:: execute_spatial_join(primary_df: polars.DataFrame, primary_key_cols: list[str], primary_geom_col: str, primary_geom_type: str, other_entity: Any, agg: dict[str, str], other_entity_name: str) -> polars.DataFrame
+
+   Materialise a cross-entity spatial join and return enriched DataFrame.
+
+   For each entity in ``primary_df``, finds the overlapping entities in
+   ``other_entity`` and aggregates the requested columns.  Result columns are
+   named ``{other_entity_name}_{column_name}`` to avoid clashes.
+
+   :param primary_df: The primary entity DataFrame (must contain
+                      ``primary_geom_col`` unless geometry is in a separate column).
+   :type primary_df: pl.DataFrame
+   :param primary_key_cols: Key column(s) of the primary entity.
+   :type primary_key_cols: list[str]
+   :param primary_geom_col: Name of the WKB geometry column in ``primary_df``.
+   :type primary_geom_col: str
+   :param primary_geom_type: Geometry encoding — ``"wkb"`` or ``"wkt"``.
+   :type primary_geom_type: str
+   :param other_entity: A :class:`~core_lens.base.entity.BaseEntity` instance
+                        to join against.
+   :type other_entity: BaseEntity
+   :param agg: Mapping ``{column: aggregation}`` — which columns from
+               ``other_entity`` to bring in and how to aggregate them.  Valid
+               aggregations: ``"count"``, ``"mean"``, ``"sum"``, ``"min"``,
+               ``"max"``, ``"area"``.
+   :type agg: dict[str, str]
+   :param other_entity_name: Used to prefix result column names.
+   :type other_entity_name: str
+
+   :returns: ``primary_df`` with additional columns
+             ``{other_entity_name}_{col}`` appended for each ``agg`` entry.
+   :rtype: pl.DataFrame
+
+

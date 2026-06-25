@@ -1,0 +1,64 @@
+core_lens.entities.tehsil
+=========================
+
+.. py:module:: core_lens.entities.tehsil
+
+
+Classes
+-------
+
+.. autoapisummary::
+
+   core_lens.entities.tehsil.TehsilEntity
+
+
+Module Contents
+---------------
+
+.. py:class:: TehsilEntity(data_root: pathlib.Path | None = None)
+
+   Bases: :py:obj:`core_lens.base.entity.BaseEntity`
+
+
+   Tehsil administrative boundary entity.
+
+   Static file columns:
+       id       — unique tehsil key
+       TEHSIL   — tehsil name
+       District — parent district name
+       STATE    — parent state name
+       geom     — WKB geometry
+
+
+   .. py:property:: key_cols
+      :type: list[str]
+
+
+      Returns:
+      list[str]: The key columns for the entity.
+
+
+   .. py:property:: geometry_col
+      :type: str
+
+
+      Returns:
+      str: The geometry column name.
+
+
+   .. py:property:: static_path
+      :type: str
+
+
+      Returns:
+      str: The relative path to the static data.
+
+
+   .. py:property:: schema_profile
+      :type: core_lens.schema.profile.SchemaProfile
+
+
+      Returns:
+      SchemaProfile: The hardcoded schema profile.
+
+

@@ -1,0 +1,72 @@
+core_lens.entities.mws
+======================
+
+.. py:module:: core_lens.entities.mws
+
+
+Classes
+-------
+
+.. autoapisummary::
+
+   core_lens.entities.mws.MWSEntity
+
+
+Module Contents
+---------------
+
+.. py:class:: MWSEntity(data_root: pathlib.Path | None = None)
+
+   Bases: :py:obj:`core_lens.base.entity.BaseEntity`
+
+
+   Microwatershed (MWS) entity.
+
+   Backed by:
+   - Static: mws/static (partitioned by year)
+   - Annual: mws/annual (partitioned by year)
+   - Fortnightly: mws/fortnightly (partitioned by basin then year)
+
+   All paths are relative to the AoI ``data_root``.
+
+
+   .. py:property:: key_cols
+      :type: list[str]
+
+
+      Returns:
+      list[str]: The key columns for the entity.
+
+
+   .. py:property:: geometry_col
+      :type: str
+
+
+      Returns:
+      str: The geometry column name.
+
+
+   .. py:property:: static_path
+      :type: str
+
+
+      Returns:
+      str: The relative path to the static data.
+
+
+   .. py:property:: annual_path
+      :type: str | None
+
+
+      Returns:
+      str | None: The relative path to the annual data.
+
+
+   .. py:property:: fortnightly_path
+      :type: str | None
+
+
+      Returns:
+      str | None: The relative path to the fortnightly data.
+
+

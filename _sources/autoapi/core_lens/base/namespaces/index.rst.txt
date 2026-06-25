@@ -1,0 +1,16 @@
+core_lens.base.namespaces
+=========================
+
+.. py:module:: core_lens.base.namespaces
+
+
+Submodules
+----------
+
+.. toctree::
+   :maxdepth: 1
+
+   /autoapi/core_lens/base/namespaces/plot/index
+   /autoapi/core_lens/base/namespaces/stats/index
+
+

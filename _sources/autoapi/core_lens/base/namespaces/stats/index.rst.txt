@@ -1,0 +1,387 @@
+core_lens.base.namespaces.stats
+===============================
+
+.. py:module:: core_lens.base.namespaces.stats
+
+.. autoapi-nested-parse::
+
+   Statistical analysis namespace for core_lens Result objects.
+
+
+
+Exceptions
+----------
+
+.. autoapisummary::
+
+   core_lens.base.namespaces.stats.CorrelationError
+
+
+Classes
+-------
+
+.. autoapisummary::
+
+   core_lens.base.namespaces.stats.CorrelateMethod
+   core_lens.base.namespaces.stats.TestMethod
+   core_lens.base.namespaces.stats.ChangeMethod
+   core_lens.base.namespaces.stats.AnomalyCrossMethod
+   core_lens.base.namespaces.stats.AnomalyTsMethod
+   core_lens.base.namespaces.stats.SimilarityMethod
+   core_lens.base.namespaces.stats.StatsNamespace
+
+
+Module Contents
+---------------
+
+.. py:class:: CorrelateMethod(*args, **kwds)
+
+   Bases: :py:obj:`enum.Enum`
+
+
+   Correlation methods.
+
+   :ivar PEARSON: Pearson correlation coefficient.
+   :ivar SPEARMAN: Spearman rank correlation.
+   :ivar KENDALL: Kendall Tau correlation.
+
+
+
+   .. py:attribute:: PEARSON
+      :value: 'pearson'
+
+
+
+   .. py:attribute:: SPEARMAN
+      :value: 'spearman'
+
+
+
+   .. py:attribute:: KENDALL
+      :value: 'kendall'
+
+
+
+.. py:class:: TestMethod(*args, **kwds)
+
+   Bases: :py:obj:`enum.Enum`
+
+
+   Statistical hypothesis testing methods.
+
+   :ivar T_TEST: Student's t-test.
+   :ivar MANN_WHITNEY: Mann-Whitney U test.
+   :ivar WILCOXON: Wilcoxon signed-rank test.
+   :ivar KS: Kolmogorov-Smirnov test.
+   :ivar CHI_SQUARE: Chi-square test.
+
+
+
+   .. py:attribute:: __test__
+      :value: False
+
+
+
+   .. py:attribute:: T_TEST
+      :value: 't-test'
+
+
+
+   .. py:attribute:: MANN_WHITNEY
+      :value: 'mann-whitney'
+
+
+
+   .. py:attribute:: WILCOXON
+      :value: 'wilcoxon'
+
+
+
+   .. py:attribute:: KS
+      :value: 'ks'
+
+
+
+   .. py:attribute:: CHI_SQUARE
+      :value: 'chi-square'
+
+
+
+.. py:class:: ChangeMethod(*args, **kwds)
+
+   Bases: :py:obj:`enum.Enum`
+
+
+   Methods for calculating change over time.
+
+   :ivar ABSOLUTE: Absolute difference between periods.
+   :ivar PERCENTAGE: Percentage change between periods.
+   :ivar TREND: Linear trend over time.
+
+
+
+   .. py:attribute:: ABSOLUTE
+      :value: 'absolute'
+
+
+
+   .. py:attribute:: PERCENTAGE
+      :value: 'percentage'
+
+
+
+   .. py:attribute:: TREND
+      :value: 'trend'
+
+
+
+.. py:class:: AnomalyCrossMethod(*args, **kwds)
+
+   Bases: :py:obj:`enum.Enum`
+
+
+   Methods for detecting cross-sectional anomalies.
+
+   :ivar ZSCORE: Z-score method.
+   :ivar IQR: Interquartile range method.
+   :ivar PERCENTILE: Percentile-based method.
+   :ivar THRESHOLD: Fixed threshold method.
+
+
+
+   .. py:attribute:: ZSCORE
+      :value: 'zscore'
+
+
+
+   .. py:attribute:: IQR
+      :value: 'iqr'
+
+
+
+   .. py:attribute:: PERCENTILE
+      :value: 'percentile'
+
+
+
+   .. py:attribute:: THRESHOLD
+      :value: 'threshold'
+
+
+
+.. py:class:: AnomalyTsMethod(*args, **kwds)
+
+   Bases: :py:obj:`enum.Enum`
+
+
+   Methods for detecting time-series anomalies.
+
+   :ivar STL: Seasonal-Trend decomposition using LOESS.
+   :ivar CUSUM: Cumulative sum control chart.
+   :ivar MAD: Median Absolute Deviation.
+
+
+
+   .. py:attribute:: STL
+      :value: 'stl'
+
+
+
+   .. py:attribute:: CUSUM
+      :value: 'cusum'
+
+
+
+   .. py:attribute:: MAD
+      :value: 'mad'
+
+
+
+.. py:class:: SimilarityMethod(*args, **kwds)
+
+   Bases: :py:obj:`enum.Enum`
+
+
+   Methods for calculating similarity or distance.
+
+   :ivar EUCLIDEAN: Euclidean distance.
+   :ivar COSINE: Cosine similarity.
+   :ivar MAHALANOBIS: Mahalanobis distance.
+   :ivar MANHATTAN: Manhattan distance.
+
+
+
+   .. py:attribute:: EUCLIDEAN
+      :value: 'euclidean'
+
+
+
+   .. py:attribute:: COSINE
+      :value: 'cosine'
+
+
+
+   .. py:attribute:: MAHALANOBIS
+      :value: 'mahalanobis'
+
+
+
+   .. py:attribute:: MANHATTAN
+      :value: 'manhattan'
+
+
+
+.. py:exception:: CorrelationError
+
+   Bases: :py:obj:`ValueError`
+
+
+   Raised when correlation cannot be computed (e.g. fewer than 2 columns).
+
+
+.. py:class:: StatsNamespace(result: core_lens.base.result.Result)
+
+   Statistical methods on ``result.stats.*``.
+
+   All methods return a fresh :class:`~core_lens.base.result.Result`.
+   Computed values always go in ``data``; method parameters go in ``metadata``.
+
+
+   .. py:method:: describe(columns: list[str] | None = None, by: str = 'column') -> core_lens.base.result.Result
+
+      Per-column or per-entity descriptive statistics.
+
+      :param columns: Numeric columns to describe. Defaults to all numeric cols.
+      :type columns: list[str] | None, optional
+      :param by: ``"column"`` (one row per column, design default) or
+                 ``"entity"`` (one row per entity with mean/std per column).
+      :type by: str, optional
+
+      :returns: New :class:`~core_lens.base.result.Result` with descriptive stats.
+      :rtype: Result
+
+      :raises ValueError: If ``by`` is not ``"column"`` or ``"entity"``.
+
+
+
+   .. py:method:: correlate(columns: list[str], method: CorrelateMethod = CorrelateMethod.PEARSON, across: str = 'entity') -> core_lens.base.result.Result
+
+      Pairwise correlations between columns.
+
+      :param columns: At least 2 column names.
+      :type columns: list[str]
+      :param method: A :class:`~core_lens.base.namespaces.stats.CorrelateMethod` enum value.
+      :type method: CorrelateMethod, optional
+      :param across: ``"entity"`` or ``"time"`` — recorded in metadata only.
+      :type across: str, optional
+
+      :returns: Result whose data has columns
+                ``column_a | column_b | correlation | p_value``.
+      :rtype: Result
+
+      :raises CorrelationError: If fewer than 2 columns supplied.
+      :raises ValueError: If ``method`` is not recognised.
+
+
+
+   .. py:method:: test(column: str, groups: str | None = None, periods: list[tuple[int, int]] | None = None, against: float | None = None, method: TestMethod | None = None, significance_level: float = 0.05) -> core_lens.base.result.Result
+
+      Hypothesis test in three modes: group-based, period-based, single-sample.
+
+      :param column: Numeric column to test.
+      :type column: str
+      :param groups: Categorical column to split groups on.
+      :type groups: str | None, optional
+      :param periods: List of ``(from_year, to_year)`` period tuples.
+      :type periods: list[tuple[int, int]] | None, optional
+      :param against: Reference value for a one-sample test.
+      :type against: float | None, optional
+      :param method: A :class:`~core_lens.base.namespaces.stats.TestMethod` enum value.
+                     Auto-selected via Shapiro-Wilk if ``None``.
+      :type method: TestMethod | None, optional
+      :param significance_level: Alpha level for ``significant`` flag (default 0.05).
+      :type significance_level: float, optional
+
+      :returns: Result whose data has per-group descriptive stats
+                ``group | n | mean | std | median`` and
+                ``metadata`` with ``statistic``, ``p_value``, ``significant``.
+      :rtype: Result
+
+      :raises ValueError: If none of ``groups``, ``periods``, ``against`` supplied,
+          or if ``method`` is not recognised.
+
+
+
+   .. py:method:: change(column: str, from_period: int, to_period: int, method: ChangeMethod = ChangeMethod.ABSOLUTE) -> core_lens.base.result.Result
+
+      Change between two time periods per entity.
+
+      :param column: Value column to compute change for.
+      :type column: str
+      :param from_period: Start year/period integer.
+      :type from_period: int
+      :param to_period: End year/period integer.
+      :type to_period: int
+      :param method: A :class:`~core_lens.base.namespaces.stats.ChangeMethod` enum value.
+      :type method: ChangeMethod, optional
+
+      :returns: For *absolute* / *percentage*: data has
+                ``key_col | value_from | value_to | change | pct_change``.
+                For *trend*: ``key_col | slope | r_squared | direction``.
+      :rtype: Result
+
+      :raises ValueError: If ``method`` is not recognised or year column absent.
+
+
+
+   .. py:method:: anomaly(column: str, mode: str, method: AnomalyCrossMethod | AnomalyTsMethod, baseline: tuple[int, int] | None = None, threshold: float = 2.0) -> core_lens.base.result.Result
+
+      Anomaly detection in cross-sectional or timeseries mode.
+
+      :param column: Value column to analyse.
+      :type column: str
+      :param mode: ``"cross_sectional"`` or ``"timeseries"``.
+      :type mode: str
+      :param method: An :class:`~core_lens.base.namespaces.stats.AnomalyCrossMethod` or :class:`~core_lens.base.namespaces.stats.AnomalyTsMethod` enum value.
+      :type method: AnomalyCrossMethod | AnomalyTsMethod
+      :param baseline: ``(from_year, to_year)`` inclusive.  Required for
+                       timeseries; optional for cross-sectional.
+      :type baseline: tuple[int, int] | None, optional
+      :param threshold: Sigma / score threshold for anomaly flag (default 2.0).
+      :type threshold: float, optional
+
+      :returns: Result whose data has ``key_col | anomaly_score | is_anomaly``
+                (cross-sectional) or ``key_col | year | anomaly_score | is_anomaly``
+                (timeseries, baseline period excluded).
+      :rtype: Result
+
+      :raises ValueError: If ``mode``, ``method``, or observation count invalid.
+
+
+
+   .. py:method:: similarity(target: str, columns: dict[str, Any], method: SimilarityMethod = SimilarityMethod.EUCLIDEAN, top_n: int = 10) -> core_lens.base.result.Result
+
+      Find entities most similar to ``target`` across ``columns``.
+
+      :param target: Key value of the reference entity.
+      :param columns: Mapping ``{column_name: None | (resolution, filter_dict)}``.
+
+                      * ``None`` — use the column directly from ``result.data``.
+                      * ``(resolution, filter_dict)`` — fetch from the entity's file at
+                        the given resolution (``"static"``, ``"annual"``,
+                        ``"fortnightly"``).  Supported ``filter_dict`` keys:
+
+                        - ``"year": int | (int, int)`` — year equality or range.
+                        - ``"season": str`` — season label (``"kharif"`` etc.).
+                        - ``"agg": str`` — time-aggregation before joining
+                          (``"mean"`` default, ``"sum"``, ``"min"``, ``"max"``).
+      :param method: Distance metric. A :class:`~core_lens.base.namespaces.stats.SimilarityMethod` enum value.
+      :param top_n: Number of most-similar entities to return (default 10).
+
+      :returns: Result with ``key_col | similarity_score | rank``.
+
+      :raises ValueError: If ``method`` is invalid, no columns can be resolved,
+          or ``target`` is not found.
+
+
+

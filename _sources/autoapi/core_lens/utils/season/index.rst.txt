@@ -1,0 +1,86 @@
+core_lens.utils.season
+======================
+
+.. py:module:: core_lens.utils.season
+
+.. autoapi-nested-parse::
+
+   Season-to-date-range resolution for time filtering and temporal column derivation.
+
+
+
+Functions
+---------
+
+.. autoapisummary::
+
+   core_lens.utils.season.resolve_time_filter
+   core_lens.utils.season.add_temporal_columns
+
+
+Module Contents
+---------------
+
+.. py:function:: resolve_time_filter(time_filter: dict[str, str | int | tuple[int, int] | None], time_col: str, season_config: core_lens.aoi.SeasonConfig) -> polars.Expr
+
+   Convert a ``View.time_filter`` dict to a Polars filter expression.
+
+   Two modes are supported, matching the dict shapes produced by
+   :meth:`~core_lens.base.view.View.between`:
+
+   **Date range mode** — ``{"start": "YYYY-MM-DD", "end": "YYYY-MM-DD"}``.
+   Translated directly to a ``between`` predicate on ``time_col``.
+
+   **Season mode** — ``{"season": name, "year": int | (int, int)}``.
+   The season name is resolved to a ``(MM-DD, MM-DD)`` range from
+   ``season_config``.  Year-crossing seasons (e.g. rabi: Nov–Mar) produce an
+   ``OR`` expression.  When ``year`` is absent, all years are matched.  When
+   ``year`` is a single integer, only that year (or the transition year for
+   year-crossing seasons) is matched.
+
+   :param time_filter: The dictionary
+                       stored on :attr:`~core_lens.base.view.View.time_filter`.
+   :type time_filter: dict[str, str | int | tuple[int, int] | None]
+   :param time_col: Name of the time column in the Parquet file.
+   :type time_col: str
+   :param season_config: The :class:`~core_lens.aoi.SeasonConfig` in effect.
+   :type season_config: SeasonConfig
+
+   :returns: A Polars expression that can be passed to ``.filter()``.
+   :rtype: pl.Expr
+
+   :raises ValueError: If ``time_filter`` has an unrecognised structure.
+
+
+.. py:function:: add_temporal_columns(df: polars.DataFrame, time_col: str, season_config: core_lens.aoi.SeasonConfig) -> polars.DataFrame
+
+   Return *df* with temporal grouping columns appended.
+
+   Adds the five columns that :meth:`~core_lens.base.result.Result.aggregate`
+   accepts as ``by`` values.  Called by the materialisation layer
+   (:meth:`~core_lens.base.view.View._materialise`) immediately after collect
+   for every fortnightly :class:`~core_lens.base.result.Result`.
+
+   Columns added (if not already present):
+
+   * ``year``        — integer calendar year of the date.
+   * ``month``       — integer month (1–12).
+   * ``year_month``  — string ``"YYYY-MM"`` (zero-padded).
+   * ``season``      — season name string (``"kharif"`` | ``"rabi"`` | ``"zaid"``).
+   * ``season_year`` — string ``"{season}_{year}"`` (e.g. ``"kharif_2022"``).
+
+   If a column with one of those names already exists on *df* it is left
+   untouched — this prevents overwriting data the entity itself may supply.
+
+   :param df: The collected fortnightly DataFrame.
+   :type df: pl.DataFrame
+   :param time_col: Name of the date/datetime column to derive from.
+   :type time_col: str
+   :param season_config: The :class:`~core_lens.aoi.SeasonConfig` in effect,
+                         used to map each date to its season name.
+   :type season_config: SeasonConfig
+
+   :returns: A new DataFrame with the temporal grouping columns appended.
+   :rtype: pl.DataFrame
+
+
