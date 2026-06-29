@@ -277,15 +277,20 @@ class PlotNamespace:
         # --- Direct Polars → GeoArrow → Lonboard path (zero Shapely, zero GeoPandas) ---
         arrow_table = _wkb_to_arrow_table(df, geom_col, extra_cols=extra)
 
+        import warnings
+
         # Extract colormap values from the already-filtered arrow_table.
         # arrow_table has the same row order as df post-filter, so indices align.
-        values = np.asarray(arrow_table.column(column).to_pylist())
-        v_min, v_max = np.nanmin(values), np.nanmax(values)
-        norm_values = (
-            (values - v_min) / (v_max - v_min)
-            if v_max > v_min
-            else np.zeros_like(values)
-        )
+        values = np.asarray(arrow_table.column(column).to_pylist(), dtype=float)
+
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", category=RuntimeWarning)
+            v_min, v_max = np.nanmin(values), np.nanmax(values)
+
+        if np.isnan(v_min) or np.isnan(v_max) or v_min >= v_max:
+            norm_values = np.where(np.isnan(values), np.nan, 0.0)
+        else:
+            norm_values = (values - v_min) / (v_max - v_min)
 
         cmap = mpl.colormaps["plasma"]
 
