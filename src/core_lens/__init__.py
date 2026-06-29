@@ -6,4 +6,8 @@ except ImportError:
 from core_lens.aoi import AoI, SeasonConfig
 from core_lens.entities.tehsil import TehsilEntity
 
+from loguru import logger
+
+logger.disable("core_lens")
+
 __all__ = ["__version__", "AoI", "SeasonConfig", "TehsilEntity"]

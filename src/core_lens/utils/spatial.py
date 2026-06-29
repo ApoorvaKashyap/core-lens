@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, Any
 
 import polars as pl
 import shapely
+from loguru import logger
 
 if TYPE_CHECKING:
     pass
@@ -28,6 +29,9 @@ def resolve_path(path: str) -> str:
     if not p.is_absolute():
         p = pathlib.Path.cwd() / p
     if not p.exists():
+        logger.error(
+            "Path resolution failed: '{}' (resolved to {}) does not exist.", path, p
+        )
         raise FileNotFoundError(
             f"Entity path {path!r} (resolved to {p}) does not exist. "
             "Provide an absolute path or ensure the file exists relative to "
@@ -62,6 +66,7 @@ def build_bbox_index(
         pl.DataFrame: A ``pl.DataFrame`` with columns ``(*key_cols, minx, miny, maxx, maxy)``.
     """
     if bbox_cols is not None:
+        logger.debug("Using pre-computed bbox columns: {}", bbox_cols)
         cols_to_read = key_cols + list(bbox_cols)
         df = pl.read_parquet(static_path, columns=cols_to_read)
         minx_col, miny_col, maxx_col, maxy_col = bbox_cols
@@ -72,12 +77,20 @@ def build_bbox_index(
     cols_to_read = key_cols + [geometry_col]
     if geometry_type == "latlon":
         # For latlon, bbox_cols must be set — this path should not be reached.
+        logger.error(
+            "build_bbox_index failed: geometry_type='latlon' requires bbox_cols to be declared."
+        )
         raise ValueError(
             "geometry_type='latlon' requires bbox_cols to be declared on the entity. "
             + "Cannot compute bounds from separate lat/lon columns without bbox hints."
         )
 
     import pyarrow.dataset as ds  # type: ignore[import-untyped]
+
+    logger.debug(
+        "No pre-computed bbox found in {}; falling back to Shapely decoding",
+        static_path,
+    )
 
     dataset = ds.dataset(static_path)
     chunks = []
@@ -184,7 +197,16 @@ def exact_spatial_filter(
     """
     import shapely
 
+    logger.debug(
+        "Refining {} candidates with exact spatial filter (relationship='{}')",
+        len(candidates),
+        relationship,
+    )
+
     if relationship not in ("centroid", "area"):
+        logger.error(
+            "exact_spatial_filter failed: Unknown relationship='{}'.", relationship
+        )
         raise ValueError(
             f"exact_spatial_filter: Unknown relationship={relationship!r}. "
             "Valid options: 'centroid', 'area'."
@@ -271,6 +293,10 @@ def execute_spatial_join(
     """
     import shapely
 
+    logger.info(
+        "Starting execute_spatial_join for other_entity_name={}", other_entity_name
+    )
+
     other_profile = other_entity.schema_profile
     other_static = other_entity._resolve(other_entity.static_path)
     other_geom_col = other_profile.geometry_col
@@ -304,6 +330,10 @@ def execute_spatial_join(
 
     # Decode primary geometries.
     if primary_geom_col not in primary_df.columns:
+        logger.error(
+            "execute_spatial_join failed: geometry column '{}' not found in primary DataFrame.",
+            primary_geom_col,
+        )
         raise ValueError(
             f"execute_spatial_join: geometry column {primary_geom_col!r} not found "
             "in primary DataFrame.  Materialise static resolution or call "

@@ -16,6 +16,7 @@ from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Any
 
 import polars as pl
+from loguru import logger
 
 from core_lens.utils.spatial import (
     bbox_intersects_geometry,
@@ -115,6 +116,9 @@ class BaseEntity(ABC):
             )
             p = root / p
         if not p.exists():
+            logger.error(
+                "Path resolution failed: '{}' (resolved to {}) does not exist.", path, p
+            )
             raise FileNotFoundError(
                 f"Entity path {path!r} (resolved to {p}) does not exist. "
                 "Provide an absolute path or ensure the file exists relative to "
@@ -219,6 +223,9 @@ class BaseEntity(ABC):
     @property
     def _index(self) -> pl.DataFrame:
         if not hasattr(self, "_cached_index"):
+            logger.debug(
+                "Building lazy bounding box index for {}", self.__class__.__name__
+            )
             profile = self.schema_profile
             self._cached_index: pl.DataFrame = build_bbox_index(
                 static_path=self._resolve(self.static_path),
@@ -256,6 +263,10 @@ class BaseEntity(ABC):
         from core_lens.aoi import _REGISTRY
         from core_lens.base.view import View
 
+        logger.debug(
+            "Applying attribute filters on {}: {}", self.__class__.__name__, kwargs
+        )
+
         static = self._resolve(self.static_path)
         schema = pl.read_parquet_schema(static)
 
@@ -265,6 +276,10 @@ class BaseEntity(ABC):
         # Validate entity-kwargs early so we give a useful error message.
         for k in entity_kwargs:
             if k not in _REGISTRY:
+                logger.error(
+                    "BaseEntity.where failed: '{}' is neither a column nor a registered entity.",
+                    k,
+                )
                 raise ValueError(
                     f"BaseEntity.where: {k!r} is not a column in {self.static_path!r} "
                     f"and is not a registered entity name. "
@@ -306,6 +321,12 @@ class BaseEntity(ABC):
             )
 
             if matched.is_empty():
+                logger.error(
+                    "BaseEntity.where failed: No rows matched {}={!r} in {}",
+                    entity_kwarg_name,
+                    entity_kwarg_val,
+                    other_entity.static_path,
+                )
                 raise ValueError(
                     f"BaseEntity.where: No rows matched {entity_kwarg_name}={entity_kwarg_val!r} "
                     f"in {other_entity.static_path!r}."
@@ -379,6 +400,9 @@ class BaseEntity(ABC):
         from core_lens.base.view import View
 
         if geometry is None and bbox is None:
+            logger.error(
+                "BaseEntity.spatial_filter failed: neither 'geometry' nor 'bbox' provided."
+            )
             raise ValueError(
                 "spatial_filter() requires either 'geometry' or 'bbox' to be provided."
             )
@@ -386,6 +410,12 @@ class BaseEntity(ABC):
             geometry = sgeom.box(*bbox)
 
         assert geometry is not None  # guaranteed by the guards above
+
+        logger.debug(
+            "Applying spatial filter on {} (relationship='{}')",
+            self.__class__.__name__,
+            relationship,
+        )
 
         profile = self.schema_profile
         candidates = bbox_intersects_geometry(self._index, geometry)
@@ -423,6 +453,12 @@ class BaseEntity(ABC):
             recorded for deferred execution.
         """
         from core_lens.base.view import View
+
+        logger.debug(
+            "Deferred spatial join registered for {} with {}",
+            self.__class__.__name__,
+            other.__class__.__name__,
+        )
 
         entity_name = _entity_name(type(self))
         join_spec = {"other": other, "agg": agg}

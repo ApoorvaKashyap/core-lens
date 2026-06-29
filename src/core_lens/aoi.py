@@ -12,6 +12,7 @@ if TYPE_CHECKING:
     from core_lens.base.result import Result
 
 import polars as pl
+from loguru import logger
 
 from core_lens.base.entity import BaseEntity, EntityValidationError
 
@@ -177,6 +178,7 @@ class AoI:
         """
         self.data_root = pathlib.Path(data_root).resolve()
         self.seasons: SeasonConfig = seasons or SeasonConfig()
+        logger.info("Initializing AoI with data_root={}", self.data_root)
 
         n_modes = sum(
             [
@@ -186,11 +188,13 @@ class AoI:
             ]
         )
         if n_modes == 0:
+            logger.error("AoI initialization failed: no boundary argument supplied.")
             raise ValueError(
                 "AoI requires exactly one boundary argument: "
                 "bbox=, geometry=, or entity keyword filters such as tehsil='Pangi'."
             )
         if n_modes > 1:
+            logger.error("AoI initialization failed: multiple boundary modes supplied.")
             raise ValueError(
                 "bbox, geometry, and entity keyword filters are mutually exclusive. "
                 "Provide exactly one boundary mode."
@@ -320,6 +324,8 @@ class AoI:
         """
         import shapely.ops as sops
 
+        logger.debug("Resolving named boundary using kwargs: {}", entity_kwargs)
+
         # Find the registered entity whose key_col or known attribute column
         # matches one of the filter keys.
         candidate: BaseEntity | None = None
@@ -335,12 +341,19 @@ class AoI:
         # Fall back: look for an entity whose name matches a kwarg key
         # (e.g. tehsil="Pangi" → TehsilEntity if registered as "tehsil").
         if candidate is None:
+            logger.debug(
+                "No direct column match found for kwargs, attempting entity name fallback"
+            )
             for name, entity in self._entity_instances.items():
                 if name in entity_kwargs:
                     candidate = entity
                     break
 
         if candidate is None:
+            logger.error(
+                "Boundary resolution failed: no registered entity matched filters {}",
+                entity_kwargs,
+            )
             raise EntityValidationError(
                 f"No registered entity can satisfy the filters {entity_kwargs}. "
                 f"Registered entities: {sorted(_REGISTRY)}."
@@ -367,6 +380,9 @@ class AoI:
         df = lf.filter(filter_expr).select(candidate.key_cols + [geom_col]).collect()
 
         if df.is_empty():
+            logger.error(
+                "Boundary resolution failed: no rows matched filters {}", entity_kwargs
+            )
             raise ValueError(
                 f"No rows matched the filters {entity_kwargs} "
                 f"in {candidate.static_path!r}."
@@ -401,6 +417,7 @@ class AoI:
         import pathlib as _pathlib
 
         name = _entity_name(entity_cls)
+        logger.info("Registering entity class: {}", name)
         # Probe with a no-root instance to check if paths are absolute.
         probe = entity_cls()
         static = probe.static_path
@@ -420,6 +437,7 @@ class AoI:
             entity_cls (type[BaseEntity]): The entity class to remove.
         """
         name = _entity_name(entity_cls)
+        logger.info("Deregistering entity class: {}", name)
         _REGISTRY.pop(name, None)
 
     @classmethod
@@ -452,11 +470,21 @@ def _validate_entity(entity: BaseEntity, name: str) -> None:
     try:
         static = entity._resolve(entity.static_path)
     except FileNotFoundError:
+        logger.error(
+            "Validation failed for entity {}: static_path '{}' does not exist.",
+            name,
+            entity.static_path,
+        )
         raise EntityValidationError(
             f"Entity {name!r}: static_path {entity.static_path!r} does not exist."
         )
 
     if not os.path.exists(static):
+        logger.error(
+            "Validation failed for entity {}: static path '{}' does not exist.",
+            name,
+            static,
+        )
         raise EntityValidationError(
             f"Entity {name!r}: static_path {static!r} does not exist."
         )
@@ -464,18 +492,34 @@ def _validate_entity(entity: BaseEntity, name: str) -> None:
     try:
         schema = pl.read_parquet_schema(static)
     except Exception as exc:
+        logger.error(
+            "Validation failed for entity {}: could not read schema from '{}': {}",
+            name,
+            static,
+            exc,
+        )
         raise EntityValidationError(
             f"Entity {name!r}: could not read schema from {static!r}: {exc}"
         ) from exc
 
     missing_keys = [c for c in entity.key_cols if c not in schema]
     if missing_keys:
+        logger.error(
+            "Validation failed for entity {}: key columns {} not found in schema.",
+            name,
+            missing_keys,
+        )
         raise EntityValidationError(
             f"Entity {name!r}: key_cols {missing_keys} not found in {static!r}. "
             f"Available columns: {list(schema.keys())}."
         )
 
     if entity.geometry_col not in schema:
+        logger.error(
+            "Validation failed for entity {}: geometry column '{}' not found in schema.",
+            name,
+            entity.geometry_col,
+        )
         raise EntityValidationError(
             f"Entity {name!r}: geometry_col {entity.geometry_col!r} "
             f"not found in {static!r}. Available columns: {list(schema.keys())}."
@@ -489,6 +533,12 @@ def _validate_entity(entity: BaseEntity, name: str) -> None:
             except FileNotFoundError:
                 abs_path = None
             if abs_path is None or not os.path.exists(abs_path):
+                logger.error(
+                    "Validation failed for entity {}: {} path '{}' does not exist.",
+                    name,
+                    label,
+                    path,
+                )
                 raise EntityValidationError(
                     f"Entity {name!r}: {label}_path {path!r} does not exist."
                 )

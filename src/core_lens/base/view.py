@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 
 import polars as pl
+from loguru import logger
 
 from enum import Enum
 
@@ -145,6 +146,9 @@ class View:
         )
 
         if geometry is None and bbox is None:
+            logger.error(
+                "View.spatial_filter failed: neither 'geometry' nor 'bbox' provided."
+            )
             raise ValueError(
                 "spatial_filter() requires either 'geometry' or 'bbox' to be provided."
             )
@@ -193,6 +197,9 @@ class View:
             View: A new lazy :class:`View` with the join spec recorded.
         """
         if self.join_spec is not None:
+            logger.error(
+                "View.spatial_join failed: View already has a pending spatial_join."
+            )
             raise ValueError("View already has a pending spatial_join.")
 
         return View(
@@ -252,23 +259,33 @@ class View:
                 supplying ``year`` with ``season="current"``).
         """
         if season is not None and (start is not None or end is not None):
+            logger.error(
+                "View.between failed: Date range (start/end) and season mode are mutually exclusive."
+            )
             raise ValueError(
                 "View.between: Date range (start/end) and season mode are mutually exclusive. "
                 "Use either positional date strings or the 'season' keyword, not both."
             )
 
         if season is None and year is not None:
+            logger.error(
+                "View.between failed: 'year' argument provided without 'season'."
+            )
             raise ValueError(
                 "View.between: 'year' argument is only valid when 'season' is also provided."
             )
 
         if season is not None:
             if not isinstance(season, Season):
+                logger.error("View.between failed: season is not a Season enum.")
                 raise ValueError(
                     f"View.between: season must be a Season enum. "
                     f"Valid options: {[e.name for e in Season]}."
                 )
             if season is Season.CURRENT and year is not None:
+                logger.error(
+                    "View.between failed: Cannot combine year with season='current'."
+                )
                 raise ValueError(
                     "View.between: Cannot combine year with season='current'. "
                     "The current season is always resolved to the present calendar date."
@@ -278,6 +295,9 @@ class View:
                 time_filter["year"] = year
         else:
             if start is None or end is None:
+                logger.error(
+                    "View.between failed: Both 'start' and 'end' must be provided for date range mode."
+                )
                 raise ValueError(
                     "View.between: Both 'start' and 'end' must be provided for date range mode."
                 )
@@ -340,12 +360,20 @@ class View:
 
         profile = self.entity.schema_profile
 
+        logger.info(
+            "Materialising {} resolution for {}", resolution.name, self.entity_name
+        )
+
         path: str
         if resolution == Resolution.STATIC:
             path = self.entity.static_path
         elif resolution == Resolution.ANNUAL:
             annual_path = self.entity.annual_path
             if annual_path is None:
+                logger.error(
+                    "View._materialise failed: Entity '{}' has no annual_path declared.",
+                    self.entity_name,
+                )
                 raise AttributeError(
                     f"Entity {self.entity_name!r} has no annual_path declared."
                 )
@@ -353,6 +381,10 @@ class View:
         else:
             fn_path = self.entity.fortnightly_path
             if fn_path is None:
+                logger.error(
+                    "View._materialise failed: Entity '{}' has no fortnightly_path declared.",
+                    self.entity_name,
+                )
                 raise AttributeError(
                     f"Entity {self.entity_name!r} has no fortnightly_path declared."
                 )
@@ -396,6 +428,7 @@ class View:
                 _tf = dict(self.time_filter)
                 if "start" in _tf and "end" in _tf:
                     _tf["_is_year_col"] = _is_year_col
+                logger.debug("Applying time filter expr using {}", _tf)
                 time_expr = resolve_time_filter(_tf, time_col, season_cfg)
 
         lf = scan_with_key_filter(
@@ -439,6 +472,7 @@ class View:
 
             from core_lens.utils.spatial import execute_spatial_join
 
+            logger.debug("Executing spatial join with {}", other_entity_name)
             data = execute_spatial_join(
                 primary_df=data,
                 primary_key_cols=self.entity.key_cols,
