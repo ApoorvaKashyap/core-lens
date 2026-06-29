@@ -7,7 +7,7 @@ geometry, derive, stats, plot, and export.
 
 Prerequisites
 -------------
-    pip install core-lens geopandas shapely polars scipy plotly lonboard
+    pip install core-lens geopandas shapely polars scipy bokeh lonboard
 
 Data layout expected
 --------------------
@@ -33,6 +33,7 @@ from core_lens.base.namespaces.stats import (
     TestMethod,
 )
 import shapely.geometry as sgeom
+from bokeh.io import show
 
 
 DATA_ROOT = "data/"
@@ -288,19 +289,19 @@ result_plot = (
 
 # ── 19. Plot — scatter ────────────────────────────────────────────────────────
 scatter_fig = result_plot.plot.scatter(x="area_km2", y="Shape_Leng")
-scatter_fig.show()
+show(scatter_fig)
 
 
 # ── 20. Plot — distribution ───────────────────────────────────────────────────
 dist_fig = result_plot.plot.distribution(x="area_km2")
-dist_fig.show()
+show(dist_fig)
 
 
 # ── 21. Plot — correlation matrix ────────────────────────────────────────────
 corr_fig = result_plot.plot.correlation(
     columns=["area_km2", "Shape_Leng", "compactness"]
 )
-corr_fig.show()
+show(corr_fig)
 
 
 # ── 22. Plot — heatmap ────────────────────────────────────────────────────────
@@ -312,7 +313,7 @@ heatmap_fig = result_plot.plot.heatmap(
     y="STATE",
     value="area_km2",
 )
-heatmap_fig.show()
+show(heatmap_fig)
 
 
 # ── 23. AoI map ───────────────────────────────────────────────────────────────

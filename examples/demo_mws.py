@@ -7,7 +7,7 @@ geometry, derive, stats, plot, temporal queries, and export.
 
 Prerequisites
 -------------
-    pip install core-lens geopandas shapely polars scipy plotly lonboard
+    pip install core-lens geopandas shapely polars scipy bokeh lonboard
 
 Data layout expected
 --------------------
@@ -30,10 +30,17 @@ from __future__ import annotations
 
 import polars as pl
 import shapely.geometry as sgeom
+from bokeh.io import save
 
 from core_lens import AoI, SeasonConfig
 from core_lens.entities import MWSEntity
 from core_lens.export import geoparquet
+from core_lens.base.namespaces.stats import (
+    CorrelateMethod,
+    SimilarityMethod,
+    TestMethod,
+)
+from core_lens.base.view import Season
 
 DATA_ROOT = "/home/akashyap/Finals"
 
@@ -127,7 +134,7 @@ print("Resolution            :", result_annual.resolution)
 print("Has geometry          :", result_annual.has_geometry)  # False by default
 
 # Fortnightly data for a specific season and year
-result_fn = view_barmer.between(season="kharif", year=2021).fortnightly
+result_fn = view_barmer.between(season=Season.KHARIF, year=2021).fortnightly
 print("\nFortnightly columns (first 10):", result_fn.columns[:10])
 
 
@@ -170,7 +177,7 @@ print(desc_annual_by_entity.df().head(5))
 # Pairwise correlations on fortnightly data
 corr = result_fn.stats.correlate(
     columns=["df_precipitation", "df_et"],
-    method="pearson",
+    method=CorrelateMethod.PEARSON,
     across="entity",
 )
 print("\nCorrelation (Precipitation vs ET):")
@@ -183,7 +190,7 @@ print(corr.df())
 test_result = result_static_derived.stats.test(
     column="di_avg_dryspe",
     groups="district",
-    method="mann-whitney",
+    method=TestMethod.MANN_WHITNEY,
 )
 print("\nHypothesis test — dryspell by district:")
 print(test_result.df())
@@ -212,7 +219,7 @@ sim = result_static_derived.stats.similarity(
         "area_in_ha": None,
         "di_avg_dryspe": None,
     },
-    method="euclidean",
+    method=SimilarityMethod.EUCLIDEAN,
     top_n=5,
 )
 print(f"\nMost similar MWS to {target_id}:")
@@ -253,7 +260,7 @@ except Exception:
 
 try:
     line_fig = result_annual.plot.timeseries(x="year", y="dw_et")
-    line_fig.write_html("mws_et_trend.html")
+    save(line_fig, filename="mws_et_trend.html")
     print("Saved line plot to mws_et_trend.html")
 except Exception:
     pass
@@ -262,7 +269,7 @@ except Exception:
 # ── 21. Plot — scatter ───────────────────────────────────────────────────────
 try:
     scatter_fig = result_static_derived.plot.scatter(x="area_km2", y="dryspell_score")
-    scatter_fig.write_html("mws_scatter.html")
+    save(scatter_fig, filename="mws_scatter.html")
 except Exception:
     pass
 
@@ -289,7 +296,7 @@ print("GeoParquet written: output_mws.geoparquet")
 
 final = (
     aoi.mws.where(ba_name="Barmer")
-    .between(season="kharif", year=2021)
+    .between(season=Season.KHARIF, year=2021)
     .fortnightly.derive(
         "et_ratio", (pl.col("df_et") / pl.col("df_precipitation")).round(3)
     )
