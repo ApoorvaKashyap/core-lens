@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="en" data-accent-color="violet" data-content_root="../../../../">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"><title>core_lens.export.formats - CoreLens documentation</title><link rel="index" title="Index" href="../../../../genindex.html" /><link rel="search" title="Search" href="../../../../search.html" /><link rel="next" title="core_lens.schema" href="../../schema/index.html" /><link rel="prev" title="core_lens.export" href="../index.html" /><script>
+    function setColorMode(t){let e=document.documentElement;e.setAttribute("data-color-mode",t);let a=window.matchMedia&&window.matchMedia("(prefers-color-scheme: dark)").matches,s=t;"auto"===t&&(s=a?"dark":"light"),"light"===s?(e.classList.remove("dark"),e.classList.add("light")):(e.classList.remove("light"),e.classList.add("dark"))}
+    setColorMode(localStorage._theme||"auto");
+  </script><link rel="stylesheet" type="text/css" href="../../../../_static/pygments.css?v=e1a1ceaf" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/shibuya.css?v=9454f7d5" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/graphviz.css?v=4ae1632d" />
+    <link media="print" rel="stylesheet" type="text/css" href="../../../../_static/print.css?v=20ff2c19" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --sy-f-text: "Inter", var(--sy-f-sys), var(--sy-f-cjk), sans-serif;
+  --sy-f-heading: "Inter", var(--sy-f-sys), var(--sy-f-cjk), sans-serif;
+}
+</style>
+    
+  <meta property="og:type" content="website"/><meta property="og:title" content="core_lens.export.formats"/>
+    <meta name="twitter:card" content="summary"/>
+  </head>
+<body><div class="sy-head">
+  <div class="sy-head-blur"></div>
+  <div class="sy-head-inner sy-container mx-auto">
+    <a class="sy-head-brand" href="../../../../index.html">
+      
+      
+      <strong>CoreLens</strong>
+    </a>
+    <div class="sy-head-nav" id="head-nav">
+      <nav class="sy-head-links"></nav>
+      <div class="sy-head-extra flex items-center print:hidden"><form class="searchbox flex items-center" action="../../../../search.html" method="get">
+  <input type="text" name="q" placeholder="Search" />
+  <kbd>/</kbd>
+</form><div class="sy-head-socials"></div></div>
+    </div>
+    <div class="sy-head-actions flex items-center shrink-0 print:hidden"><button class="js-theme theme-switch flex items-center"
+data-aria-auto="Switch to light color mode"
+data-aria-light="Switch to dark color mode"
+data-aria-dark="Switch to auto color mode">
+<i class="i-lucide theme-icon"></i>
+</button><button class="md:hidden flex items-center js-menu" aria-label="Menu" type="button" aria-controls="head-nav" aria-expanded="false">
+        <div class="hamburger">
+          <span class="hamburger_1"></span>
+          <span class="hamburger_2"></span>
+          <span class="hamburger_3"></span>
+        </div>
+      </button>
+    </div>
+  </div>
+</div>
+<div class="sy-page sy-container flex mx-auto">
+  <aside id="lside" class="sy-lside md:w-72 md:shrink-0 print:hidden">
+    <div class="sy-lside-inner md:sticky">
+      <div class="sy-scrollbar p-6">
+        <div class="globaltoc" data-expand-depth="0"><p class="caption" role="heading" aria-level="3"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../../../../intro.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../quickstart.html">Quickstart</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../concepts.html">Core Concepts</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../queries.html">Example Queries</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../stats.html">Statistical Analysis</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../plots.html">Visualisation and Plots</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../export.html">Data Export</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../plugins.html">Plugin System</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../logging.html">Logging</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="../../../index.html">API Reference</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="../../index.html">core_lens</a><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="../../aoi/index.html">core_lens.aoi</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../base/index.html">core_lens.base</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../../base/entity/index.html">core_lens.base.entity</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../base/namespaces/index.html">core_lens.base.namespaces</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../base/result/index.html">core_lens.base.result</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../base/view/index.html">core_lens.base.view</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../../entities/index.html">core_lens.entities</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../../entities/mws/index.html">core_lens.entities.mws</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../entities/tehsil/index.html">core_lens.entities.tehsil</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../entities/waterbody/index.html">core_lens.entities.waterbody</a></li>
+</ul>
+</li>
+<li class="toctree-l3 current"><a class="reference internal" href="../index.html">core_lens.export</a><ul class="current">
+<li class="toctree-l4 current"><a class="current reference internal" href="#">core_lens.export.formats</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../../schema/index.html">core_lens.schema</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../../schema/detection/index.html">core_lens.schema.detection</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../schema/profile/index.html">core_lens.schema.profile</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../../utils/index.html">core_lens.utils</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../../utils/polars_utils/index.html">core_lens.utils.polars_utils</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../utils/season/index.html">core_lens.utils.season</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../utils/spatial/index.html">core_lens.utils.spatial</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+        </div>
+      </div>
+    </div>
+  </aside>
+  <div class="lside-overlay js-menu" role="button" aria-label="Close left sidebar" aria-controls="lside" aria-expanded="false"></div>
+  <aside id="rside" class="sy-rside pb-3 w-64 shrink-0 order-last">
+    <button class="rside-close js-menu xl:hidden" aria-label="Close Table of Contents" type="button" aria-controls="rside" aria-expanded="false">
+      <i class="i-lucide close"></i>
+    </button>
+    <div class="sy-scrollbar sy-rside-inner px-6 xl:top-16 xl:sticky xl:pl-0 pt-6 pb-4"><div class="localtoc"><h3>On this page</h3><ul>
+<li><a class="reference internal" href="#functions">Functions</a></li>
+<li><a class="reference internal" href="#module-contents">Module Contents</a><ul>
+<li><a class="reference internal" href="#core_lens.export.formats.parquet"><code class="docutils literal notranslate"><span class="pre">parquet()</span></code></a></li>
+<li><a class="reference internal" href="#core_lens.export.formats.json"><code class="docutils literal notranslate"><span class="pre">json()</span></code></a></li>
+<li><a class="reference internal" href="#core_lens.export.formats.csv"><code class="docutils literal notranslate"><span class="pre">csv()</span></code></a></li>
+<li><a class="reference internal" href="#core_lens.export.formats.geoparquet"><code class="docutils literal notranslate"><span class="pre">geoparquet()</span></code></a></li>
+<li><a class="reference internal" href="#core_lens.export.formats.geojson"><code class="docutils literal notranslate"><span class="pre">geojson()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</div><div id="ethical-ad-placement" data-ea-publisher="readthedocs"></div></div>
+  </aside>
+  <div class="rside-overlay js-menu" role="button" aria-label="Close Table of Contents" aria-controls="rside" aria-expanded="false"></div>
+  <main class="sy-main w-full max-sm:max-w-full print:pt-6">
+<div class="sy-breadcrumbs" role="navigation">
+  <div class="sy-breadcrumbs-inner flex items-center">
+    <div class="md:hidden mr-3">
+      <button class="js-menu" aria-label="Menu" type="button" aria-controls="lside" aria-expanded="false">
+        <i class="i-lucide menu"></i>
+      </button>
+    </div>
+    <ol class="flex-1" itemscope itemtype="https://schema.org/BreadcrumbList"><li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+        <a itemprop="item" href="../../../../index.html"><span itemprop="name">CoreLens</span></a>
+        <span>/</span>
+        <meta itemprop="position" content="1" />
+      </li><li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+        <a itemprop="item" href="../../../index.html"><span itemprop="name">API Reference</span></a>
+        <span>/</span>
+        <meta itemprop="position" content="2" />
+      </li><li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+        <a itemprop="item" href="../../index.html"><span itemprop="name">core_lens</span></a>
+        <span>/</span>
+        <meta itemprop="position" content="3" />
+      </li><li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+        <a itemprop="item" href="../index.html"><span itemprop="name">core_lens.export</span></a>
+        <span>/</span>
+        <meta itemprop="position" content="4" />
+      </li><li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+        <strong itemprop="name">core_lens.export.formats</strong>
+        <meta itemprop="position" content="5" />
+      </li></ol>
+    <div class="xl:hidden ml-1">
+      <button class="js-menu" aria-label="Show table of contents" type="button" aria-controls="rside"
+        aria-expanded="false">
+        <i class="i-lucide outdent"></i>
+      </button>
+    </div>
+  </div>
+</div><div class="flex flex-col break-words justify-between">
+      <div class="relative min-w-0 max-w-6xl px-6 pb-6 pt-8 xl:px-12">
+  <article class="yue" role="main">
+          <section id="module-core_lens.export.formats">
+<span id="core-lens-export-formats"></span><h1>core_lens.export.formats<a class="headerlink" href="#module-core_lens.export.formats" title="Link to this heading">¶</a></h1>
+<section id="functions">
+<h2>Functions<a class="headerlink" href="#functions" title="Link to this heading">¶</a></h2>
+<div class="table-wrapper autosummary longtable docutils container">
+<table class="autosummary longtable docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#core_lens.export.formats.parquet" title="core_lens.export.formats.parquet"><code class="xref py py-obj docutils literal notranslate"><span class="pre">parquet</span></code></a>(→ None)</p></td>
+<td><p>Export the result data to a standard Parquet file.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#core_lens.export.formats.json" title="core_lens.export.formats.json"><code class="xref py py-obj docutils literal notranslate"><span class="pre">json</span></code></a>(→ None)</p></td>
+<td><p>Export the result data to a standard JSON file.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#core_lens.export.formats.csv" title="core_lens.export.formats.csv"><code class="xref py py-obj docutils literal notranslate"><span class="pre">csv</span></code></a>(→ None)</p></td>
+<td><p>Export the result data to a standard CSV file.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#core_lens.export.formats.geoparquet" title="core_lens.export.formats.geoparquet"><code class="xref py py-obj docutils literal notranslate"><span class="pre">geoparquet</span></code></a>(→ None)</p></td>
+<td><p>Export the result data to a GeoParquet file.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#core_lens.export.formats.geojson" title="core_lens.export.formats.geojson"><code class="xref py py-obj docutils literal notranslate"><span class="pre">geojson</span></code></a>(→ None)</p></td>
+<td><p>Export the result data to a GeoJSON file.</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+<section id="module-contents">
+<h2>Module Contents<a class="headerlink" href="#module-contents" title="Link to this heading">¶</a></h2>
+<dl class="py function">
+<dt class="sig sig-object py" id="core_lens.export.formats.parquet">
+<span class="sig-prename descclassname"><span class="pre">core_lens.export.formats.</span></span><span class="sig-name descname"><span class="pre">parquet</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">result</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="../../base/result/index.html#core_lens.base.result.Result" title="core_lens.base.result.Result"><span class="pre">core_lens.base.result.Result</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">pathlib.Path</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Any</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#core_lens.export.formats.parquet" title="Link to this definition">¶</a></dt>
+<dd><p>Export the result data to a standard Parquet file.</p>
+<p>This function uses Polars to write the underlying data frame.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>result</strong> (<a class="reference internal" href="../../base/result/index.html#core_lens.base.result.Result" title="core_lens.base.result.Result"><em>Result</em></a>) – The Result object to export.</p></li>
+<li><p><strong>path</strong> (<em>str</em><em> | </em><em>pathlib.Path</em>) – Destination path for the Parquet file.</p></li>
+<li><p><strong>**kwargs</strong> (<em>Any</em>) – Additional options to pass to Polars <cite>write_parquet</cite>.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>TypeError</strong> – If the Result object has geometry.</p>
+</dd>
+</dl>
+<p class="rubric">Example</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span data-line="1"><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">core_lens.export</span><span class="w"> </span><span class="kn">import</span> <span class="n">parquet</span>
+</span><span data-line="2"><span class="gp">&gt;&gt;&gt; </span><span class="n">parquet</span><span class="p">(</span><span class="n">result</span><span class="p">,</span> <span class="s2">&quot;output.parquet&quot;</span><span class="p">,</span> <span class="n">compression</span><span class="o">=</span><span class="s2">&quot;zstd&quot;</span><span class="p">,</span> <span class="n">compression_level</span><span class="o">=</span><span class="mi">3</span><span class="p">)</span>
+</span></pre></div>
+</div>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="core_lens.export.formats.json">
+<span class="sig-prename descclassname"><span class="pre">core_lens.export.formats.</span></span><span class="sig-name descname"><span class="pre">json</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">result</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="../../base/result/index.html#core_lens.base.result.Result" title="core_lens.base.result.Result"><span class="pre">core_lens.base.result.Result</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">pathlib.Path</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Any</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#core_lens.export.formats.json" title="Link to this definition">¶</a></dt>
+<dd><p>Export the result data to a standard JSON file.</p>
+<p>This function uses Polars to write the underlying data frame.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>result</strong> (<a class="reference internal" href="../../base/result/index.html#core_lens.base.result.Result" title="core_lens.base.result.Result"><em>Result</em></a>) – The Result object to export.</p></li>
+<li><p><strong>path</strong> (<em>str</em><em> | </em><em>pathlib.Path</em>) – Destination path for the JSON file.</p></li>
+<li><p><strong>**kwargs</strong> (<em>Any</em>) – Additional options to pass to Polars <cite>write_json</cite>.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>TypeError</strong> – If the Result object has geometry.</p>
+</dd>
+</dl>
+<p class="rubric">Example</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span data-line="1"><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">core_lens.export</span><span class="w"> </span><span class="kn">import</span> <span class="n">json</span>
+</span><span data-line="2"><span class="gp">&gt;&gt;&gt; </span><span class="n">json</span><span class="p">(</span><span class="n">result</span><span class="p">,</span> <span class="s2">&quot;output.json&quot;</span><span class="p">,</span> <span class="n">pretty</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</span></pre></div>
+</div>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="core_lens.export.formats.csv">
+<span class="sig-prename descclassname"><span class="pre">core_lens.export.formats.</span></span><span class="sig-name descname"><span class="pre">csv</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">result</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="../../base/result/index.html#core_lens.base.result.Result" title="core_lens.base.result.Result"><span class="pre">core_lens.base.result.Result</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">pathlib.Path</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Any</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#core_lens.export.formats.csv" title="Link to this definition">¶</a></dt>
+<dd><p>Export the result data to a standard CSV file.</p>
+<p>This function uses Polars to write the underlying data frame.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>result</strong> (<a class="reference internal" href="../../base/result/index.html#core_lens.base.result.Result" title="core_lens.base.result.Result"><em>Result</em></a>) – The Result object to export.</p></li>
+<li><p><strong>path</strong> (<em>str</em><em> | </em><em>pathlib.Path</em>) – Destination path for the CSV file.</p></li>
+<li><p><strong>**kwargs</strong> (<em>Any</em>) – Additional options to pass to Polars <cite>write_csv</cite>.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>TypeError</strong> – If the Result object has geometry.</p>
+</dd>
+</dl>
+<p class="rubric">Example</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span data-line="1"><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">core_lens.export</span><span class="w"> </span><span class="kn">import</span> <span class="n">csv</span>
+</span><span data-line="2"><span class="gp">&gt;&gt;&gt; </span><span class="n">csv</span><span class="p">(</span><span class="n">result</span><span class="p">,</span> <span class="s2">&quot;output.csv&quot;</span><span class="p">,</span> <span class="n">separator</span><span class="o">=</span><span class="s2">&quot;,&quot;</span><span class="p">)</span>
+</span></pre></div>
+</div>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="core_lens.export.formats.geoparquet">
+<span class="sig-prename descclassname"><span class="pre">core_lens.export.formats.</span></span><span class="sig-name descname"><span class="pre">geoparquet</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">result</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="../../base/result/index.html#core_lens.base.result.Result" title="core_lens.base.result.Result"><span class="pre">core_lens.base.result.Result</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">pathlib.Path</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Any</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#core_lens.export.formats.geoparquet" title="Link to this definition">¶</a></dt>
+<dd><p>Export the result data to a GeoParquet file.</p>
+<p>This function uses DuckDB to write the data frame with spatial extensions.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>result</strong> (<a class="reference internal" href="../../base/result/index.html#core_lens.base.result.Result" title="core_lens.base.result.Result"><em>Result</em></a>) – The Result object to export.</p></li>
+<li><p><strong>path</strong> (<em>str</em><em> | </em><em>pathlib.Path</em>) – Destination path for the GeoParquet file.</p></li>
+<li><p><strong>**kwargs</strong> (<em>Any</em>) – Additional options to pass to DuckDB’s COPY statement.</p></li>
+</ul>
+</dd>
+</dl>
+<p class="rubric">Example</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span data-line="1"><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">core_lens.export</span><span class="w"> </span><span class="kn">import</span> <span class="n">geoparquet</span>
+</span><span data-line="2"><span class="gp">&gt;&gt;&gt; </span><span class="n">geoparquet</span><span class="p">(</span>
+</span><span data-line="3"><span class="gp">... </span>    <span class="n">result</span><span class="o">.</span><span class="n">with_geometry</span><span class="p">(),</span>
+</span><span data-line="4"><span class="gp">... </span>    <span class="s2">&quot;output.geoparquet&quot;</span><span class="p">,</span>
+</span><span data-line="5"><span class="gp">... </span>    <span class="n">compression</span><span class="o">=</span><span class="s2">&quot;ZSTD&quot;</span><span class="p">,</span>
+</span><span data-line="6"><span class="gp">... </span>    <span class="n">partition_by</span><span class="o">=</span><span class="s2">&quot;year&quot;</span>
+</span><span data-line="7"><span class="gp">... </span><span class="p">)</span>
+</span></pre></div>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>TypeError</strong> – If the Result object does not have geometry.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="core_lens.export.formats.geojson">
+<span class="sig-prename descclassname"><span class="pre">core_lens.export.formats.</span></span><span class="sig-name descname"><span class="pre">geojson</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">result</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="../../base/result/index.html#core_lens.base.result.Result" title="core_lens.base.result.Result"><span class="pre">core_lens.base.result.Result</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">pathlib.Path</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Any</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#core_lens.export.formats.geojson" title="Link to this definition">¶</a></dt>
+<dd><p>Export the result data to a GeoJSON file.</p>
+<p>This function uses DuckDB to write the data frame with spatial extensions.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>result</strong> (<a class="reference internal" href="../../base/result/index.html#core_lens.base.result.Result" title="core_lens.base.result.Result"><em>Result</em></a>) – The Result object to export.</p></li>
+<li><p><strong>path</strong> (<em>str</em><em> | </em><em>pathlib.Path</em>) – Destination path for the GeoJSON file.</p></li>
+<li><p><strong>**kwargs</strong> (<em>Any</em>) – Additional options to pass to DuckDB’s COPY statement.</p></li>
+</ul>
+</dd>
+</dl>
+<p class="rubric">Example</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span data-line="1"><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">core_lens.export</span><span class="w"> </span><span class="kn">import</span> <span class="n">geojson</span>
+</span><span data-line="2"><span class="gp">&gt;&gt;&gt; </span><span class="n">geojson</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">with_geometry</span><span class="p">(),</span> <span class="s2">&quot;output.json&quot;</span><span class="p">)</span>
+</span></pre></div>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>TypeError</strong> – If the Result object does not have geometry.</p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+</section>
+
+        </article><button class="back-to-top" type="button">
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+    <path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8v12z"></path>
+  </svg>
+  <span>Back to top</span>
+</button><div class="navigation flex print:hidden"><div class="navigation-prev">
+    <a href="../index.html">
+      <i class="i-lucide chevron-left"></i>
+      <div class="page-info">
+        <span>Previous</span><div class="title">core_lens.export</div></div>
+    </a>
+  </div><div class="navigation-next">
+    <a href="../../schema/index.html">
+      <div class="page-info">
+        <span>Next</span>
+        <div class="title">core_lens.schema</div>
+      </div>
+      <i class="i-lucide chevron-right"></i>
+    </a>
+  </div></div></div>
+    </div>
+  </main>
+</div>
+<footer class="sy-foot">
+  <div class="sy-foot-inner sy-container mx-auto">
+    <div class="sy-foot-reserved md:flex justify-between items-center">
+      <div class="sy-foot-copyright"><p>2026, Apoorva Kashyap</p>
+  
+  <p>
+    Made with
+    
+    <a href="https://www.sphinx-doc.org/">Sphinx</a> and
+    
+    <a href="https://shibuya.lepture.com">Shibuya theme</a>.
+  </p>
+</div>
+      <div class="sy-foot-socials"></div>
+    </div>
+  </div>
+</footer>
+      <script src="../../../../_static/documentation_options.js?v=5929fcd5"></script>
+      <script src="../../../../_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="../../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
+      <script src="../../../../_static/clipboard.min.js?v=a7894cd8"></script>
+      <script src="../../../../_static/copybutton.js?v=f281be69"></script>
+      <script src="../../../../_static/shibuya.js?v=50760d75"></script></body>
+</html>

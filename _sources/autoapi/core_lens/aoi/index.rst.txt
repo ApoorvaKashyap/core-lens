@@ -1,0 +1,215 @@
+core_lens.aoi
+=============
+
+.. py:module:: core_lens.aoi
+
+.. autoapi-nested-parse::
+
+   AoI (Area of Interest) — primary entry point for core_lens.
+
+
+
+Classes
+-------
+
+.. autoapisummary::
+
+   core_lens.aoi.SeasonConfig
+   core_lens.aoi.AoI
+
+
+Module Contents
+---------------
+
+.. py:class:: SeasonConfig
+
+   Date-range definitions for the three Indian crop seasons.
+
+   Each season is a ``(MM-DD, MM-DD)`` inclusive range.  Seasons that cross
+   the calendar year-end (e.g. rabi: Nov → Mar) are handled by comparing
+   the month-day portion of a date against each range, rolling over where
+   necessary.
+
+   The library ships with agronomic defaults for the Indo-Gangetic plain.
+   Override at AoI construction time to match a different agro-climatic zone::
+
+       aoi = AoI("data/", district="Dharwad", seasons=SeasonConfig(
+           kharif=("06-01", "10-15"),
+           rabi=("10-16", "02-28"),
+           zaid=("03-01", "05-31"),
+       ))
+
+   :ivar kharif: Kharif (monsoon) season range as ``(start_MM-DD, end_MM-DD)``.
+   :ivar rabi: Rabi (winter) season range.
+   :ivar zaid: Zaid (summer) season range.
+
+
+
+   .. py:attribute:: kharif
+      :type:  tuple[str, str]
+      :value: ('07-01', '10-31')
+
+
+
+   .. py:attribute:: rabi
+      :type:  tuple[str, str]
+      :value: ('11-01', '03-31')
+
+
+
+   .. py:attribute:: zaid
+      :type:  tuple[str, str]
+      :value: ('04-01', '06-30')
+
+
+
+   .. py:method:: __post_init__() -> None
+
+
+   .. py:method:: season_for(d: datetime.date) -> str
+
+      Return the season name for a given date.
+
+      :param d: The date to classify.
+      :type d: date
+
+      :returns: ``"kharif"``, ``"rabi"``, or ``"zaid"``.
+      :rtype: str
+
+
+
+.. py:class:: AoI(data_root: str, *, bbox: tuple[float, float, float, float] | None = None, geometry: shapely.Geometry | None = None, seasons: SeasonConfig | None = None, **entity_kwargs: str | list[str])
+
+   Area of Interest — the primary entry point for querying geospatial data.
+
+   An ``AoI`` is two things simultaneously:
+
+   1. **A geometry** — the resolved boundary of the named administrative unit
+      (or a raw bbox / Shapely polygon), stored as :attr:`geometry`.
+   2. **A collection of scoped entities** — every registered entity
+      pre-filtered to instances that fall within :attr:`geometry`.  Accessed
+      as attributes: ``aoi.mws``, ``aoi.village``, ``aoi.forest``, etc.
+
+   ``AoI`` holds no data itself.  Entity attributes are lazy
+   :class:`~core_lens.base.view.View` objects; no Parquet I/O occurs until a
+   materialisation property (``.static``, ``.annual``, ``.fortnightly``) is
+   accessed on a View.
+
+   **Registration** must happen before any ``AoI`` is constructed::
+
+       from core_lens import AoI, MWSEntity, TehsilEntity
+
+       AoI.register(MWSEntity)
+       AoI.register(TehsilEntity)
+
+   **Initialisation** — exactly one boundary argument is required::
+
+       aoi = AoI("data/", tehsil="Pangi", district="Chamba", state="Himachal Pradesh")
+       aoi = AoI("data/", bbox=(minx, miny, maxx, maxy))
+       aoi = AoI("data/", geometry=some_shapely_polygon)
+       aoi = AoI("data/", village="Shiroor")
+       aoi = AoI("data/", mws_id="13_551")
+
+   **Entity access**::
+
+       aoi.mws        # View — all MWS within the AoI boundary
+       aoi.tehsil     # View — all tehsils within the AoI boundary
+       aoi.forest     # View — plugin entity (if registered)
+
+   :ivar data_root: Resolved path to the data directory.
+   :ivar geometry: Shapely polygon representing the AoI boundary.
+   :ivar seasons: :class:`SeasonConfig` in effect for this AoI.
+
+
+
+   .. py:attribute:: data_root
+
+
+   .. py:attribute:: seasons
+      :type:  SeasonConfig
+
+
+   .. py:property:: current_season
+      :type: str
+
+
+      The season name for today's date under the AoI's SeasonConfig.
+
+      :returns: ``"kharif"``, ``"rabi"``, or ``"zaid"``.
+      :rtype: str
+
+
+   .. py:property:: current_year
+      :type: int
+
+
+      The current calendar year.
+
+      :returns: Current year as an integer.
+      :rtype: int
+
+
+   .. py:method:: plot(overlay: Result | None = None) -> Any
+
+      Render an interactive Lonboard map of the AoI and its entity layers.
+
+      :param overlay: An optional :class:`~core_lens.base.result.Result` to
+                      overlay on the map.
+      :type overlay: Result | None, optional
+
+      :returns: A Lonboard Map object.
+      :rtype: Any
+
+
+
+   .. py:method:: __getattr__(name: str) -> core_lens.base.view.View
+
+
+   .. py:method:: register(entity_cls: type[core_lens.base.entity.BaseEntity]) -> None
+      :classmethod:
+
+
+      Register an entity class so it is available on all future AoI instances.
+
+      The entity name is derived from the class name by stripping a trailing
+      ``"Entity"`` suffix and lower-casing the result
+      (``MWSEntity`` → ``"mws"``, ``ForestEntity`` → ``"forest"``).
+
+      For entities with **absolute** paths, validation (file existence, key cols,
+      geometry col) runs immediately at registration time.
+      For entities with **relative** paths, validation is deferred until an
+      :class:`AoI` is instantiated (when ``data_root`` is known).
+
+      :param entity_cls: A concrete subclass of
+                         :class:`~core_lens.base.entity.BaseEntity`.
+      :type entity_cls: type[BaseEntity]
+
+      :raises ~core_lens.base.EntityValidationError: If any validation check
+          fails (absolute-path entities only at register time).
+
+
+
+   .. py:method:: deregister(entity_cls: type[core_lens.base.entity.BaseEntity]) -> None
+      :classmethod:
+
+
+      Remove a previously registered entity.
+
+      Primarily useful in tests where a clean registry is needed between runs.
+
+      :param entity_cls: The entity class to remove.
+      :type entity_cls: type[BaseEntity]
+
+
+
+   .. py:method:: registered_entities() -> list[str]
+      :classmethod:
+
+
+      Return the names of all currently registered entities.
+
+      :returns: A sorted list of entity name strings.
+      :rtype: list[str]
+
+
+

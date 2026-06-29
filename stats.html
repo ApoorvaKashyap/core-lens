@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="en" data-accent-color="violet" data-content_root="./">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Statistical Analysis - CoreLens documentation</title><link rel="index" title="Index" href="genindex.html" /><link rel="search" title="Search" href="search.html" /><link rel="next" title="Visualisation and Plots" href="plots.html" /><link rel="prev" title="Example Queries" href="queries.html" /><script>
+    function setColorMode(t){let e=document.documentElement;e.setAttribute("data-color-mode",t);let a=window.matchMedia&&window.matchMedia("(prefers-color-scheme: dark)").matches,s=t;"auto"===t&&(s=a?"dark":"light"),"light"===s?(e.classList.remove("dark"),e.classList.add("light")):(e.classList.remove("light"),e.classList.add("dark"))}
+    setColorMode(localStorage._theme||"auto");
+  </script><link rel="stylesheet" type="text/css" href="_static/pygments.css?v=e1a1ceaf" />
+    <link rel="stylesheet" type="text/css" href="_static/shibuya.css?v=9454f7d5" />
+    <link rel="stylesheet" type="text/css" href="_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="_static/graphviz.css?v=4ae1632d" />
+    <link media="print" rel="stylesheet" type="text/css" href="_static/print.css?v=20ff2c19" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --sy-f-text: "Inter", var(--sy-f-sys), var(--sy-f-cjk), sans-serif;
+  --sy-f-heading: "Inter", var(--sy-f-sys), var(--sy-f-cjk), sans-serif;
+}
+</style>
+    
+  <meta property="og:type" content="website"/><meta property="og:title" content="Statistical Analysis"/>
+    <meta name="twitter:card" content="summary"/>
+  </head>
+<body><div class="sy-head">
+  <div class="sy-head-blur"></div>
+  <div class="sy-head-inner sy-container mx-auto">
+    <a class="sy-head-brand" href="index.html">
+      
+      
+      <strong>CoreLens</strong>
+    </a>
+    <div class="sy-head-nav" id="head-nav">
+      <nav class="sy-head-links"></nav>
+      <div class="sy-head-extra flex items-center print:hidden"><form class="searchbox flex items-center" action="search.html" method="get">
+  <input type="text" name="q" placeholder="Search" />
+  <kbd>/</kbd>
+</form><div class="sy-head-socials"></div></div>
+    </div>
+    <div class="sy-head-actions flex items-center shrink-0 print:hidden"><button class="js-theme theme-switch flex items-center"
+data-aria-auto="Switch to light color mode"
+data-aria-light="Switch to dark color mode"
+data-aria-dark="Switch to auto color mode">
+<i class="i-lucide theme-icon"></i>
+</button><button class="md:hidden flex items-center js-menu" aria-label="Menu" type="button" aria-controls="head-nav" aria-expanded="false">
+        <div class="hamburger">
+          <span class="hamburger_1"></span>
+          <span class="hamburger_2"></span>
+          <span class="hamburger_3"></span>
+        </div>
+      </button>
+    </div>
+  </div>
+</div>
+<div class="sy-page sy-container flex mx-auto">
+  <aside id="lside" class="sy-lside md:w-72 md:shrink-0 print:hidden">
+    <div class="sy-lside-inner md:sticky">
+      <div class="sy-scrollbar p-6">
+        <div class="globaltoc" data-expand-depth="0"><p class="caption" role="heading" aria-level="3"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="intro.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="quickstart.html">Quickstart</a></li>
+<li class="toctree-l1"><a class="reference internal" href="concepts.html">Core Concepts</a></li>
+<li class="toctree-l1"><a class="reference internal" href="queries.html">Example Queries</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Statistical Analysis</a></li>
+<li class="toctree-l1"><a class="reference internal" href="plots.html">Visualisation and Plots</a></li>
+<li class="toctree-l1"><a class="reference internal" href="export.html">Data Export</a></li>
+<li class="toctree-l1"><a class="reference internal" href="plugins.html">Plugin System</a></li>
+<li class="toctree-l1"><a class="reference internal" href="logging.html">Logging</a></li>
+<li class="toctree-l1"><a class="reference internal" href="autoapi/index.html">API Reference</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="autoapi/core_lens/index.html">core_lens</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="autoapi/core_lens/aoi/index.html">core_lens.aoi</a></li>
+<li class="toctree-l3"><a class="reference internal" href="autoapi/core_lens/base/index.html">core_lens.base</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="autoapi/core_lens/base/entity/index.html">core_lens.base.entity</a></li>
+<li class="toctree-l4"><a class="reference internal" href="autoapi/core_lens/base/namespaces/index.html">core_lens.base.namespaces</a></li>
+<li class="toctree-l4"><a class="reference internal" href="autoapi/core_lens/base/result/index.html">core_lens.base.result</a></li>
+<li class="toctree-l4"><a class="reference internal" href="autoapi/core_lens/base/view/index.html">core_lens.base.view</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="autoapi/core_lens/entities/index.html">core_lens.entities</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="autoapi/core_lens/entities/mws/index.html">core_lens.entities.mws</a></li>
+<li class="toctree-l4"><a class="reference internal" href="autoapi/core_lens/entities/tehsil/index.html">core_lens.entities.tehsil</a></li>
+<li class="toctree-l4"><a class="reference internal" href="autoapi/core_lens/entities/waterbody/index.html">core_lens.entities.waterbody</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="autoapi/core_lens/export/index.html">core_lens.export</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="autoapi/core_lens/export/formats/index.html">core_lens.export.formats</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="autoapi/core_lens/schema/index.html">core_lens.schema</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="autoapi/core_lens/schema/detection/index.html">core_lens.schema.detection</a></li>
+<li class="toctree-l4"><a class="reference internal" href="autoapi/core_lens/schema/profile/index.html">core_lens.schema.profile</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="autoapi/core_lens/utils/index.html">core_lens.utils</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="autoapi/core_lens/utils/polars_utils/index.html">core_lens.utils.polars_utils</a></li>
+<li class="toctree-l4"><a class="reference internal" href="autoapi/core_lens/utils/season/index.html">core_lens.utils.season</a></li>
+<li class="toctree-l4"><a class="reference internal" href="autoapi/core_lens/utils/spatial/index.html">core_lens.utils.spatial</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+        </div>
+      </div>
+    </div>
+  </aside>
+  <div class="lside-overlay js-menu" role="button" aria-label="Close left sidebar" aria-controls="lside" aria-expanded="false"></div>
+  <aside id="rside" class="sy-rside pb-3 w-64 shrink-0 order-last">
+    <button class="rside-close js-menu xl:hidden" aria-label="Close Table of Contents" type="button" aria-controls="rside" aria-expanded="false">
+      <i class="i-lucide close"></i>
+    </button>
+    <div class="sy-scrollbar sy-rside-inner px-6 xl:top-16 xl:sticky xl:pl-0 pt-6 pb-4"><div class="localtoc"><h3>On this page</h3><ul>
+<li><a class="reference internal" href="#descriptive-statistics">Descriptive Statistics</a></li>
+<li><a class="reference internal" href="#correlation">Correlation</a></li>
+<li><a class="reference internal" href="#hypothesis-testing">Hypothesis Testing</a></li>
+<li><a class="reference internal" href="#change-detection">Change Detection</a></li>
+<li><a class="reference internal" href="#anomaly-detection">Anomaly Detection</a></li>
+<li><a class="reference internal" href="#similarity-search">Similarity Search</a></li>
+</ul>
+</div><div id="ethical-ad-placement" data-ea-publisher="readthedocs"></div></div>
+  </aside>
+  <div class="rside-overlay js-menu" role="button" aria-label="Close Table of Contents" aria-controls="rside" aria-expanded="false"></div>
+  <main class="sy-main w-full max-sm:max-w-full print:pt-6">
+<div class="sy-breadcrumbs" role="navigation">
+  <div class="sy-breadcrumbs-inner flex items-center">
+    <div class="md:hidden mr-3">
+      <button class="js-menu" aria-label="Menu" type="button" aria-controls="lside" aria-expanded="false">
+        <i class="i-lucide menu"></i>
+      </button>
+    </div>
+    <ol class="flex-1" itemscope itemtype="https://schema.org/BreadcrumbList"><li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+        <a itemprop="item" href="index.html"><span itemprop="name">CoreLens</span></a>
+        <span>/</span>
+        <meta itemprop="position" content="1" />
+      </li><li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+        <strong itemprop="name">Statistical Analysis</strong>
+        <meta itemprop="position" content="2" />
+      </li></ol>
+    <div class="xl:hidden ml-1">
+      <button class="js-menu" aria-label="Show table of contents" type="button" aria-controls="rside"
+        aria-expanded="false">
+        <i class="i-lucide outdent"></i>
+      </button>
+    </div>
+  </div>
+</div><div class="flex flex-col break-words justify-between">
+      <div class="relative min-w-0 max-w-6xl px-6 pb-6 pt-8 xl:px-12">
+  <article class="yue" role="main">
+          <section id="statistical-analysis">
+<h1>Statistical Analysis<a class="headerlink" href="#statistical-analysis" title="Link to this heading">¶</a></h1>
+<p>The <code class="docutils literal notranslate"><span class="pre">result.stats</span></code> namespace provides powerful analytical tools for geospatial and timeseries data. All statistical methods return a new <code class="docutils literal notranslate"><span class="pre">Result</span></code> object with computed <code class="docutils literal notranslate"><span class="pre">data</span></code> and populated <code class="docutils literal notranslate"><span class="pre">metadata</span></code>.</p>
+<section id="descriptive-statistics">
+<h2>Descriptive Statistics<a class="headerlink" href="#descriptive-statistics" title="Link to this heading">¶</a></h2>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span data-line="1"><span class="c1"># Describe specific columns</span>
+</span><span data-line="2"><span class="n">desc</span> <span class="o">=</span> <span class="n">res</span><span class="o">.</span><span class="n">stats</span><span class="o">.</span><span class="n">describe</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;ndvi&quot;</span><span class="p">,</span> <span class="s2">&quot;rainfall&quot;</span><span class="p">])</span>
+</span><span data-line="3">
+</span><span data-line="4"><span class="c1"># Breakdown per entity</span>
+</span><span data-line="5"><span class="n">desc_entity</span> <span class="o">=</span> <span class="n">res</span><span class="o">.</span><span class="n">stats</span><span class="o">.</span><span class="n">describe</span><span class="p">(</span><span class="n">by</span><span class="o">=</span><span class="s2">&quot;entity&quot;</span><span class="p">)</span>
+</span></pre></div>
+</div>
+</section>
+<section id="correlation">
+<h2>Correlation<a class="headerlink" href="#correlation" title="Link to this heading">¶</a></h2>
+<p>Find temporal or spatial correlations between variables:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span data-line="1"><span class="kn">from</span><span class="w"> </span><span class="nn">core_lens.base.namespaces.stats</span><span class="w"> </span><span class="kn">import</span> <span class="n">CorrelateMethod</span>
+</span><span data-line="2">
+</span><span data-line="3"><span class="n">corr</span> <span class="o">=</span> <span class="n">res</span><span class="o">.</span><span class="n">stats</span><span class="o">.</span><span class="n">correlate</span><span class="p">(</span>
+</span><span data-line="4">    <span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;ndvi&quot;</span><span class="p">,</span> <span class="s2">&quot;rainfall&quot;</span><span class="p">,</span> <span class="s2">&quot;temperature&quot;</span><span class="p">],</span>
+</span><span data-line="5">    <span class="n">method</span><span class="o">=</span><span class="n">CorrelateMethod</span><span class="o">.</span><span class="n">PEARSON</span><span class="p">,</span> <span class="c1"># or SPEARMAN, KENDALL</span>
+</span><span data-line="6">    <span class="n">across</span><span class="o">=</span><span class="s2">&quot;entity&quot;</span>      <span class="c1"># correlate across entities or time</span>
+</span><span data-line="7"><span class="p">)</span>
+</span></pre></div>
+</div>
+</section>
+<section id="hypothesis-testing">
+<h2>Hypothesis Testing<a class="headerlink" href="#hypothesis-testing" title="Link to this heading">¶</a></h2>
+<p>Test for significant differences between groups or periods:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span data-line="1"><span class="kn">from</span><span class="w"> </span><span class="nn">core_lens.base.namespaces.stats</span><span class="w"> </span><span class="kn">import</span> <span class="n">TestMethod</span>
+</span><span data-line="2">
+</span><span data-line="3"><span class="c1"># Group-based testing</span>
+</span><span data-line="4"><span class="n">test_res</span> <span class="o">=</span> <span class="n">res</span><span class="o">.</span><span class="n">stats</span><span class="o">.</span><span class="n">test</span><span class="p">(</span>
+</span><span data-line="5">    <span class="n">column</span><span class="o">=</span><span class="s2">&quot;cropping_intensity&quot;</span><span class="p">,</span>
+</span><span data-line="6">    <span class="n">groups</span><span class="o">=</span><span class="s2">&quot;temperature_zone&quot;</span><span class="p">,</span>
+</span><span data-line="7">    <span class="n">method</span><span class="o">=</span><span class="n">TestMethod</span><span class="o">.</span><span class="n">MANN_WHITNEY</span>
+</span><span data-line="8"><span class="p">)</span>
+</span><span data-line="9">
+</span><span data-line="10"><span class="c1"># Period-based testing</span>
+</span><span data-line="11"><span class="n">test_period</span> <span class="o">=</span> <span class="n">res</span><span class="o">.</span><span class="n">stats</span><span class="o">.</span><span class="n">test</span><span class="p">(</span>
+</span><span data-line="12">    <span class="n">column</span><span class="o">=</span><span class="s2">&quot;ndvi&quot;</span><span class="p">,</span>
+</span><span data-line="13">    <span class="n">periods</span><span class="o">=</span><span class="p">[(</span><span class="mi">2010</span><span class="p">,</span> <span class="mi">2015</span><span class="p">),</span> <span class="p">(</span><span class="mi">2016</span><span class="p">,</span> <span class="mi">2023</span><span class="p">)],</span>
+</span><span data-line="14">    <span class="n">method</span><span class="o">=</span><span class="n">TestMethod</span><span class="o">.</span><span class="n">T_TEST</span>
+</span><span data-line="15"><span class="p">)</span>
+</span></pre></div>
+</div>
+</section>
+<section id="change-detection">
+<h2>Change Detection<a class="headerlink" href="#change-detection" title="Link to this heading">¶</a></h2>
+<p>Analyse absolute, percentage, or trend changes over time:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span data-line="1"><span class="kn">from</span><span class="w"> </span><span class="nn">core_lens.base.namespaces.stats</span><span class="w"> </span><span class="kn">import</span> <span class="n">ChangeMethod</span>
+</span><span data-line="2">
+</span><span data-line="3"><span class="c1"># Trend over time</span>
+</span><span data-line="4"><span class="n">trend</span> <span class="o">=</span> <span class="n">res</span><span class="o">.</span><span class="n">stats</span><span class="o">.</span><span class="n">change</span><span class="p">(</span>
+</span><span data-line="5">    <span class="n">column</span><span class="o">=</span><span class="s2">&quot;ndvi&quot;</span><span class="p">,</span>
+</span><span data-line="6">    <span class="n">from_period</span><span class="o">=</span><span class="mi">2010</span><span class="p">,</span>
+</span><span data-line="7">    <span class="n">to_period</span><span class="o">=</span><span class="mi">2023</span><span class="p">,</span>
+</span><span data-line="8">    <span class="n">method</span><span class="o">=</span><span class="n">ChangeMethod</span><span class="o">.</span><span class="n">TREND</span>
+</span><span data-line="9"><span class="p">)</span>
+</span><span data-line="10">
+</span><span data-line="11"><span class="c1"># Absolute or percentage change</span>
+</span><span data-line="12"><span class="n">pct_change</span> <span class="o">=</span> <span class="n">res</span><span class="o">.</span><span class="n">stats</span><span class="o">.</span><span class="n">change</span><span class="p">(</span>
+</span><span data-line="13">    <span class="n">column</span><span class="o">=</span><span class="s2">&quot;tree_cover&quot;</span><span class="p">,</span>
+</span><span data-line="14">    <span class="n">from_period</span><span class="o">=</span><span class="mi">2018</span><span class="p">,</span>
+</span><span data-line="15">    <span class="n">to_period</span><span class="o">=</span><span class="mi">2023</span><span class="p">,</span>
+</span><span data-line="16">    <span class="n">method</span><span class="o">=</span><span class="n">ChangeMethod</span><span class="o">.</span><span class="n">PERCENTAGE</span>
+</span><span data-line="17"><span class="p">)</span>
+</span></pre></div>
+</div>
+</section>
+<section id="anomaly-detection">
+<h2>Anomaly Detection<a class="headerlink" href="#anomaly-detection" title="Link to this heading">¶</a></h2>
+<p>Identify anomalies against a historical baseline or cross-sectionally:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span data-line="1"><span class="kn">from</span><span class="w"> </span><span class="nn">core_lens.base.namespaces.stats</span><span class="w"> </span><span class="kn">import</span> <span class="n">AnomalyTsMethod</span><span class="p">,</span> <span class="n">AnomalyCrossMethod</span>
+</span><span data-line="2">
+</span><span data-line="3"><span class="c1"># Timeseries anomaly against its own history</span>
+</span><span data-line="4"><span class="n">ts_anomalies</span> <span class="o">=</span> <span class="n">res</span><span class="o">.</span><span class="n">stats</span><span class="o">.</span><span class="n">anomaly</span><span class="p">(</span>
+</span><span data-line="5">    <span class="n">column</span><span class="o">=</span><span class="s2">&quot;ndvi&quot;</span><span class="p">,</span>
+</span><span data-line="6">    <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;timeseries&quot;</span><span class="p">,</span>
+</span><span data-line="7">    <span class="n">method</span><span class="o">=</span><span class="n">AnomalyTsMethod</span><span class="o">.</span><span class="n">STL</span><span class="p">,</span>
+</span><span data-line="8">    <span class="n">baseline</span><span class="o">=</span><span class="p">(</span><span class="mi">2010</span><span class="p">,</span> <span class="mi">2018</span><span class="p">)</span>
+</span><span data-line="9"><span class="p">)</span>
+</span><span data-line="10">
+</span><span data-line="11"><span class="c1"># Cross-sectional anomaly against other entities</span>
+</span><span data-line="12"><span class="n">cross_anomalies</span> <span class="o">=</span> <span class="n">res</span><span class="o">.</span><span class="n">stats</span><span class="o">.</span><span class="n">anomaly</span><span class="p">(</span>
+</span><span data-line="13">    <span class="n">column</span><span class="o">=</span><span class="s2">&quot;ndvi&quot;</span><span class="p">,</span>
+</span><span data-line="14">    <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;cross_sectional&quot;</span><span class="p">,</span>
+</span><span data-line="15">    <span class="n">method</span><span class="o">=</span><span class="n">AnomalyCrossMethod</span><span class="o">.</span><span class="n">ZSCORE</span><span class="p">,</span>
+</span><span data-line="16">    <span class="n">baseline</span><span class="o">=</span><span class="p">(</span><span class="mi">2010</span><span class="p">,</span> <span class="mi">2020</span><span class="p">)</span>
+</span><span data-line="17"><span class="p">)</span>
+</span></pre></div>
+</div>
+</section>
+<section id="similarity-search">
+<h2>Similarity Search<a class="headerlink" href="#similarity-search" title="Link to this heading">¶</a></h2>
+<p>Find entities similar to a target entity across multiple dimensions:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span data-line="1"><span class="kn">from</span><span class="w"> </span><span class="nn">core_lens.base.namespaces.stats</span><span class="w"> </span><span class="kn">import</span> <span class="n">SimilarityMethod</span>
+</span><span data-line="2">
+</span><span data-line="3"><span class="n">similar</span> <span class="o">=</span> <span class="n">res</span><span class="o">.</span><span class="n">stats</span><span class="o">.</span><span class="n">similarity</span><span class="p">(</span>
+</span><span data-line="4">    <span class="n">target</span><span class="o">=</span><span class="s2">&quot;13_551&quot;</span><span class="p">,</span>
+</span><span data-line="5">    <span class="n">columns</span><span class="o">=</span><span class="p">{</span>
+</span><span data-line="6">        <span class="s2">&quot;rainfall&quot;</span><span class="p">:</span> <span class="p">(</span><span class="s2">&quot;annual&quot;</span><span class="p">,</span> <span class="p">{</span><span class="s2">&quot;year&quot;</span><span class="p">:</span> <span class="mi">2018</span><span class="p">}),</span>
+</span><span data-line="7">        <span class="s2">&quot;ndvi&quot;</span><span class="p">:</span> <span class="p">(</span><span class="s2">&quot;fortnightly&quot;</span><span class="p">,</span> <span class="p">{</span><span class="s2">&quot;season&quot;</span><span class="p">:</span> <span class="s2">&quot;kharif&quot;</span><span class="p">,</span> <span class="s2">&quot;year&quot;</span><span class="p">:</span> <span class="mi">2020</span><span class="p">})</span>
+</span><span data-line="8">    <span class="p">},</span>
+</span><span data-line="9">    <span class="n">method</span><span class="o">=</span><span class="n">SimilarityMethod</span><span class="o">.</span><span class="n">EUCLIDEAN</span><span class="p">,</span>
+</span><span data-line="10">    <span class="n">top_n</span><span class="o">=</span><span class="mi">10</span>
+</span><span data-line="11"><span class="p">)</span>
+</span></pre></div>
+</div>
+</section>
+</section>
+
+        </article><button class="back-to-top" type="button">
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+    <path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8v12z"></path>
+  </svg>
+  <span>Back to top</span>
+</button><div class="navigation flex print:hidden"><div class="navigation-prev">
+    <a href="queries.html">
+      <i class="i-lucide chevron-left"></i>
+      <div class="page-info">
+        <span>Previous</span><div class="title">Example Queries</div></div>
+    </a>
+  </div><div class="navigation-next">
+    <a href="plots.html">
+      <div class="page-info">
+        <span>Next</span>
+        <div class="title">Visualisation and Plots</div>
+      </div>
+      <i class="i-lucide chevron-right"></i>
+    </a>
+  </div></div></div>
+    </div>
+  </main>
+</div>
+<footer class="sy-foot">
+  <div class="sy-foot-inner sy-container mx-auto">
+    <div class="sy-foot-reserved md:flex justify-between items-center">
+      <div class="sy-foot-copyright"><p>2026, Apoorva Kashyap</p>
+  
+  <p>
+    Made with
+    
+    <a href="https://www.sphinx-doc.org/">Sphinx</a> and
+    
+    <a href="https://shibuya.lepture.com">Shibuya theme</a>.
+  </p>
+</div>
+      <div class="sy-foot-socials"></div>
+    </div>
+  </div>
+</footer>
+      <script src="_static/documentation_options.js?v=5929fcd5"></script>
+      <script src="_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
+      <script src="_static/clipboard.min.js?v=a7894cd8"></script>
+      <script src="_static/copybutton.js?v=f281be69"></script>
+      <script src="_static/shibuya.js?v=50760d75"></script></body>
+</html>

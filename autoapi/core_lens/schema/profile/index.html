@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="en" data-accent-color="violet" data-content_root="../../../../">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"><title>core_lens.schema.profile - CoreLens documentation</title><link rel="index" title="Index" href="../../../../genindex.html" /><link rel="search" title="Search" href="../../../../search.html" /><link rel="next" title="core_lens.utils" href="../../utils/index.html" /><link rel="prev" title="core_lens.schema.detection" href="../detection/index.html" /><script>
+    function setColorMode(t){let e=document.documentElement;e.setAttribute("data-color-mode",t);let a=window.matchMedia&&window.matchMedia("(prefers-color-scheme: dark)").matches,s=t;"auto"===t&&(s=a?"dark":"light"),"light"===s?(e.classList.remove("dark"),e.classList.add("light")):(e.classList.remove("light"),e.classList.add("dark"))}
+    setColorMode(localStorage._theme||"auto");
+  </script><link rel="stylesheet" type="text/css" href="../../../../_static/pygments.css?v=e1a1ceaf" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/shibuya.css?v=9454f7d5" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/graphviz.css?v=4ae1632d" />
+    <link media="print" rel="stylesheet" type="text/css" href="../../../../_static/print.css?v=20ff2c19" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --sy-f-text: "Inter", var(--sy-f-sys), var(--sy-f-cjk), sans-serif;
+  --sy-f-heading: "Inter", var(--sy-f-sys), var(--sy-f-cjk), sans-serif;
+}
+</style>
+    
+  <meta property="og:type" content="website"/><meta property="og:title" content="core_lens.schema.profile"/>
+    <meta name="twitter:card" content="summary"/>
+  </head>
+<body><div class="sy-head">
+  <div class="sy-head-blur"></div>
+  <div class="sy-head-inner sy-container mx-auto">
+    <a class="sy-head-brand" href="../../../../index.html">
+      
+      
+      <strong>CoreLens</strong>
+    </a>
+    <div class="sy-head-nav" id="head-nav">
+      <nav class="sy-head-links"></nav>
+      <div class="sy-head-extra flex items-center print:hidden"><form class="searchbox flex items-center" action="../../../../search.html" method="get">
+  <input type="text" name="q" placeholder="Search" />
+  <kbd>/</kbd>
+</form><div class="sy-head-socials"></div></div>
+    </div>
+    <div class="sy-head-actions flex items-center shrink-0 print:hidden"><button class="js-theme theme-switch flex items-center"
+data-aria-auto="Switch to light color mode"
+data-aria-light="Switch to dark color mode"
+data-aria-dark="Switch to auto color mode">
+<i class="i-lucide theme-icon"></i>
+</button><button class="md:hidden flex items-center js-menu" aria-label="Menu" type="button" aria-controls="head-nav" aria-expanded="false">
+        <div class="hamburger">
+          <span class="hamburger_1"></span>
+          <span class="hamburger_2"></span>
+          <span class="hamburger_3"></span>
+        </div>
+      </button>
+    </div>
+  </div>
+</div>
+<div class="sy-page sy-container flex mx-auto">
+  <aside id="lside" class="sy-lside md:w-72 md:shrink-0 print:hidden">
+    <div class="sy-lside-inner md:sticky">
+      <div class="sy-scrollbar p-6">
+        <div class="globaltoc" data-expand-depth="0"><p class="caption" role="heading" aria-level="3"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../../../../intro.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../quickstart.html">Quickstart</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../concepts.html">Core Concepts</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../queries.html">Example Queries</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../stats.html">Statistical Analysis</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../plots.html">Visualisation and Plots</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../export.html">Data Export</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../plugins.html">Plugin System</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../logging.html">Logging</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="../../../index.html">API Reference</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="../../index.html">core_lens</a><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="../../aoi/index.html">core_lens.aoi</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../base/index.html">core_lens.base</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../../base/entity/index.html">core_lens.base.entity</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../base/namespaces/index.html">core_lens.base.namespaces</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../base/result/index.html">core_lens.base.result</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../base/view/index.html">core_lens.base.view</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../../entities/index.html">core_lens.entities</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../../entities/mws/index.html">core_lens.entities.mws</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../entities/tehsil/index.html">core_lens.entities.tehsil</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../entities/waterbody/index.html">core_lens.entities.waterbody</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../../export/index.html">core_lens.export</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../../export/formats/index.html">core_lens.export.formats</a></li>
+</ul>
+</li>
+<li class="toctree-l3 current"><a class="reference internal" href="../index.html">core_lens.schema</a><ul class="current">
+<li class="toctree-l4"><a class="reference internal" href="../detection/index.html">core_lens.schema.detection</a></li>
+<li class="toctree-l4 current"><a class="current reference internal" href="#">core_lens.schema.profile</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../../utils/index.html">core_lens.utils</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../../utils/polars_utils/index.html">core_lens.utils.polars_utils</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../utils/season/index.html">core_lens.utils.season</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../utils/spatial/index.html">core_lens.utils.spatial</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+        </div>
+      </div>
+    </div>
+  </aside>
+  <div class="lside-overlay js-menu" role="button" aria-label="Close left sidebar" aria-controls="lside" aria-expanded="false"></div>
+  <aside id="rside" class="sy-rside pb-3 w-64 shrink-0 order-last">
+    <button class="rside-close js-menu xl:hidden" aria-label="Close Table of Contents" type="button" aria-controls="rside" aria-expanded="false">
+      <i class="i-lucide close"></i>
+    </button>
+    <div class="sy-scrollbar sy-rside-inner px-6 xl:top-16 xl:sticky xl:pl-0 pt-6 pb-4"><div class="localtoc"><h3>On this page</h3><ul>
+<li><a class="reference internal" href="#classes">Classes</a></li>
+<li><a class="reference internal" href="#module-contents">Module Contents</a><ul>
+<li><a class="reference internal" href="#core_lens.schema.profile.Resolution"><code class="docutils literal notranslate"><span class="pre">Resolution</span></code></a><ul>
+<li><a class="reference internal" href="#core_lens.schema.profile.Resolution.STATIC"><code class="docutils literal notranslate">STATIC</span></code></a></li>
+<li><a class="reference internal" href="#core_lens.schema.profile.Resolution.ANNUAL"><code class="docutils literal notranslate">ANNUAL</span></code></a></li>
+<li><a class="reference internal" href="#core_lens.schema.profile.Resolution.FORTNIGHTLY"><code class="docutils literal notranslate">FORTNIGHTLY</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#core_lens.schema.profile.SchemaProfile"><code class="docutils literal notranslate"><span class="pre">SchemaProfile</span></code></a><ul>
+<li><a class="reference internal" href="#core_lens.schema.profile.SchemaProfile.model_config"><code class="docutils literal notranslate">model_config</span></code></a></li>
+<li><a class="reference internal" href="#core_lens.schema.profile.SchemaProfile.key_cols"><code class="docutils literal notranslate">key_cols</span></code></a></li>
+<li><a class="reference internal" href="#core_lens.schema.profile.SchemaProfile.geometry_col"><code class="docutils literal notranslate">geometry_col</span></code></a></li>
+<li><a class="reference internal" href="#core_lens.schema.profile.SchemaProfile.geometry_type"><code class="docutils literal notranslate">geometry_type</span></code></a></li>
+<li><a class="reference internal" href="#core_lens.schema.profile.SchemaProfile.annual_time_col"><code class="docutils literal notranslate">annual_time_col</span></code></a></li>
+<li><a class="reference internal" href="#core_lens.schema.profile.SchemaProfile.fortnightly_time_col"><code class="docutils literal notranslate">fortnightly_time_col</span></code></a></li>
+<li><a class="reference internal" href="#core_lens.schema.profile.SchemaProfile.bbox_cols"><code class="docutils literal notranslate">bbox_cols</span></code></a></li>
+<li><a class="reference internal" href="#core_lens.schema.profile.SchemaProfile.extra_static_cols"><code class="docutils literal notranslate">extra_static_cols</span></code></a></li>
+<li><a class="reference internal" href="#core_lens.schema.profile.SchemaProfile.extra_annual_cols"><code class="docutils literal notranslate">extra_annual_cols</span></code></a></li>
+<li><a class="reference internal" href="#core_lens.schema.profile.SchemaProfile.extra_fortnightly_cols"><code class="docutils literal notranslate">extra_fortnightly_cols</span></code></a></li>
+<li><a class="reference internal" href="#core_lens.schema.profile.SchemaProfile.from_file"><code class="docutils literal notranslate">from_file()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</div><div id="ethical-ad-placement" data-ea-publisher="readthedocs"></div></div>
+  </aside>
+  <div class="rside-overlay js-menu" role="button" aria-label="Close Table of Contents" aria-controls="rside" aria-expanded="false"></div>
+  <main class="sy-main w-full max-sm:max-w-full print:pt-6">
+<div class="sy-breadcrumbs" role="navigation">
+  <div class="sy-breadcrumbs-inner flex items-center">
+    <div class="md:hidden mr-3">
+      <button class="js-menu" aria-label="Menu" type="button" aria-controls="lside" aria-expanded="false">
+        <i class="i-lucide menu"></i>
+      </button>
+    </div>
+    <ol class="flex-1" itemscope itemtype="https://schema.org/BreadcrumbList"><li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+        <a itemprop="item" href="../../../../index.html"><span itemprop="name">CoreLens</span></a>
+        <span>/</span>
+        <meta itemprop="position" content="1" />
+      </li><li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+        <a itemprop="item" href="../../../index.html"><span itemprop="name">API Reference</span></a>
+        <span>/</span>
+        <meta itemprop="position" content="2" />
+      </li><li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+        <a itemprop="item" href="../../index.html"><span itemprop="name">core_lens</span></a>
+        <span>/</span>
+        <meta itemprop="position" content="3" />
+      </li><li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+        <a itemprop="item" href="../index.html"><span itemprop="name">core_lens.schema</span></a>
+        <span>/</span>
+        <meta itemprop="position" content="4" />
+      </li><li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+        <strong itemprop="name">core_lens.schema.profile</strong>
+        <meta itemprop="position" content="5" />
+      </li></ol>
+    <div class="xl:hidden ml-1">
+      <button class="js-menu" aria-label="Show table of contents" type="button" aria-controls="rside"
+        aria-expanded="false">
+        <i class="i-lucide outdent"></i>
+      </button>
+    </div>
+  </div>
+</div><div class="flex flex-col break-words justify-between">
+      <div class="relative min-w-0 max-w-6xl px-6 pb-6 pt-8 xl:px-12">
+  <article class="yue" role="main">
+          <section id="module-core_lens.schema.profile">
+<span id="core-lens-schema-profile"></span><h1>core_lens.schema.profile<a class="headerlink" href="#module-core_lens.schema.profile" title="Link to this heading">¶</a></h1>
+<p>Pydantic model describing the schema of one entity’s data files.</p>
+<section id="classes">
+<h2>Classes<a class="headerlink" href="#classes" title="Link to this heading">¶</a></h2>
+<div class="table-wrapper autosummary longtable docutils container">
+<table class="autosummary longtable docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#core_lens.schema.profile.Resolution" title="core_lens.schema.profile.Resolution"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Resolution</span></code></a></p></td>
+<td><p>Temporal resolution of a dataset.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#core_lens.schema.profile.SchemaProfile" title="core_lens.schema.profile.SchemaProfile"><code class="xref py py-obj docutils literal notranslate"><span class="pre">SchemaProfile</span></code></a></p></td>
+<td><p>Validated descriptor for the column layout of one entity's Parquet files.</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+<section id="module-contents">
+<h2>Module Contents<a class="headerlink" href="#module-contents" title="Link to this heading">¶</a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="core_lens.schema.profile.Resolution">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">core_lens.schema.profile.</span></span><span class="sig-name descname"><span class="pre">Resolution</span></span><a class="headerlink" href="#core_lens.schema.profile.Resolution" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-obj docutils literal notranslate"><span class="pre">str</span></code>, <code class="xref py py-obj docutils literal notranslate"><span class="pre">enum.Enum</span></code></p>
+<p>Temporal resolution of a dataset.</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="core_lens.schema.profile.Resolution.STATIC">
+<span class="sig-name descname"><span class="pre">STATIC</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'static'</span></span><a class="headerlink" href="#core_lens.schema.profile.Resolution.STATIC" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="core_lens.schema.profile.Resolution.ANNUAL">
+<span class="sig-name descname"><span class="pre">ANNUAL</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'annual'</span></span><a class="headerlink" href="#core_lens.schema.profile.Resolution.ANNUAL" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="core_lens.schema.profile.Resolution.FORTNIGHTLY">
+<span class="sig-name descname"><span class="pre">FORTNIGHTLY</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'fortnightly'</span></span><a class="headerlink" href="#core_lens.schema.profile.Resolution.FORTNIGHTLY" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="core_lens.schema.profile.SchemaProfile">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">core_lens.schema.profile.</span></span><span class="sig-name descname"><span class="pre">SchemaProfile</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">/</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">**data</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Any</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#core_lens.schema.profile.SchemaProfile" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-obj docutils literal notranslate"><span class="pre">pydantic.BaseModel</span></code></p>
+<p>Validated descriptor for the column layout of one entity’s Parquet files.</p>
+<p><code class="docutils literal notranslate"><span class="pre">SchemaProfile</span></code> is a Pydantic model, so all fields are validated at
+construction time.  It is built once per entity — either declared
+explicitly in a concrete <a class="reference internal" href="../../base/entity/index.html#core_lens.base.entity.BaseEntity" title="core_lens.base.entity.BaseEntity"><code class="xref py py-class docutils literal notranslate"><span class="pre">BaseEntity</span></code></a>
+subclass, or produced lazily by the schema detection layer when a path is
+first accessed.</p>
+<p>The model is intentionally narrow: it captures only what the rest of the
+library needs to adapt to schema changes at runtime (key identities, geometry
+encoding, time column names, optional bbox columns).  Columns not listed in
+one of the <code class="docutils literal notranslate"><span class="pre">extra_*</span></code> fields are ignored rather than rejected, so adding
+a new attribute column to a Parquet file is always a non-breaking change.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Variables<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>key_cols</strong> – Column name(s) that form the unique identifier for one entity
+instance.  Must be present in the static file and in every temporal
+file that references the entity.</p></li>
+<li><p><strong>geometry_col</strong> – Name of the geometry column in the static GeoParquet file.</p></li>
+<li><p><strong>geometry_type</strong> – Encoding of the geometry column.  <code class="docutils literal notranslate"><span class="pre">&quot;wkb&quot;</span></code> for WKB-encoded
+bytes (standard GeoParquet), <code class="docutils literal notranslate"><span class="pre">&quot;wkt&quot;</span></code> for WKT strings, <code class="docutils literal notranslate"><span class="pre">&quot;latlon&quot;</span></code>
+for separate latitude/longitude columns (requires <code class="docutils literal notranslate"><span class="pre">bbox_cols</span></code> to be
+set or a specific lat/lon pair to be documented separately).</p></li>
+<li><p><strong>annual_time_col</strong> – Name of the date/year column in the annual Parquet file,
+or <code class="docutils literal notranslate"><span class="pre">None</span></code> if the entity has no annual data.</p></li>
+<li><p><strong>fortnightly_time_col</strong> – Name of the date column in the fortnightly Parquet
+file, or <code class="docutils literal notranslate"><span class="pre">None</span></code> if the entity has no fortnightly data.</p></li>
+<li><p><strong>bbox_cols</strong> – Four-tuple <code class="docutils literal notranslate"><span class="pre">(minx,</span> <span class="pre">miny,</span> <span class="pre">maxx,</span> <span class="pre">maxy)</span></code> of column names
+holding the pre-computed bounding box for each entity instance in the
+static file.  Used to build the in-memory index without a geometry
+decode pass.  <code class="docutils literal notranslate"><span class="pre">None</span></code> if the static file does not carry bbox columns
+(the index will be built by decoding the geometry column instead).</p></li>
+<li><p><strong>extra_static_cols</strong> – Additional attribute columns in the static file that
+the library should surface.  Columns absent from this list are still
+readable via <a class="reference internal" href="../../base/result/index.html#core_lens.base.result.Result.df" title="core_lens.base.result.Result.df"><code class="xref py py-meth docutils literal notranslate"><span class="pre">df()</span></code></a>; this field
+is used for validation and documentation only.</p></li>
+<li><p><strong>extra_annual_cols</strong> – Additional attribute columns in the annual file.</p></li>
+<li><p><strong>extra_fortnightly_cols</strong> – Additional attribute columns in the fortnightly file.</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="core_lens.schema.profile.SchemaProfile.model_config">
+<span class="sig-name descname"><span class="pre">model_config</span></span><a class="headerlink" href="#core_lens.schema.profile.SchemaProfile.model_config" title="Link to this definition">¶</a></dt>
+<dd><p>Configuration for the model, should be a dictionary conforming to [<cite>ConfigDict</cite>][pydantic.config.ConfigDict].</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="core_lens.schema.profile.SchemaProfile.key_cols">
+<span class="sig-name descname"><span class="pre">key_cols</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span><a class="headerlink" href="#core_lens.schema.profile.SchemaProfile.key_cols" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="core_lens.schema.profile.SchemaProfile.geometry_col">
+<span class="sig-name descname"><span class="pre">geometry_col</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">str</span></span><a class="headerlink" href="#core_lens.schema.profile.SchemaProfile.geometry_col" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="core_lens.schema.profile.SchemaProfile.geometry_type">
+<span class="sig-name descname"><span class="pre">geometry_type</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">Literal</span><span class="p"><span class="pre">[</span></span><span class="s"><span class="pre">'wkb'</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'wkt'</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'latlon'</span></span><span class="p"><span class="pre">]</span></span></span><a class="headerlink" href="#core_lens.schema.profile.SchemaProfile.geometry_type" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="core_lens.schema.profile.SchemaProfile.annual_time_col">
+<span class="sig-name descname"><span class="pre">annual_time_col</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><a class="headerlink" href="#core_lens.schema.profile.SchemaProfile.annual_time_col" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="core_lens.schema.profile.SchemaProfile.fortnightly_time_col">
+<span class="sig-name descname"><span class="pre">fortnightly_time_col</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><a class="headerlink" href="#core_lens.schema.profile.SchemaProfile.fortnightly_time_col" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="core_lens.schema.profile.SchemaProfile.bbox_cols">
+<span class="sig-name descname"><span class="pre">bbox_cols</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><a class="headerlink" href="#core_lens.schema.profile.SchemaProfile.bbox_cols" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="core_lens.schema.profile.SchemaProfile.extra_static_cols">
+<span class="sig-name descname"><span class="pre">extra_static_cols</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">[]</span></span><a class="headerlink" href="#core_lens.schema.profile.SchemaProfile.extra_static_cols" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="core_lens.schema.profile.SchemaProfile.extra_annual_cols">
+<span class="sig-name descname"><span class="pre">extra_annual_cols</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">[]</span></span><a class="headerlink" href="#core_lens.schema.profile.SchemaProfile.extra_annual_cols" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="core_lens.schema.profile.SchemaProfile.extra_fortnightly_cols">
+<span class="sig-name descname"><span class="pre">extra_fortnightly_cols</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">[]</span></span><a class="headerlink" href="#core_lens.schema.profile.SchemaProfile.extra_fortnightly_cols" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="core_lens.schema.profile.SchemaProfile.from_file">
+<span class="property"><span class="k"><span class="pre">classmethod</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">from_file</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">pathlib.Path</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#core_lens.schema.profile.SchemaProfile" title="core_lens.schema.profile.SchemaProfile"><span class="pre">SchemaProfile</span></a></span></span><a class="headerlink" href="#core_lens.schema.profile.SchemaProfile.from_file" title="Link to this definition">¶</a></dt>
+<dd><p>Load a schema profile from a JSON file.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>path</strong> (<em>str</em><em> | </em><em>pathlib.Path</em>) – Path to the JSON configuration file.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>A new <a class="reference internal" href="#core_lens.schema.profile.SchemaProfile" title="core_lens.schema.profile.SchemaProfile"><code class="xref py py-class docutils literal notranslate"><span class="pre">SchemaProfile</span></code></a> instance.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference internal" href="#core_lens.schema.profile.SchemaProfile" title="core_lens.schema.profile.SchemaProfile">SchemaProfile</a></p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><ul class="simple">
+<li><p><strong>ValueError</strong> – If the file is not valid JSON.</p></li>
+<li><p><strong>FileNotFoundError</strong> – If the file does not exist.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+</section>
+
+        </article><button class="back-to-top" type="button">
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+    <path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8v12z"></path>
+  </svg>
+  <span>Back to top</span>
+</button><div class="navigation flex print:hidden"><div class="navigation-prev">
+    <a href="../detection/index.html">
+      <i class="i-lucide chevron-left"></i>
+      <div class="page-info">
+        <span>Previous</span><div class="title">core_lens.schema.detection</div></div>
+    </a>
+  </div><div class="navigation-next">
+    <a href="../../utils/index.html">
+      <div class="page-info">
+        <span>Next</span>
+        <div class="title">core_lens.utils</div>
+      </div>
+      <i class="i-lucide chevron-right"></i>
+    </a>
+  </div></div></div>
+    </div>
+  </main>
+</div>
+<footer class="sy-foot">
+  <div class="sy-foot-inner sy-container mx-auto">
+    <div class="sy-foot-reserved md:flex justify-between items-center">
+      <div class="sy-foot-copyright"><p>2026, Apoorva Kashyap</p>
+  
+  <p>
+    Made with
+    
+    <a href="https://www.sphinx-doc.org/">Sphinx</a> and
+    
+    <a href="https://shibuya.lepture.com">Shibuya theme</a>.
+  </p>
+</div>
+      <div class="sy-foot-socials"></div>
+    </div>
+  </div>
+</footer>
+      <script src="../../../../_static/documentation_options.js?v=5929fcd5"></script>
+      <script src="../../../../_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="../../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
+      <script src="../../../../_static/clipboard.min.js?v=a7894cd8"></script>
+      <script src="../../../../_static/copybutton.js?v=f281be69"></script>
+      <script src="../../../../_static/shibuya.js?v=50760d75"></script></body>
+</html>

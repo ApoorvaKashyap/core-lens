@@ -1,0 +1,17 @@
+core_lens.entities
+==================
+
+.. py:module:: core_lens.entities
+
+
+Submodules
+----------
+
+.. toctree::
+   :maxdepth: 1
+
+   /autoapi/core_lens/entities/mws/index
+   /autoapi/core_lens/entities/tehsil/index
+   /autoapi/core_lens/entities/waterbody/index
+
+

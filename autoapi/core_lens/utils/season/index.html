@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="en" data-accent-color="violet" data-content_root="../../../../">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"><title>core_lens.utils.season - CoreLens documentation</title><link rel="index" title="Index" href="../../../../genindex.html" /><link rel="search" title="Search" href="../../../../search.html" /><link rel="next" title="core_lens.utils.spatial" href="../spatial/index.html" /><link rel="prev" title="core_lens.utils.polars_utils" href="../polars_utils/index.html" /><script>
+    function setColorMode(t){let e=document.documentElement;e.setAttribute("data-color-mode",t);let a=window.matchMedia&&window.matchMedia("(prefers-color-scheme: dark)").matches,s=t;"auto"===t&&(s=a?"dark":"light"),"light"===s?(e.classList.remove("dark"),e.classList.add("light")):(e.classList.remove("light"),e.classList.add("dark"))}
+    setColorMode(localStorage._theme||"auto");
+  </script><link rel="stylesheet" type="text/css" href="../../../../_static/pygments.css?v=e1a1ceaf" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/shibuya.css?v=9454f7d5" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/graphviz.css?v=4ae1632d" />
+    <link media="print" rel="stylesheet" type="text/css" href="../../../../_static/print.css?v=20ff2c19" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --sy-f-text: "Inter", var(--sy-f-sys), var(--sy-f-cjk), sans-serif;
+  --sy-f-heading: "Inter", var(--sy-f-sys), var(--sy-f-cjk), sans-serif;
+}
+</style>
+    
+  <meta property="og:type" content="website"/><meta property="og:title" content="core_lens.utils.season"/>
+    <meta name="twitter:card" content="summary"/>
+  </head>
+<body><div class="sy-head">
+  <div class="sy-head-blur"></div>
+  <div class="sy-head-inner sy-container mx-auto">
+    <a class="sy-head-brand" href="../../../../index.html">
+      
+      
+      <strong>CoreLens</strong>
+    </a>
+    <div class="sy-head-nav" id="head-nav">
+      <nav class="sy-head-links"></nav>
+      <div class="sy-head-extra flex items-center print:hidden"><form class="searchbox flex items-center" action="../../../../search.html" method="get">
+  <input type="text" name="q" placeholder="Search" />
+  <kbd>/</kbd>
+</form><div class="sy-head-socials"></div></div>
+    </div>
+    <div class="sy-head-actions flex items-center shrink-0 print:hidden"><button class="js-theme theme-switch flex items-center"
+data-aria-auto="Switch to light color mode"
+data-aria-light="Switch to dark color mode"
+data-aria-dark="Switch to auto color mode">
+<i class="i-lucide theme-icon"></i>
+</button><button class="md:hidden flex items-center js-menu" aria-label="Menu" type="button" aria-controls="head-nav" aria-expanded="false">
+        <div class="hamburger">
+          <span class="hamburger_1"></span>
+          <span class="hamburger_2"></span>
+          <span class="hamburger_3"></span>
+        </div>
+      </button>
+    </div>
+  </div>
+</div>
+<div class="sy-page sy-container flex mx-auto">
+  <aside id="lside" class="sy-lside md:w-72 md:shrink-0 print:hidden">
+    <div class="sy-lside-inner md:sticky">
+      <div class="sy-scrollbar p-6">
+        <div class="globaltoc" data-expand-depth="0"><p class="caption" role="heading" aria-level="3"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../../../../intro.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../quickstart.html">Quickstart</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../concepts.html">Core Concepts</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../queries.html">Example Queries</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../stats.html">Statistical Analysis</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../plots.html">Visualisation and Plots</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../export.html">Data Export</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../plugins.html">Plugin System</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../logging.html">Logging</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="../../../index.html">API Reference</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="../../index.html">core_lens</a><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="../../aoi/index.html">core_lens.aoi</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../base/index.html">core_lens.base</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../../base/entity/index.html">core_lens.base.entity</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../base/namespaces/index.html">core_lens.base.namespaces</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../base/result/index.html">core_lens.base.result</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../base/view/index.html">core_lens.base.view</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../../entities/index.html">core_lens.entities</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../../entities/mws/index.html">core_lens.entities.mws</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../entities/tehsil/index.html">core_lens.entities.tehsil</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../entities/waterbody/index.html">core_lens.entities.waterbody</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../../export/index.html">core_lens.export</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../../export/formats/index.html">core_lens.export.formats</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../../schema/index.html">core_lens.schema</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../../schema/detection/index.html">core_lens.schema.detection</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../schema/profile/index.html">core_lens.schema.profile</a></li>
+</ul>
+</li>
+<li class="toctree-l3 current"><a class="reference internal" href="../index.html">core_lens.utils</a><ul class="current">
+<li class="toctree-l4"><a class="reference internal" href="../polars_utils/index.html">core_lens.utils.polars_utils</a></li>
+<li class="toctree-l4 current"><a class="current reference internal" href="#">core_lens.utils.season</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../spatial/index.html">core_lens.utils.spatial</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+        </div>
+      </div>
+    </div>
+  </aside>
+  <div class="lside-overlay js-menu" role="button" aria-label="Close left sidebar" aria-controls="lside" aria-expanded="false"></div>
+  <aside id="rside" class="sy-rside pb-3 w-64 shrink-0 order-last">
+    <button class="rside-close js-menu xl:hidden" aria-label="Close Table of Contents" type="button" aria-controls="rside" aria-expanded="false">
+      <i class="i-lucide close"></i>
+    </button>
+    <div class="sy-scrollbar sy-rside-inner px-6 xl:top-16 xl:sticky xl:pl-0 pt-6 pb-4"><div class="localtoc"><h3>On this page</h3><ul>
+<li><a class="reference internal" href="#functions">Functions</a></li>
+<li><a class="reference internal" href="#module-contents">Module Contents</a><ul>
+<li><a class="reference internal" href="#core_lens.utils.season.resolve_time_filter"><code class="docutils literal notranslate"><span class="pre">resolve_time_filter()</span></code></a></li>
+<li><a class="reference internal" href="#core_lens.utils.season.add_temporal_columns"><code class="docutils literal notranslate"><span class="pre">add_temporal_columns()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</div><div id="ethical-ad-placement" data-ea-publisher="readthedocs"></div></div>
+  </aside>
+  <div class="rside-overlay js-menu" role="button" aria-label="Close Table of Contents" aria-controls="rside" aria-expanded="false"></div>
+  <main class="sy-main w-full max-sm:max-w-full print:pt-6">
+<div class="sy-breadcrumbs" role="navigation">
+  <div class="sy-breadcrumbs-inner flex items-center">
+    <div class="md:hidden mr-3">
+      <button class="js-menu" aria-label="Menu" type="button" aria-controls="lside" aria-expanded="false">
+        <i class="i-lucide menu"></i>
+      </button>
+    </div>
+    <ol class="flex-1" itemscope itemtype="https://schema.org/BreadcrumbList"><li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+        <a itemprop="item" href="../../../../index.html"><span itemprop="name">CoreLens</span></a>
+        <span>/</span>
+        <meta itemprop="position" content="1" />
+      </li><li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+        <a itemprop="item" href="../../../index.html"><span itemprop="name">API Reference</span></a>
+        <span>/</span>
+        <meta itemprop="position" content="2" />
+      </li><li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+        <a itemprop="item" href="../../index.html"><span itemprop="name">core_lens</span></a>
+        <span>/</span>
+        <meta itemprop="position" content="3" />
+      </li><li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+        <a itemprop="item" href="../index.html"><span itemprop="name">core_lens.utils</span></a>
+        <span>/</span>
+        <meta itemprop="position" content="4" />
+      </li><li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+        <strong itemprop="name">core_lens.utils.season</strong>
+        <meta itemprop="position" content="5" />
+      </li></ol>
+    <div class="xl:hidden ml-1">
+      <button class="js-menu" aria-label="Show table of contents" type="button" aria-controls="rside"
+        aria-expanded="false">
+        <i class="i-lucide outdent"></i>
+      </button>
+    </div>
+  </div>
+</div><div class="flex flex-col break-words justify-between">
+      <div class="relative min-w-0 max-w-6xl px-6 pb-6 pt-8 xl:px-12">
+  <article class="yue" role="main">
+          <section id="module-core_lens.utils.season">
+<span id="core-lens-utils-season"></span><h1>core_lens.utils.season<a class="headerlink" href="#module-core_lens.utils.season" title="Link to this heading">¶</a></h1>
+<p>Season-to-date-range resolution for time filtering and temporal column derivation.</p>
+<section id="functions">
+<h2>Functions<a class="headerlink" href="#functions" title="Link to this heading">¶</a></h2>
+<div class="table-wrapper autosummary longtable docutils container">
+<table class="autosummary longtable docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#core_lens.utils.season.resolve_time_filter" title="core_lens.utils.season.resolve_time_filter"><code class="xref py py-obj docutils literal notranslate"><span class="pre">resolve_time_filter</span></code></a>(→ polars.Expr)</p></td>
+<td><p>Convert a <code class="docutils literal notranslate"><span class="pre">View.time_filter</span></code> dict to a Polars filter expression.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#core_lens.utils.season.add_temporal_columns" title="core_lens.utils.season.add_temporal_columns"><code class="xref py py-obj docutils literal notranslate"><span class="pre">add_temporal_columns</span></code></a>(→ polars.DataFrame)</p></td>
+<td><p>Return <em>df</em> with temporal grouping columns appended.</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+<section id="module-contents">
+<h2>Module Contents<a class="headerlink" href="#module-contents" title="Link to this heading">¶</a></h2>
+<dl class="py function">
+<dt class="sig sig-object py" id="core_lens.utils.season.resolve_time_filter">
+<span class="sig-prename descclassname"><span class="pre">core_lens.utils.season.</span></span><span class="sig-name descname"><span class="pre">resolve_time_filter</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">time_filter</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">int</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">time_col</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">season_config</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="../../aoi/index.html#core_lens.aoi.SeasonConfig" title="core_lens.aoi.SeasonConfig"><span class="pre">core_lens.aoi.SeasonConfig</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">polars.Expr</span></span></span><a class="headerlink" href="#core_lens.utils.season.resolve_time_filter" title="Link to this definition">¶</a></dt>
+<dd><p>Convert a <code class="docutils literal notranslate"><span class="pre">View.time_filter</span></code> dict to a Polars filter expression.</p>
+<p>Two modes are supported, matching the dict shapes produced by
+<a class="reference internal" href="../../base/view/index.html#core_lens.base.view.View.between" title="core_lens.base.view.View.between"><code class="xref py py-meth docutils literal notranslate"><span class="pre">between()</span></code></a>:</p>
+<p><strong>Date range mode</strong> — <code class="docutils literal notranslate"><span class="pre">{&quot;start&quot;:</span> <span class="pre">&quot;YYYY-MM-DD&quot;,</span> <span class="pre">&quot;end&quot;:</span> <span class="pre">&quot;YYYY-MM-DD&quot;}</span></code>.
+Translated directly to a <code class="docutils literal notranslate"><span class="pre">between</span></code> predicate on <code class="docutils literal notranslate"><span class="pre">time_col</span></code>.</p>
+<p><strong>Season mode</strong> — <code class="docutils literal notranslate"><span class="pre">{&quot;season&quot;:</span> <span class="pre">name,</span> <span class="pre">&quot;year&quot;:</span> <span class="pre">int</span> <span class="pre">|</span> <span class="pre">(int,</span> <span class="pre">int)}</span></code>.
+The season name is resolved to a <code class="docutils literal notranslate"><span class="pre">(MM-DD,</span> <span class="pre">MM-DD)</span></code> range from
+<code class="docutils literal notranslate"><span class="pre">season_config</span></code>.  Year-crossing seasons (e.g. rabi: Nov–Mar) produce an
+<code class="docutils literal notranslate"><span class="pre">OR</span></code> expression.  When <code class="docutils literal notranslate"><span class="pre">year</span></code> is absent, all years are matched.  When
+<code class="docutils literal notranslate"><span class="pre">year</span></code> is a single integer, only that year (or the transition year for
+year-crossing seasons) is matched.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>time_filter</strong> (<em>dict</em><em>[</em><em>str</em><em>, </em><em>str</em><em> | </em><em>int</em><em> | </em><em>tuple</em><em>[</em><em>int</em><em>, </em><em>int</em><em>] </em><em>| </em><em>None</em><em>]</em>) – The dictionary
+stored on <a class="reference internal" href="../../base/view/index.html#core_lens.base.view.View.time_filter" title="core_lens.base.view.View.time_filter"><code class="xref py py-attr docutils literal notranslate"><span class="pre">time_filter</span></code></a>.</p></li>
+<li><p><strong>time_col</strong> (<em>str</em>) – Name of the time column in the Parquet file.</p></li>
+<li><p><strong>season_config</strong> (<a class="reference internal" href="../../aoi/index.html#core_lens.aoi.SeasonConfig" title="core_lens.aoi.SeasonConfig"><em>SeasonConfig</em></a>) – The <a class="reference internal" href="../../aoi/index.html#core_lens.aoi.SeasonConfig" title="core_lens.aoi.SeasonConfig"><code class="xref py py-class docutils literal notranslate"><span class="pre">SeasonConfig</span></code></a> in effect.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>A Polars expression that can be passed to <code class="docutils literal notranslate"><span class="pre">.filter()</span></code>.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>pl.Expr</p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>ValueError</strong> – If <code class="docutils literal notranslate"><span class="pre">time_filter</span></code> has an unrecognised structure.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="core_lens.utils.season.add_temporal_columns">
+<span class="sig-prename descclassname"><span class="pre">core_lens.utils.season.</span></span><span class="sig-name descname"><span class="pre">add_temporal_columns</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">df</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">polars.DataFrame</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">time_col</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">season_config</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="../../aoi/index.html#core_lens.aoi.SeasonConfig" title="core_lens.aoi.SeasonConfig"><span class="pre">core_lens.aoi.SeasonConfig</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">polars.DataFrame</span></span></span><a class="headerlink" href="#core_lens.utils.season.add_temporal_columns" title="Link to this definition">¶</a></dt>
+<dd><p>Return <em>df</em> with temporal grouping columns appended.</p>
+<p>Adds the five columns that <a class="reference internal" href="../../base/result/index.html#core_lens.base.result.Result.aggregate" title="core_lens.base.result.Result.aggregate"><code class="xref py py-meth docutils literal notranslate"><span class="pre">aggregate()</span></code></a>
+accepts as <code class="docutils literal notranslate"><span class="pre">by</span></code> values.  Called by the materialisation layer
+(<code class="xref py py-meth docutils literal notranslate"><span class="pre">_materialise()</span></code>) immediately after collect
+for every fortnightly <a class="reference internal" href="../../base/result/index.html#core_lens.base.result.Result" title="core_lens.base.result.Result"><code class="xref py py-class docutils literal notranslate"><span class="pre">Result</span></code></a>.</p>
+<p>Columns added (if not already present):</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">year</span></code>        — integer calendar year of the date.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">month</span></code>       — integer month (1–12).</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">year_month</span></code>  — string <code class="docutils literal notranslate"><span class="pre">&quot;YYYY-MM&quot;</span></code> (zero-padded).</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">season</span></code>      — season name string (<code class="docutils literal notranslate"><span class="pre">&quot;kharif&quot;</span></code> | <code class="docutils literal notranslate"><span class="pre">&quot;rabi&quot;</span></code> | <code class="docutils literal notranslate"><span class="pre">&quot;zaid&quot;</span></code>).</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">season_year</span></code> — string <code class="docutils literal notranslate"><span class="pre">&quot;{season}_{year}&quot;</span></code> (e.g. <code class="docutils literal notranslate"><span class="pre">&quot;kharif_2022&quot;</span></code>).</p></li>
+</ul>
+<p>If a column with one of those names already exists on <em>df</em> it is left
+untouched — this prevents overwriting data the entity itself may supply.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>df</strong> (<em>pl.DataFrame</em>) – The collected fortnightly DataFrame.</p></li>
+<li><p><strong>time_col</strong> (<em>str</em>) – Name of the date/datetime column to derive from.</p></li>
+<li><p><strong>season_config</strong> (<a class="reference internal" href="../../aoi/index.html#core_lens.aoi.SeasonConfig" title="core_lens.aoi.SeasonConfig"><em>SeasonConfig</em></a>) – The <a class="reference internal" href="../../aoi/index.html#core_lens.aoi.SeasonConfig" title="core_lens.aoi.SeasonConfig"><code class="xref py py-class docutils literal notranslate"><span class="pre">SeasonConfig</span></code></a> in effect,
+used to map each date to its season name.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>A new DataFrame with the temporal grouping columns appended.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>pl.DataFrame</p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+</section>
+
+        </article><button class="back-to-top" type="button">
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+    <path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8v12z"></path>
+  </svg>
+  <span>Back to top</span>
+</button><div class="navigation flex print:hidden"><div class="navigation-prev">
+    <a href="../polars_utils/index.html">
+      <i class="i-lucide chevron-left"></i>
+      <div class="page-info">
+        <span>Previous</span><div class="title">core_lens.utils.polars_utils</div></div>
+    </a>
+  </div><div class="navigation-next">
+    <a href="../spatial/index.html">
+      <div class="page-info">
+        <span>Next</span>
+        <div class="title">core_lens.utils.spatial</div>
+      </div>
+      <i class="i-lucide chevron-right"></i>
+    </a>
+  </div></div></div>
+    </div>
+  </main>
+</div>
+<footer class="sy-foot">
+  <div class="sy-foot-inner sy-container mx-auto">
+    <div class="sy-foot-reserved md:flex justify-between items-center">
+      <div class="sy-foot-copyright"><p>2026, Apoorva Kashyap</p>
+  
+  <p>
+    Made with
+    
+    <a href="https://www.sphinx-doc.org/">Sphinx</a> and
+    
+    <a href="https://shibuya.lepture.com">Shibuya theme</a>.
+  </p>
+</div>
+      <div class="sy-foot-socials"></div>
+    </div>
+  </div>
+</footer>
+      <script src="../../../../_static/documentation_options.js?v=5929fcd5"></script>
+      <script src="../../../../_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="../../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
+      <script src="../../../../_static/clipboard.min.js?v=a7894cd8"></script>
+      <script src="../../../../_static/copybutton.js?v=f281be69"></script>
+      <script src="../../../../_static/shibuya.js?v=50760d75"></script></body>
+</html>

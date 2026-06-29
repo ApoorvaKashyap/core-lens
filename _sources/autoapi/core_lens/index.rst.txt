@@ -1,0 +1,35 @@
+core_lens
+=========
+
+.. py:module:: core_lens
+
+
+Submodules
+----------
+
+.. toctree::
+   :maxdepth: 1
+
+   /autoapi/core_lens/aoi/index
+   /autoapi/core_lens/base/index
+   /autoapi/core_lens/entities/index
+   /autoapi/core_lens/export/index
+   /autoapi/core_lens/schema/index
+   /autoapi/core_lens/utils/index
+
+
+Attributes
+----------
+
+.. autoapisummary::
+
+   core_lens.__version__
+
+
+Package Contents
+----------------
+
+.. py:data:: __version__
+   :value: '0.1.0'
+
+

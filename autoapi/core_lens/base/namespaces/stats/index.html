@@ -1,0 +1,722 @@
+<!DOCTYPE html>
+<html lang="en" data-accent-color="violet" data-content_root="../../../../../">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"><title>core_lens.base.namespaces.stats - CoreLens documentation</title><link rel="index" title="Index" href="../../../../../genindex.html" /><link rel="search" title="Search" href="../../../../../search.html" /><link rel="next" title="core_lens.base.result" href="../../result/index.html" /><link rel="prev" title="core_lens.base.namespaces.plot" href="../plot/index.html" /><script>
+    function setColorMode(t){let e=document.documentElement;e.setAttribute("data-color-mode",t);let a=window.matchMedia&&window.matchMedia("(prefers-color-scheme: dark)").matches,s=t;"auto"===t&&(s=a?"dark":"light"),"light"===s?(e.classList.remove("dark"),e.classList.add("light")):(e.classList.remove("light"),e.classList.add("dark"))}
+    setColorMode(localStorage._theme||"auto");
+  </script><link rel="stylesheet" type="text/css" href="../../../../../_static/pygments.css?v=e1a1ceaf" />
+    <link rel="stylesheet" type="text/css" href="../../../../../_static/shibuya.css?v=9454f7d5" />
+    <link rel="stylesheet" type="text/css" href="../../../../../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../../../../../_static/graphviz.css?v=4ae1632d" />
+    <link media="print" rel="stylesheet" type="text/css" href="../../../../../_static/print.css?v=20ff2c19" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --sy-f-text: "Inter", var(--sy-f-sys), var(--sy-f-cjk), sans-serif;
+  --sy-f-heading: "Inter", var(--sy-f-sys), var(--sy-f-cjk), sans-serif;
+}
+</style>
+    
+  <meta property="og:type" content="website"/><meta property="og:title" content="core_lens.base.namespaces.stats"/>
+    <meta name="twitter:card" content="summary"/>
+  </head>
+<body><div class="sy-head">
+  <div class="sy-head-blur"></div>
+  <div class="sy-head-inner sy-container mx-auto">
+    <a class="sy-head-brand" href="../../../../../index.html">
+      
+      
+      <strong>CoreLens</strong>
+    </a>
+    <div class="sy-head-nav" id="head-nav">
+      <nav class="sy-head-links"></nav>
+      <div class="sy-head-extra flex items-center print:hidden"><form class="searchbox flex items-center" action="../../../../../search.html" method="get">
+  <input type="text" name="q" placeholder="Search" />
+  <kbd>/</kbd>
+</form><div class="sy-head-socials"></div></div>
+    </div>
+    <div class="sy-head-actions flex items-center shrink-0 print:hidden"><button class="js-theme theme-switch flex items-center"
+data-aria-auto="Switch to light color mode"
+data-aria-light="Switch to dark color mode"
+data-aria-dark="Switch to auto color mode">
+<i class="i-lucide theme-icon"></i>
+</button><button class="md:hidden flex items-center js-menu" aria-label="Menu" type="button" aria-controls="head-nav" aria-expanded="false">
+        <div class="hamburger">
+          <span class="hamburger_1"></span>
+          <span class="hamburger_2"></span>
+          <span class="hamburger_3"></span>
+        </div>
+      </button>
+    </div>
+  </div>
+</div>
+<div class="sy-page sy-container flex mx-auto">
+  <aside id="lside" class="sy-lside md:w-72 md:shrink-0 print:hidden">
+    <div class="sy-lside-inner md:sticky">
+      <div class="sy-scrollbar p-6">
+        <div class="globaltoc" data-expand-depth="0"><p class="caption" role="heading" aria-level="3"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../../../../../intro.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../quickstart.html">Quickstart</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../concepts.html">Core Concepts</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../queries.html">Example Queries</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../stats.html">Statistical Analysis</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../plots.html">Visualisation and Plots</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../export.html">Data Export</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../plugins.html">Plugin System</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../logging.html">Logging</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="../../../../index.html">API Reference</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="../../../index.html">core_lens</a><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="../../../aoi/index.html">core_lens.aoi</a></li>
+<li class="toctree-l3 current"><a class="reference internal" href="../../index.html">core_lens.base</a><ul class="current">
+<li class="toctree-l4"><a class="reference internal" href="../../entity/index.html">core_lens.base.entity</a></li>
+<li class="toctree-l4 current"><a class="reference internal" href="../index.html">core_lens.base.namespaces</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../result/index.html">core_lens.base.result</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../view/index.html">core_lens.base.view</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../../../entities/index.html">core_lens.entities</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../../../entities/mws/index.html">core_lens.entities.mws</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../entities/tehsil/index.html">core_lens.entities.tehsil</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../entities/waterbody/index.html">core_lens.entities.waterbody</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../../../export/index.html">core_lens.export</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../../../export/formats/index.html">core_lens.export.formats</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../../../schema/index.html">core_lens.schema</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../../../schema/detection/index.html">core_lens.schema.detection</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../schema/profile/index.html">core_lens.schema.profile</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../../../utils/index.html">core_lens.utils</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../../../utils/polars_utils/index.html">core_lens.utils.polars_utils</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../utils/season/index.html">core_lens.utils.season</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../utils/spatial/index.html">core_lens.utils.spatial</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+        </div>
+      </div>
+    </div>
+  </aside>
+  <div class="lside-overlay js-menu" role="button" aria-label="Close left sidebar" aria-controls="lside" aria-expanded="false"></div>
+  <aside id="rside" class="sy-rside pb-3 w-64 shrink-0 order-last">
+    <button class="rside-close js-menu xl:hidden" aria-label="Close Table of Contents" type="button" aria-controls="rside" aria-expanded="false">
+      <i class="i-lucide close"></i>
+    </button>
+    <div class="sy-scrollbar sy-rside-inner px-6 xl:top-16 xl:sticky xl:pl-0 pt-6 pb-4"><div class="localtoc"><h3>On this page</h3><ul>
+<li><a class="reference internal" href="#exceptions">Exceptions</a></li>
+<li><a class="reference internal" href="#classes">Classes</a></li>
+<li><a class="reference internal" href="#module-contents">Module Contents</a><ul>
+<li><a class="reference internal" href="#core_lens.base.namespaces.stats.CorrelateMethod"><code class="docutils literal notranslate"><span class="pre">CorrelateMethod</span></code></a><ul>
+<li><a class="reference internal" href="#core_lens.base.namespaces.stats.CorrelateMethod.PEARSON"><code class="docutils literal notranslate">PEARSON</span></code></a></li>
+<li><a class="reference internal" href="#core_lens.base.namespaces.stats.CorrelateMethod.SPEARMAN"><code class="docutils literal notranslate">SPEARMAN</span></code></a></li>
+<li><a class="reference internal" href="#core_lens.base.namespaces.stats.CorrelateMethod.KENDALL"><code class="docutils literal notranslate">KENDALL</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#core_lens.base.namespaces.stats.TestMethod"><code class="docutils literal notranslate"><span class="pre">TestMethod</span></code></a><ul>
+<li><a class="reference internal" href="#core_lens.base.namespaces.stats.TestMethod.__test__"><code class="docutils literal notranslate">__test__</span></code></a></li>
+<li><a class="reference internal" href="#core_lens.base.namespaces.stats.TestMethod.T_TEST"><code class="docutils literal notranslate">T_TEST</span></code></a></li>
+<li><a class="reference internal" href="#core_lens.base.namespaces.stats.TestMethod.MANN_WHITNEY"><code class="docutils literal notranslate">MANN_WHITNEY</span></code></a></li>
+<li><a class="reference internal" href="#core_lens.base.namespaces.stats.TestMethod.WILCOXON"><code class="docutils literal notranslate">WILCOXON</span></code></a></li>
+<li><a class="reference internal" href="#core_lens.base.namespaces.stats.TestMethod.KS"><code class="docutils literal notranslate">KS</span></code></a></li>
+<li><a class="reference internal" href="#core_lens.base.namespaces.stats.TestMethod.CHI_SQUARE"><code class="docutils literal notranslate">CHI_SQUARE</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#core_lens.base.namespaces.stats.ChangeMethod"><code class="docutils literal notranslate"><span class="pre">ChangeMethod</span></code></a><ul>
+<li><a class="reference internal" href="#core_lens.base.namespaces.stats.ChangeMethod.ABSOLUTE"><code class="docutils literal notranslate">ABSOLUTE</span></code></a></li>
+<li><a class="reference internal" href="#core_lens.base.namespaces.stats.ChangeMethod.PERCENTAGE"><code class="docutils literal notranslate">PERCENTAGE</span></code></a></li>
+<li><a class="reference internal" href="#core_lens.base.namespaces.stats.ChangeMethod.TREND"><code class="docutils literal notranslate">TREND</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#core_lens.base.namespaces.stats.AnomalyCrossMethod"><code class="docutils literal notranslate"><span class="pre">AnomalyCrossMethod</span></code></a><ul>
+<li><a class="reference internal" href="#core_lens.base.namespaces.stats.AnomalyCrossMethod.ZSCORE"><code class="docutils literal notranslate">ZSCORE</span></code></a></li>
+<li><a class="reference internal" href="#core_lens.base.namespaces.stats.AnomalyCrossMethod.IQR"><code class="docutils literal notranslate">IQR</span></code></a></li>
+<li><a class="reference internal" href="#core_lens.base.namespaces.stats.AnomalyCrossMethod.PERCENTILE"><code class="docutils literal notranslate">PERCENTILE</span></code></a></li>
+<li><a class="reference internal" href="#core_lens.base.namespaces.stats.AnomalyCrossMethod.THRESHOLD"><code class="docutils literal notranslate">THRESHOLD</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#core_lens.base.namespaces.stats.AnomalyTsMethod"><code class="docutils literal notranslate"><span class="pre">AnomalyTsMethod</span></code></a><ul>
+<li><a class="reference internal" href="#core_lens.base.namespaces.stats.AnomalyTsMethod.STL"><code class="docutils literal notranslate">STL</span></code></a></li>
+<li><a class="reference internal" href="#core_lens.base.namespaces.stats.AnomalyTsMethod.CUSUM"><code class="docutils literal notranslate">CUSUM</span></code></a></li>
+<li><a class="reference internal" href="#core_lens.base.namespaces.stats.AnomalyTsMethod.MAD"><code class="docutils literal notranslate">MAD</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#core_lens.base.namespaces.stats.SimilarityMethod"><code class="docutils literal notranslate"><span class="pre">SimilarityMethod</span></code></a><ul>
+<li><a class="reference internal" href="#core_lens.base.namespaces.stats.SimilarityMethod.EUCLIDEAN"><code class="docutils literal notranslate">EUCLIDEAN</span></code></a></li>
+<li><a class="reference internal" href="#core_lens.base.namespaces.stats.SimilarityMethod.COSINE"><code class="docutils literal notranslate">COSINE</span></code></a></li>
+<li><a class="reference internal" href="#core_lens.base.namespaces.stats.SimilarityMethod.MAHALANOBIS"><code class="docutils literal notranslate">MAHALANOBIS</span></code></a></li>
+<li><a class="reference internal" href="#core_lens.base.namespaces.stats.SimilarityMethod.MANHATTAN"><code class="docutils literal notranslate">MANHATTAN</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#core_lens.base.namespaces.stats.CorrelationError"><code class="docutils literal notranslate"><span class="pre">CorrelationError</span></code></a></li>
+<li><a class="reference internal" href="#core_lens.base.namespaces.stats.StatsNamespace"><code class="docutils literal notranslate"><span class="pre">StatsNamespace</span></code></a><ul>
+<li><a class="reference internal" href="#core_lens.base.namespaces.stats.StatsNamespace.describe"><code class="docutils literal notranslate">describe()</span></code></a></li>
+<li><a class="reference internal" href="#core_lens.base.namespaces.stats.StatsNamespace.correlate"><code class="docutils literal notranslate">correlate()</span></code></a></li>
+<li><a class="reference internal" href="#core_lens.base.namespaces.stats.StatsNamespace.test"><code class="docutils literal notranslate">test()</span></code></a></li>
+<li><a class="reference internal" href="#core_lens.base.namespaces.stats.StatsNamespace.change"><code class="docutils literal notranslate">change()</span></code></a></li>
+<li><a class="reference internal" href="#core_lens.base.namespaces.stats.StatsNamespace.anomaly"><code class="docutils literal notranslate">anomaly()</span></code></a></li>
+<li><a class="reference internal" href="#core_lens.base.namespaces.stats.StatsNamespace.similarity"><code class="docutils literal notranslate">similarity()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</div><div id="ethical-ad-placement" data-ea-publisher="readthedocs"></div></div>
+  </aside>
+  <div class="rside-overlay js-menu" role="button" aria-label="Close Table of Contents" aria-controls="rside" aria-expanded="false"></div>
+  <main class="sy-main w-full max-sm:max-w-full print:pt-6">
+<div class="sy-breadcrumbs" role="navigation">
+  <div class="sy-breadcrumbs-inner flex items-center">
+    <div class="md:hidden mr-3">
+      <button class="js-menu" aria-label="Menu" type="button" aria-controls="lside" aria-expanded="false">
+        <i class="i-lucide menu"></i>
+      </button>
+    </div>
+    <ol class="flex-1" itemscope itemtype="https://schema.org/BreadcrumbList"><li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+        <a itemprop="item" href="../../../../../index.html"><span itemprop="name">CoreLens</span></a>
+        <span>/</span>
+        <meta itemprop="position" content="1" />
+      </li><li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+        <a itemprop="item" href="../../../../index.html"><span itemprop="name">API Reference</span></a>
+        <span>/</span>
+        <meta itemprop="position" content="2" />
+      </li><li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+        <a itemprop="item" href="../../../index.html"><span itemprop="name">core_lens</span></a>
+        <span>/</span>
+        <meta itemprop="position" content="3" />
+      </li><li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+        <a itemprop="item" href="../../index.html"><span itemprop="name">core_lens.base</span></a>
+        <span>/</span>
+        <meta itemprop="position" content="4" />
+      </li><li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+        <a itemprop="item" href="../index.html"><span itemprop="name">core_lens.base.namespaces</span></a>
+        <span>/</span>
+        <meta itemprop="position" content="5" />
+      </li><li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+        <strong itemprop="name">core_lens.base.namespaces.stats</strong>
+        <meta itemprop="position" content="6" />
+      </li></ol>
+    <div class="xl:hidden ml-1">
+      <button class="js-menu" aria-label="Show table of contents" type="button" aria-controls="rside"
+        aria-expanded="false">
+        <i class="i-lucide outdent"></i>
+      </button>
+    </div>
+  </div>
+</div><div class="flex flex-col break-words justify-between">
+      <div class="relative min-w-0 max-w-6xl px-6 pb-6 pt-8 xl:px-12">
+  <article class="yue" role="main">
+          <section id="module-core_lens.base.namespaces.stats">
+<span id="core-lens-base-namespaces-stats"></span><h1>core_lens.base.namespaces.stats<a class="headerlink" href="#module-core_lens.base.namespaces.stats" title="Link to this heading">¶</a></h1>
+<p>Statistical analysis namespace for core_lens Result objects.</p>
+<section id="exceptions">
+<h2>Exceptions<a class="headerlink" href="#exceptions" title="Link to this heading">¶</a></h2>
+<div class="table-wrapper autosummary longtable docutils container">
+<table class="autosummary longtable docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#core_lens.base.namespaces.stats.CorrelationError" title="core_lens.base.namespaces.stats.CorrelationError"><code class="xref py py-obj docutils literal notranslate"><span class="pre">CorrelationError</span></code></a></p></td>
+<td><p>Raised when correlation cannot be computed (e.g. fewer than 2 columns).</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+<section id="classes">
+<h2>Classes<a class="headerlink" href="#classes" title="Link to this heading">¶</a></h2>
+<div class="table-wrapper autosummary longtable docutils container">
+<table class="autosummary longtable docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#core_lens.base.namespaces.stats.CorrelateMethod" title="core_lens.base.namespaces.stats.CorrelateMethod"><code class="xref py py-obj docutils literal notranslate"><span class="pre">CorrelateMethod</span></code></a></p></td>
+<td><p>Correlation methods.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#core_lens.base.namespaces.stats.TestMethod" title="core_lens.base.namespaces.stats.TestMethod"><code class="xref py py-obj docutils literal notranslate"><span class="pre">TestMethod</span></code></a></p></td>
+<td><p>Statistical hypothesis testing methods.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#core_lens.base.namespaces.stats.ChangeMethod" title="core_lens.base.namespaces.stats.ChangeMethod"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ChangeMethod</span></code></a></p></td>
+<td><p>Methods for calculating change over time.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#core_lens.base.namespaces.stats.AnomalyCrossMethod" title="core_lens.base.namespaces.stats.AnomalyCrossMethod"><code class="xref py py-obj docutils literal notranslate"><span class="pre">AnomalyCrossMethod</span></code></a></p></td>
+<td><p>Methods for detecting cross-sectional anomalies.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#core_lens.base.namespaces.stats.AnomalyTsMethod" title="core_lens.base.namespaces.stats.AnomalyTsMethod"><code class="xref py py-obj docutils literal notranslate"><span class="pre">AnomalyTsMethod</span></code></a></p></td>
+<td><p>Methods for detecting time-series anomalies.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#core_lens.base.namespaces.stats.SimilarityMethod" title="core_lens.base.namespaces.stats.SimilarityMethod"><code class="xref py py-obj docutils literal notranslate"><span class="pre">SimilarityMethod</span></code></a></p></td>
+<td><p>Methods for calculating similarity or distance.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#core_lens.base.namespaces.stats.StatsNamespace" title="core_lens.base.namespaces.stats.StatsNamespace"><code class="xref py py-obj docutils literal notranslate"><span class="pre">StatsNamespace</span></code></a></p></td>
+<td><p>Statistical methods on <code class="docutils literal notranslate"><span class="pre">result.stats.*</span></code>.</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+<section id="module-contents">
+<h2>Module Contents<a class="headerlink" href="#module-contents" title="Link to this heading">¶</a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="core_lens.base.namespaces.stats.CorrelateMethod">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">core_lens.base.namespaces.stats.</span></span><span class="sig-name descname"><span class="pre">CorrelateMethod</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwds</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#core_lens.base.namespaces.stats.CorrelateMethod" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-obj docutils literal notranslate"><span class="pre">enum.Enum</span></code></p>
+<p>Correlation methods.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Variables<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>PEARSON</strong> – Pearson correlation coefficient.</p></li>
+<li><p><strong>SPEARMAN</strong> – Spearman rank correlation.</p></li>
+<li><p><strong>KENDALL</strong> – Kendall Tau correlation.</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="core_lens.base.namespaces.stats.CorrelateMethod.PEARSON">
+<span class="sig-name descname"><span class="pre">PEARSON</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'pearson'</span></span><a class="headerlink" href="#core_lens.base.namespaces.stats.CorrelateMethod.PEARSON" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="core_lens.base.namespaces.stats.CorrelateMethod.SPEARMAN">
+<span class="sig-name descname"><span class="pre">SPEARMAN</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'spearman'</span></span><a class="headerlink" href="#core_lens.base.namespaces.stats.CorrelateMethod.SPEARMAN" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="core_lens.base.namespaces.stats.CorrelateMethod.KENDALL">
+<span class="sig-name descname"><span class="pre">KENDALL</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'kendall'</span></span><a class="headerlink" href="#core_lens.base.namespaces.stats.CorrelateMethod.KENDALL" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="core_lens.base.namespaces.stats.TestMethod">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">core_lens.base.namespaces.stats.</span></span><span class="sig-name descname"><span class="pre">TestMethod</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwds</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#core_lens.base.namespaces.stats.TestMethod" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-obj docutils literal notranslate"><span class="pre">enum.Enum</span></code></p>
+<p>Statistical hypothesis testing methods.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Variables<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>T_TEST</strong> – Student’s t-test.</p></li>
+<li><p><strong>MANN_WHITNEY</strong> – Mann-Whitney U test.</p></li>
+<li><p><strong>WILCOXON</strong> – Wilcoxon signed-rank test.</p></li>
+<li><p><strong>KS</strong> – Kolmogorov-Smirnov test.</p></li>
+<li><p><strong>CHI_SQUARE</strong> – Chi-square test.</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="core_lens.base.namespaces.stats.TestMethod.__test__">
+<span class="sig-name descname"><span class="pre">__test__</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">False</span></span><a class="headerlink" href="#core_lens.base.namespaces.stats.TestMethod.__test__" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="core_lens.base.namespaces.stats.TestMethod.T_TEST">
+<span class="sig-name descname"><span class="pre">T_TEST</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'t-test'</span></span><a class="headerlink" href="#core_lens.base.namespaces.stats.TestMethod.T_TEST" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="core_lens.base.namespaces.stats.TestMethod.MANN_WHITNEY">
+<span class="sig-name descname"><span class="pre">MANN_WHITNEY</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'mann-whitney'</span></span><a class="headerlink" href="#core_lens.base.namespaces.stats.TestMethod.MANN_WHITNEY" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="core_lens.base.namespaces.stats.TestMethod.WILCOXON">
+<span class="sig-name descname"><span class="pre">WILCOXON</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'wilcoxon'</span></span><a class="headerlink" href="#core_lens.base.namespaces.stats.TestMethod.WILCOXON" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="core_lens.base.namespaces.stats.TestMethod.KS">
+<span class="sig-name descname"><span class="pre">KS</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'ks'</span></span><a class="headerlink" href="#core_lens.base.namespaces.stats.TestMethod.KS" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="core_lens.base.namespaces.stats.TestMethod.CHI_SQUARE">
+<span class="sig-name descname"><span class="pre">CHI_SQUARE</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'chi-square'</span></span><a class="headerlink" href="#core_lens.base.namespaces.stats.TestMethod.CHI_SQUARE" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="core_lens.base.namespaces.stats.ChangeMethod">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">core_lens.base.namespaces.stats.</span></span><span class="sig-name descname"><span class="pre">ChangeMethod</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwds</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#core_lens.base.namespaces.stats.ChangeMethod" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-obj docutils literal notranslate"><span class="pre">enum.Enum</span></code></p>
+<p>Methods for calculating change over time.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Variables<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>ABSOLUTE</strong> – Absolute difference between periods.</p></li>
+<li><p><strong>PERCENTAGE</strong> – Percentage change between periods.</p></li>
+<li><p><strong>TREND</strong> – Linear trend over time.</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="core_lens.base.namespaces.stats.ChangeMethod.ABSOLUTE">
+<span class="sig-name descname"><span class="pre">ABSOLUTE</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'absolute'</span></span><a class="headerlink" href="#core_lens.base.namespaces.stats.ChangeMethod.ABSOLUTE" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="core_lens.base.namespaces.stats.ChangeMethod.PERCENTAGE">
+<span class="sig-name descname"><span class="pre">PERCENTAGE</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'percentage'</span></span><a class="headerlink" href="#core_lens.base.namespaces.stats.ChangeMethod.PERCENTAGE" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="core_lens.base.namespaces.stats.ChangeMethod.TREND">
+<span class="sig-name descname"><span class="pre">TREND</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'trend'</span></span><a class="headerlink" href="#core_lens.base.namespaces.stats.ChangeMethod.TREND" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="core_lens.base.namespaces.stats.AnomalyCrossMethod">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">core_lens.base.namespaces.stats.</span></span><span class="sig-name descname"><span class="pre">AnomalyCrossMethod</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwds</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#core_lens.base.namespaces.stats.AnomalyCrossMethod" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-obj docutils literal notranslate"><span class="pre">enum.Enum</span></code></p>
+<p>Methods for detecting cross-sectional anomalies.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Variables<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>ZSCORE</strong> – Z-score method.</p></li>
+<li><p><strong>IQR</strong> – Interquartile range method.</p></li>
+<li><p><strong>PERCENTILE</strong> – Percentile-based method.</p></li>
+<li><p><strong>THRESHOLD</strong> – Fixed threshold method.</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="core_lens.base.namespaces.stats.AnomalyCrossMethod.ZSCORE">
+<span class="sig-name descname"><span class="pre">ZSCORE</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'zscore'</span></span><a class="headerlink" href="#core_lens.base.namespaces.stats.AnomalyCrossMethod.ZSCORE" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="core_lens.base.namespaces.stats.AnomalyCrossMethod.IQR">
+<span class="sig-name descname"><span class="pre">IQR</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'iqr'</span></span><a class="headerlink" href="#core_lens.base.namespaces.stats.AnomalyCrossMethod.IQR" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="core_lens.base.namespaces.stats.AnomalyCrossMethod.PERCENTILE">
+<span class="sig-name descname"><span class="pre">PERCENTILE</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'percentile'</span></span><a class="headerlink" href="#core_lens.base.namespaces.stats.AnomalyCrossMethod.PERCENTILE" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="core_lens.base.namespaces.stats.AnomalyCrossMethod.THRESHOLD">
+<span class="sig-name descname"><span class="pre">THRESHOLD</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'threshold'</span></span><a class="headerlink" href="#core_lens.base.namespaces.stats.AnomalyCrossMethod.THRESHOLD" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="core_lens.base.namespaces.stats.AnomalyTsMethod">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">core_lens.base.namespaces.stats.</span></span><span class="sig-name descname"><span class="pre">AnomalyTsMethod</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwds</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#core_lens.base.namespaces.stats.AnomalyTsMethod" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-obj docutils literal notranslate"><span class="pre">enum.Enum</span></code></p>
+<p>Methods for detecting time-series anomalies.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Variables<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>STL</strong> – Seasonal-Trend decomposition using LOESS.</p></li>
+<li><p><strong>CUSUM</strong> – Cumulative sum control chart.</p></li>
+<li><p><strong>MAD</strong> – Median Absolute Deviation.</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="core_lens.base.namespaces.stats.AnomalyTsMethod.STL">
+<span class="sig-name descname"><span class="pre">STL</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'stl'</span></span><a class="headerlink" href="#core_lens.base.namespaces.stats.AnomalyTsMethod.STL" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="core_lens.base.namespaces.stats.AnomalyTsMethod.CUSUM">
+<span class="sig-name descname"><span class="pre">CUSUM</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'cusum'</span></span><a class="headerlink" href="#core_lens.base.namespaces.stats.AnomalyTsMethod.CUSUM" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="core_lens.base.namespaces.stats.AnomalyTsMethod.MAD">
+<span class="sig-name descname"><span class="pre">MAD</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'mad'</span></span><a class="headerlink" href="#core_lens.base.namespaces.stats.AnomalyTsMethod.MAD" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="core_lens.base.namespaces.stats.SimilarityMethod">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">core_lens.base.namespaces.stats.</span></span><span class="sig-name descname"><span class="pre">SimilarityMethod</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwds</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#core_lens.base.namespaces.stats.SimilarityMethod" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-obj docutils literal notranslate"><span class="pre">enum.Enum</span></code></p>
+<p>Methods for calculating similarity or distance.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Variables<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>EUCLIDEAN</strong> – Euclidean distance.</p></li>
+<li><p><strong>COSINE</strong> – Cosine similarity.</p></li>
+<li><p><strong>MAHALANOBIS</strong> – Mahalanobis distance.</p></li>
+<li><p><strong>MANHATTAN</strong> – Manhattan distance.</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="core_lens.base.namespaces.stats.SimilarityMethod.EUCLIDEAN">
+<span class="sig-name descname"><span class="pre">EUCLIDEAN</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'euclidean'</span></span><a class="headerlink" href="#core_lens.base.namespaces.stats.SimilarityMethod.EUCLIDEAN" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="core_lens.base.namespaces.stats.SimilarityMethod.COSINE">
+<span class="sig-name descname"><span class="pre">COSINE</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'cosine'</span></span><a class="headerlink" href="#core_lens.base.namespaces.stats.SimilarityMethod.COSINE" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="core_lens.base.namespaces.stats.SimilarityMethod.MAHALANOBIS">
+<span class="sig-name descname"><span class="pre">MAHALANOBIS</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'mahalanobis'</span></span><a class="headerlink" href="#core_lens.base.namespaces.stats.SimilarityMethod.MAHALANOBIS" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="core_lens.base.namespaces.stats.SimilarityMethod.MANHATTAN">
+<span class="sig-name descname"><span class="pre">MANHATTAN</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'manhattan'</span></span><a class="headerlink" href="#core_lens.base.namespaces.stats.SimilarityMethod.MANHATTAN" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py exception">
+<dt class="sig sig-object py" id="core_lens.base.namespaces.stats.CorrelationError">
+<span class="property"><span class="k"><span class="pre">exception</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">core_lens.base.namespaces.stats.</span></span><span class="sig-name descname"><span class="pre">CorrelationError</span></span><a class="headerlink" href="#core_lens.base.namespaces.stats.CorrelationError" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-obj docutils literal notranslate"><span class="pre">ValueError</span></code></p>
+<p>Raised when correlation cannot be computed (e.g. fewer than 2 columns).</p>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="core_lens.base.namespaces.stats.StatsNamespace">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">core_lens.base.namespaces.stats.</span></span><span class="sig-name descname"><span class="pre">StatsNamespace</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">result</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="../../result/index.html#core_lens.base.result.Result" title="core_lens.base.result.Result"><span class="pre">core_lens.base.result.Result</span></a></span></em><span class="sig-paren">)</span><a class="headerlink" href="#core_lens.base.namespaces.stats.StatsNamespace" title="Link to this definition">¶</a></dt>
+<dd><p>Statistical methods on <code class="docutils literal notranslate"><span class="pre">result.stats.*</span></code>.</p>
+<p>All methods return a fresh <a class="reference internal" href="../../result/index.html#core_lens.base.result.Result" title="core_lens.base.result.Result"><code class="xref py py-class docutils literal notranslate"><span class="pre">Result</span></code></a>.
+Computed values always go in <code class="docutils literal notranslate"><span class="pre">data</span></code>; method parameters go in <code class="docutils literal notranslate"><span class="pre">metadata</span></code>.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="core_lens.base.namespaces.stats.StatsNamespace.describe">
+<span class="sig-name descname"><span class="pre">describe</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">columns</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">by</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'column'</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="../../result/index.html#core_lens.base.result.Result" title="core_lens.base.result.Result"><span class="pre">core_lens.base.result.Result</span></a></span></span><a class="headerlink" href="#core_lens.base.namespaces.stats.StatsNamespace.describe" title="Link to this definition">¶</a></dt>
+<dd><p>Per-column or per-entity descriptive statistics.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>columns</strong> (<em>list</em><em>[</em><em>str</em><em>] </em><em>| </em><em>None</em><em>, </em><em>optional</em>) – Numeric columns to describe. Defaults to all numeric cols.</p></li>
+<li><p><strong>by</strong> (<em>str</em><em>, </em><em>optional</em>) – <code class="docutils literal notranslate"><span class="pre">&quot;column&quot;</span></code> (one row per column, design default) or
+<code class="docutils literal notranslate"><span class="pre">&quot;entity&quot;</span></code> (one row per entity with mean/std per column).</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>New <a class="reference internal" href="../../result/index.html#core_lens.base.result.Result" title="core_lens.base.result.Result"><code class="xref py py-class docutils literal notranslate"><span class="pre">Result</span></code></a> with descriptive stats.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference internal" href="../../result/index.html#core_lens.base.result.Result" title="core_lens.base.result.Result">Result</a></p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>ValueError</strong> – If <code class="docutils literal notranslate"><span class="pre">by</span></code> is not <code class="docutils literal notranslate"><span class="pre">&quot;column&quot;</span></code> or <code class="docutils literal notranslate"><span class="pre">&quot;entity&quot;</span></code>.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="core_lens.base.namespaces.stats.StatsNamespace.correlate">
+<span class="sig-name descname"><span class="pre">correlate</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">columns</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">method</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#core_lens.base.namespaces.stats.CorrelateMethod" title="core_lens.base.namespaces.stats.CorrelateMethod"><span class="pre">CorrelateMethod</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">CorrelateMethod.PEARSON</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">across</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'entity'</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="../../result/index.html#core_lens.base.result.Result" title="core_lens.base.result.Result"><span class="pre">core_lens.base.result.Result</span></a></span></span><a class="headerlink" href="#core_lens.base.namespaces.stats.StatsNamespace.correlate" title="Link to this definition">¶</a></dt>
+<dd><p>Pairwise correlations between columns.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>columns</strong> (<em>list</em><em>[</em><em>str</em><em>]</em>) – At least 2 column names.</p></li>
+<li><p><strong>method</strong> (<a class="reference internal" href="#core_lens.base.namespaces.stats.CorrelateMethod" title="core_lens.base.namespaces.stats.CorrelateMethod"><em>CorrelateMethod</em></a><em>, </em><em>optional</em>) – A <a class="reference internal" href="#core_lens.base.namespaces.stats.CorrelateMethod" title="core_lens.base.namespaces.stats.CorrelateMethod"><code class="xref py py-class docutils literal notranslate"><span class="pre">CorrelateMethod</span></code></a> enum value.</p></li>
+<li><p><strong>across</strong> (<em>str</em><em>, </em><em>optional</em>) – <code class="docutils literal notranslate"><span class="pre">&quot;entity&quot;</span></code> or <code class="docutils literal notranslate"><span class="pre">&quot;time&quot;</span></code> — recorded in metadata only.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Result whose data has columns
+<code class="docutils literal notranslate"><span class="pre">column_a</span> <span class="pre">|</span> <span class="pre">column_b</span> <span class="pre">|</span> <span class="pre">correlation</span> <span class="pre">|</span> <span class="pre">p_value</span></code>.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference internal" href="../../result/index.html#core_lens.base.result.Result" title="core_lens.base.result.Result">Result</a></p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><ul class="simple">
+<li><p><a class="reference internal" href="#core_lens.base.namespaces.stats.CorrelationError" title="core_lens.base.namespaces.stats.CorrelationError"><strong>CorrelationError</strong></a> – If fewer than 2 columns supplied.</p></li>
+<li><p><strong>ValueError</strong> – If <code class="docutils literal notranslate"><span class="pre">method</span></code> is not recognised.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="core_lens.base.namespaces.stats.StatsNamespace.test">
+<span class="sig-name descname"><span class="pre">test</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">column</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">groups</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">periods</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">int</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">against</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">method</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#core_lens.base.namespaces.stats.TestMethod" title="core_lens.base.namespaces.stats.TestMethod"><span class="pre">TestMethod</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">significance_level</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.05</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="../../result/index.html#core_lens.base.result.Result" title="core_lens.base.result.Result"><span class="pre">core_lens.base.result.Result</span></a></span></span><a class="headerlink" href="#core_lens.base.namespaces.stats.StatsNamespace.test" title="Link to this definition">¶</a></dt>
+<dd><p>Hypothesis test in three modes: group-based, period-based, single-sample.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>column</strong> (<em>str</em>) – Numeric column to test.</p></li>
+<li><p><strong>groups</strong> (<em>str</em><em> | </em><em>None</em><em>, </em><em>optional</em>) – Categorical column to split groups on.</p></li>
+<li><p><strong>periods</strong> (<em>list</em><em>[</em><em>tuple</em><em>[</em><em>int</em><em>, </em><em>int</em><em>]</em><em>] </em><em>| </em><em>None</em><em>, </em><em>optional</em>) – List of <code class="docutils literal notranslate"><span class="pre">(from_year,</span> <span class="pre">to_year)</span></code> period tuples.</p></li>
+<li><p><strong>against</strong> (<em>float</em><em> | </em><em>None</em><em>, </em><em>optional</em>) – Reference value for a one-sample test.</p></li>
+<li><p><strong>method</strong> (<a class="reference internal" href="#core_lens.base.namespaces.stats.TestMethod" title="core_lens.base.namespaces.stats.TestMethod"><em>TestMethod</em></a><em> | </em><em>None</em><em>, </em><em>optional</em>) – A <a class="reference internal" href="#core_lens.base.namespaces.stats.TestMethod" title="core_lens.base.namespaces.stats.TestMethod"><code class="xref py py-class docutils literal notranslate"><span class="pre">TestMethod</span></code></a> enum value.
+Auto-selected via Shapiro-Wilk if <code class="docutils literal notranslate"><span class="pre">None</span></code>.</p></li>
+<li><p><strong>significance_level</strong> (<em>float</em><em>, </em><em>optional</em>) – Alpha level for <code class="docutils literal notranslate"><span class="pre">significant</span></code> flag (default 0.05).</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Result whose data has per-group descriptive stats
+<code class="docutils literal notranslate"><span class="pre">group</span> <span class="pre">|</span> <span class="pre">n</span> <span class="pre">|</span> <span class="pre">mean</span> <span class="pre">|</span> <span class="pre">std</span> <span class="pre">|</span> <span class="pre">median</span></code> and
+<code class="docutils literal notranslate"><span class="pre">metadata</span></code> with <code class="docutils literal notranslate"><span class="pre">statistic</span></code>, <code class="docutils literal notranslate"><span class="pre">p_value</span></code>, <code class="docutils literal notranslate"><span class="pre">significant</span></code>.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference internal" href="../../result/index.html#core_lens.base.result.Result" title="core_lens.base.result.Result">Result</a></p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>ValueError</strong> – If none of <code class="docutils literal notranslate"><span class="pre">groups</span></code>, <code class="docutils literal notranslate"><span class="pre">periods</span></code>, <code class="docutils literal notranslate"><span class="pre">against</span></code> supplied,
+or if <code class="docutils literal notranslate"><span class="pre">method</span></code> is not recognised.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="core_lens.base.namespaces.stats.StatsNamespace.change">
+<span class="sig-name descname"><span class="pre">change</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">column</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">from_period</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">to_period</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">method</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#core_lens.base.namespaces.stats.ChangeMethod" title="core_lens.base.namespaces.stats.ChangeMethod"><span class="pre">ChangeMethod</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">ChangeMethod.ABSOLUTE</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="../../result/index.html#core_lens.base.result.Result" title="core_lens.base.result.Result"><span class="pre">core_lens.base.result.Result</span></a></span></span><a class="headerlink" href="#core_lens.base.namespaces.stats.StatsNamespace.change" title="Link to this definition">¶</a></dt>
+<dd><p>Change between two time periods per entity.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>column</strong> (<em>str</em>) – Value column to compute change for.</p></li>
+<li><p><strong>from_period</strong> (<em>int</em>) – Start year/period integer.</p></li>
+<li><p><strong>to_period</strong> (<em>int</em>) – End year/period integer.</p></li>
+<li><p><strong>method</strong> (<a class="reference internal" href="#core_lens.base.namespaces.stats.ChangeMethod" title="core_lens.base.namespaces.stats.ChangeMethod"><em>ChangeMethod</em></a><em>, </em><em>optional</em>) – A <a class="reference internal" href="#core_lens.base.namespaces.stats.ChangeMethod" title="core_lens.base.namespaces.stats.ChangeMethod"><code class="xref py py-class docutils literal notranslate"><span class="pre">ChangeMethod</span></code></a> enum value.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>For <em>absolute</em> / <em>percentage</em>: data has
+<code class="docutils literal notranslate"><span class="pre">key_col</span> <span class="pre">|</span> <span class="pre">value_from</span> <span class="pre">|</span> <span class="pre">value_to</span> <span class="pre">|</span> <span class="pre">change</span> <span class="pre">|</span> <span class="pre">pct_change</span></code>.
+For <em>trend</em>: <code class="docutils literal notranslate"><span class="pre">key_col</span> <span class="pre">|</span> <span class="pre">slope</span> <span class="pre">|</span> <span class="pre">r_squared</span> <span class="pre">|</span> <span class="pre">direction</span></code>.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference internal" href="../../result/index.html#core_lens.base.result.Result" title="core_lens.base.result.Result">Result</a></p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>ValueError</strong> – If <code class="docutils literal notranslate"><span class="pre">method</span></code> is not recognised or year column absent.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="core_lens.base.namespaces.stats.StatsNamespace.anomaly">
+<span class="sig-name descname"><span class="pre">anomaly</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">column</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mode</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">method</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#core_lens.base.namespaces.stats.AnomalyCrossMethod" title="core_lens.base.namespaces.stats.AnomalyCrossMethod"><span class="pre">AnomalyCrossMethod</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference internal" href="#core_lens.base.namespaces.stats.AnomalyTsMethod" title="core_lens.base.namespaces.stats.AnomalyTsMethod"><span class="pre">AnomalyTsMethod</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">baseline</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">int</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">threshold</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">2.0</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="../../result/index.html#core_lens.base.result.Result" title="core_lens.base.result.Result"><span class="pre">core_lens.base.result.Result</span></a></span></span><a class="headerlink" href="#core_lens.base.namespaces.stats.StatsNamespace.anomaly" title="Link to this definition">¶</a></dt>
+<dd><p>Anomaly detection in cross-sectional or timeseries mode.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>column</strong> (<em>str</em>) – Value column to analyse.</p></li>
+<li><p><strong>mode</strong> (<em>str</em>) – <code class="docutils literal notranslate"><span class="pre">&quot;cross_sectional&quot;</span></code> or <code class="docutils literal notranslate"><span class="pre">&quot;timeseries&quot;</span></code>.</p></li>
+<li><p><strong>method</strong> (<a class="reference internal" href="#core_lens.base.namespaces.stats.AnomalyCrossMethod" title="core_lens.base.namespaces.stats.AnomalyCrossMethod"><em>AnomalyCrossMethod</em></a><em> | </em><a class="reference internal" href="#core_lens.base.namespaces.stats.AnomalyTsMethod" title="core_lens.base.namespaces.stats.AnomalyTsMethod"><em>AnomalyTsMethod</em></a>) – An <a class="reference internal" href="#core_lens.base.namespaces.stats.AnomalyCrossMethod" title="core_lens.base.namespaces.stats.AnomalyCrossMethod"><code class="xref py py-class docutils literal notranslate"><span class="pre">AnomalyCrossMethod</span></code></a> or <a class="reference internal" href="#core_lens.base.namespaces.stats.AnomalyTsMethod" title="core_lens.base.namespaces.stats.AnomalyTsMethod"><code class="xref py py-class docutils literal notranslate"><span class="pre">AnomalyTsMethod</span></code></a> enum value.</p></li>
+<li><p><strong>baseline</strong> (<em>tuple</em><em>[</em><em>int</em><em>, </em><em>int</em><em>] </em><em>| </em><em>None</em><em>, </em><em>optional</em>) – <code class="docutils literal notranslate"><span class="pre">(from_year,</span> <span class="pre">to_year)</span></code> inclusive.  Required for
+timeseries; optional for cross-sectional.</p></li>
+<li><p><strong>threshold</strong> (<em>float</em><em>, </em><em>optional</em>) – Sigma / score threshold for anomaly flag (default 2.0).</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Result whose data has <code class="docutils literal notranslate"><span class="pre">key_col</span> <span class="pre">|</span> <span class="pre">anomaly_score</span> <span class="pre">|</span> <span class="pre">is_anomaly</span></code>
+(cross-sectional) or <code class="docutils literal notranslate"><span class="pre">key_col</span> <span class="pre">|</span> <span class="pre">year</span> <span class="pre">|</span> <span class="pre">anomaly_score</span> <span class="pre">|</span> <span class="pre">is_anomaly</span></code>
+(timeseries, baseline period excluded).</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference internal" href="../../result/index.html#core_lens.base.result.Result" title="core_lens.base.result.Result">Result</a></p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>ValueError</strong> – If <code class="docutils literal notranslate"><span class="pre">mode</span></code>, <code class="docutils literal notranslate"><span class="pre">method</span></code>, or observation count invalid.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="core_lens.base.namespaces.stats.StatsNamespace.similarity">
+<span class="sig-name descname"><span class="pre">similarity</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">target</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">columns</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">method</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#core_lens.base.namespaces.stats.SimilarityMethod" title="core_lens.base.namespaces.stats.SimilarityMethod"><span class="pre">SimilarityMethod</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">SimilarityMethod.EUCLIDEAN</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">top_n</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">10</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="../../result/index.html#core_lens.base.result.Result" title="core_lens.base.result.Result"><span class="pre">core_lens.base.result.Result</span></a></span></span><a class="headerlink" href="#core_lens.base.namespaces.stats.StatsNamespace.similarity" title="Link to this definition">¶</a></dt>
+<dd><p>Find entities most similar to <code class="docutils literal notranslate"><span class="pre">target</span></code> across <code class="docutils literal notranslate"><span class="pre">columns</span></code>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>target</strong> – Key value of the reference entity.</p></li>
+<li><p><strong>columns</strong> – <p>Mapping <code class="docutils literal notranslate"><span class="pre">{column_name:</span> <span class="pre">None</span> <span class="pre">|</span> <span class="pre">(resolution,</span> <span class="pre">filter_dict)}</span></code>.</p>
+<ul>
+<li><p><code class="docutils literal notranslate"><span class="pre">None</span></code> — use the column directly from <code class="docutils literal notranslate"><span class="pre">result.data</span></code>.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">(resolution,</span> <span class="pre">filter_dict)</span></code> — fetch from the entity’s file at
+the given resolution (<code class="docutils literal notranslate"><span class="pre">&quot;static&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;annual&quot;</span></code>,
+<code class="docutils literal notranslate"><span class="pre">&quot;fortnightly&quot;</span></code>).  Supported <code class="docutils literal notranslate"><span class="pre">filter_dict</span></code> keys:</p>
+<ul>
+<li><p><code class="docutils literal notranslate"><span class="pre">&quot;year&quot;:</span> <span class="pre">int</span> <span class="pre">|</span> <span class="pre">(int,</span> <span class="pre">int)</span></code> — year equality or range.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">&quot;season&quot;:</span> <span class="pre">str</span></code> — season label (<code class="docutils literal notranslate"><span class="pre">&quot;kharif&quot;</span></code> etc.).</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">&quot;agg&quot;:</span> <span class="pre">str</span></code> — time-aggregation before joining
+(<code class="docutils literal notranslate"><span class="pre">&quot;mean&quot;</span></code> default, <code class="docutils literal notranslate"><span class="pre">&quot;sum&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;min&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;max&quot;</span></code>).</p></li>
+</ul>
+</li>
+</ul>
+</p></li>
+<li><p><strong>method</strong> – Distance metric. A <a class="reference internal" href="#core_lens.base.namespaces.stats.SimilarityMethod" title="core_lens.base.namespaces.stats.SimilarityMethod"><code class="xref py py-class docutils literal notranslate"><span class="pre">SimilarityMethod</span></code></a> enum value.</p></li>
+<li><p><strong>top_n</strong> – Number of most-similar entities to return (default 10).</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Result with <code class="docutils literal notranslate"><span class="pre">key_col</span> <span class="pre">|</span> <span class="pre">similarity_score</span> <span class="pre">|</span> <span class="pre">rank</span></code>.</p>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>ValueError</strong> – If <code class="docutils literal notranslate"><span class="pre">method</span></code> is invalid, no columns can be resolved,
+or <code class="docutils literal notranslate"><span class="pre">target</span></code> is not found.</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+</section>
+
+        </article><button class="back-to-top" type="button">
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+    <path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8v12z"></path>
+  </svg>
+  <span>Back to top</span>
+</button><div class="navigation flex print:hidden"><div class="navigation-prev">
+    <a href="../plot/index.html">
+      <i class="i-lucide chevron-left"></i>
+      <div class="page-info">
+        <span>Previous</span><div class="title">core_lens.base.namespaces.plot</div></div>
+    </a>
+  </div><div class="navigation-next">
+    <a href="../../result/index.html">
+      <div class="page-info">
+        <span>Next</span>
+        <div class="title">core_lens.base.result</div>
+      </div>
+      <i class="i-lucide chevron-right"></i>
+    </a>
+  </div></div></div>
+    </div>
+  </main>
+</div>
+<footer class="sy-foot">
+  <div class="sy-foot-inner sy-container mx-auto">
+    <div class="sy-foot-reserved md:flex justify-between items-center">
+      <div class="sy-foot-copyright"><p>2026, Apoorva Kashyap</p>
+  
+  <p>
+    Made with
+    
+    <a href="https://www.sphinx-doc.org/">Sphinx</a> and
+    
+    <a href="https://shibuya.lepture.com">Shibuya theme</a>.
+  </p>
+</div>
+      <div class="sy-foot-socials"></div>
+    </div>
+  </div>
+</footer>
+      <script src="../../../../../_static/documentation_options.js?v=5929fcd5"></script>
+      <script src="../../../../../_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="../../../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
+      <script src="../../../../../_static/clipboard.min.js?v=a7894cd8"></script>
+      <script src="../../../../../_static/copybutton.js?v=f281be69"></script>
+      <script src="../../../../../_static/shibuya.js?v=50760d75"></script></body>
+</html>

@@ -1,0 +1,81 @@
+core_lens.schema.detection
+==========================
+
+.. py:module:: core_lens.schema.detection
+
+.. autoapi-nested-parse::
+
+   Schema auto-detection from Parquet file metadata.
+
+
+
+Exceptions
+----------
+
+.. autoapisummary::
+
+   core_lens.schema.detection.SchemaDetectionError
+
+
+Functions
+---------
+
+.. autoapisummary::
+
+   core_lens.schema.detection.detect
+
+
+Module Contents
+---------------
+
+.. py:exception:: SchemaDetectionError
+
+   Bases: :py:obj:`Exception`
+
+
+   Raised when the detection layer cannot produce a valid SchemaProfile.
+
+   The message identifies which file and which inference step failed so
+   entity authors have an actionable starting point.
+
+
+.. py:function:: detect(static_path: str, key_cols: list[str], geometry_col: str, annual_path: str | None = None, fortnightly_path: str | None = None) -> core_lens.schema.profile.SchemaProfile
+
+   Introspect Parquet file schemas and return a validated SchemaProfile.
+
+   Reads only Parquet footer metadata — no row data is scanned.  Intended
+   to be called once per entity at ``AoI.register()`` time and the result
+   cached on the entity instance.
+
+   Detection order for each inferred field:
+
+   * **geometry_type** — derived from the dtype of ``geometry_col``:
+     ``Binary`` → ``"wkb"``, ``String`` → ``"wkt"``, ``Float``
+     with a detected lon companion column → ``"latlon"``.
+   * **bbox_cols** — checked against a fixed set of four-column name
+     patterns.  ``None`` if no known pattern is present in the static schema.
+   * **annual_time_col** / **fortnightly_time_col** — the first column with
+     a ``Date``, ``Datetime``, or ``Int`` dtype whose name matches a known
+     set of time-column names.  Falls back to the first ``Date``/``Datetime``
+     column regardless of name.
+   * **extra_*_cols** — every remaining column after key, geometry, bbox,
+     and time columns are accounted for.
+
+   :param static_path: Path to the static GeoParquet file.
+   :type static_path: str
+   :param key_cols: Entity key column name(s), as declared on the entity.
+   :type key_cols: list[str]
+   :param geometry_col: Geometry column name, as declared on the entity.
+   :type geometry_col: str
+   :param annual_path: Path to the annual Parquet file, or ``None``.
+   :type annual_path: str | None, optional
+   :param fortnightly_path: Path to the fortnightly Parquet file, or ``None``.
+   :type fortnightly_path: str | None, optional
+
+   :returns: A validated :class:`~core_lens.schema.profile.SchemaProfile`.
+   :rtype: SchemaProfile
+
+   :raises SchemaDetectionError: If a required column is absent, the geometry
+       type cannot be inferred, or any other detection step fails.
+
+

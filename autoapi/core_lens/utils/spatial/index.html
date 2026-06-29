@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="en" data-accent-color="violet" data-content_root="../../../../">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"><title>core_lens.utils.spatial - CoreLens documentation</title><link rel="index" title="Index" href="../../../../genindex.html" /><link rel="search" title="Search" href="../../../../search.html" /><link rel="prev" title="core_lens.utils.season" href="../season/index.html" /><script>
+    function setColorMode(t){let e=document.documentElement;e.setAttribute("data-color-mode",t);let a=window.matchMedia&&window.matchMedia("(prefers-color-scheme: dark)").matches,s=t;"auto"===t&&(s=a?"dark":"light"),"light"===s?(e.classList.remove("dark"),e.classList.add("light")):(e.classList.remove("light"),e.classList.add("dark"))}
+    setColorMode(localStorage._theme||"auto");
+  </script><link rel="stylesheet" type="text/css" href="../../../../_static/pygments.css?v=e1a1ceaf" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/shibuya.css?v=9454f7d5" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/graphviz.css?v=4ae1632d" />
+    <link media="print" rel="stylesheet" type="text/css" href="../../../../_static/print.css?v=20ff2c19" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --sy-f-text: "Inter", var(--sy-f-sys), var(--sy-f-cjk), sans-serif;
+  --sy-f-heading: "Inter", var(--sy-f-sys), var(--sy-f-cjk), sans-serif;
+}
+</style>
+    
+  <meta property="og:type" content="website"/><meta property="og:title" content="core_lens.utils.spatial"/>
+    <meta name="twitter:card" content="summary"/>
+  </head>
+<body><div class="sy-head">
+  <div class="sy-head-blur"></div>
+  <div class="sy-head-inner sy-container mx-auto">
+    <a class="sy-head-brand" href="../../../../index.html">
+      
+      
+      <strong>CoreLens</strong>
+    </a>
+    <div class="sy-head-nav" id="head-nav">
+      <nav class="sy-head-links"></nav>
+      <div class="sy-head-extra flex items-center print:hidden"><form class="searchbox flex items-center" action="../../../../search.html" method="get">
+  <input type="text" name="q" placeholder="Search" />
+  <kbd>/</kbd>
+</form><div class="sy-head-socials"></div></div>
+    </div>
+    <div class="sy-head-actions flex items-center shrink-0 print:hidden"><button class="js-theme theme-switch flex items-center"
+data-aria-auto="Switch to light color mode"
+data-aria-light="Switch to dark color mode"
+data-aria-dark="Switch to auto color mode">
+<i class="i-lucide theme-icon"></i>
+</button><button class="md:hidden flex items-center js-menu" aria-label="Menu" type="button" aria-controls="head-nav" aria-expanded="false">
+        <div class="hamburger">
+          <span class="hamburger_1"></span>
+          <span class="hamburger_2"></span>
+          <span class="hamburger_3"></span>
+        </div>
+      </button>
+    </div>
+  </div>
+</div>
+<div class="sy-page sy-container flex mx-auto">
+  <aside id="lside" class="sy-lside md:w-72 md:shrink-0 print:hidden">
+    <div class="sy-lside-inner md:sticky">
+      <div class="sy-scrollbar p-6">
+        <div class="globaltoc" data-expand-depth="0"><p class="caption" role="heading" aria-level="3"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../../../../intro.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../quickstart.html">Quickstart</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../concepts.html">Core Concepts</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../queries.html">Example Queries</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../stats.html">Statistical Analysis</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../plots.html">Visualisation and Plots</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../export.html">Data Export</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../plugins.html">Plugin System</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../logging.html">Logging</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="../../../index.html">API Reference</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="../../index.html">core_lens</a><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="../../aoi/index.html">core_lens.aoi</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../base/index.html">core_lens.base</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../../base/entity/index.html">core_lens.base.entity</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../base/namespaces/index.html">core_lens.base.namespaces</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../base/result/index.html">core_lens.base.result</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../base/view/index.html">core_lens.base.view</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../../entities/index.html">core_lens.entities</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../../entities/mws/index.html">core_lens.entities.mws</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../entities/tehsil/index.html">core_lens.entities.tehsil</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../entities/waterbody/index.html">core_lens.entities.waterbody</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../../export/index.html">core_lens.export</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../../export/formats/index.html">core_lens.export.formats</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../../schema/index.html">core_lens.schema</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../../schema/detection/index.html">core_lens.schema.detection</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../schema/profile/index.html">core_lens.schema.profile</a></li>
+</ul>
+</li>
+<li class="toctree-l3 current"><a class="reference internal" href="../index.html">core_lens.utils</a><ul class="current">
+<li class="toctree-l4"><a class="reference internal" href="../polars_utils/index.html">core_lens.utils.polars_utils</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../season/index.html">core_lens.utils.season</a></li>
+<li class="toctree-l4 current"><a class="current reference internal" href="#">core_lens.utils.spatial</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+        </div>
+      </div>
+    </div>
+  </aside>
+  <div class="lside-overlay js-menu" role="button" aria-label="Close left sidebar" aria-controls="lside" aria-expanded="false"></div>
+  <aside id="rside" class="sy-rside pb-3 w-64 shrink-0 order-last">
+    <button class="rside-close js-menu xl:hidden" aria-label="Close Table of Contents" type="button" aria-controls="rside" aria-expanded="false">
+      <i class="i-lucide close"></i>
+    </button>
+    <div class="sy-scrollbar sy-rside-inner px-6 xl:top-16 xl:sticky xl:pl-0 pt-6 pb-4"><div class="localtoc"><h3>On this page</h3><ul>
+<li><a class="reference internal" href="#functions">Functions</a></li>
+<li><a class="reference internal" href="#module-contents">Module Contents</a><ul>
+<li><a class="reference internal" href="#core_lens.utils.spatial.resolve_path"><code class="docutils literal notranslate"><span class="pre">resolve_path()</span></code></a></li>
+<li><a class="reference internal" href="#core_lens.utils.spatial.build_bbox_index"><code class="docutils literal notranslate"><span class="pre">build_bbox_index()</span></code></a></li>
+<li><a class="reference internal" href="#core_lens.utils.spatial.bbox_intersects_geometry"><code class="docutils literal notranslate"><span class="pre">bbox_intersects_geometry()</span></code></a></li>
+<li><a class="reference internal" href="#core_lens.utils.spatial.exact_spatial_filter"><code class="docutils literal notranslate"><span class="pre">exact_spatial_filter()</span></code></a></li>
+<li><a class="reference internal" href="#core_lens.utils.spatial.execute_spatial_join"><code class="docutils literal notranslate"><span class="pre">execute_spatial_join()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</div><div id="ethical-ad-placement" data-ea-publisher="readthedocs"></div></div>
+  </aside>
+  <div class="rside-overlay js-menu" role="button" aria-label="Close Table of Contents" aria-controls="rside" aria-expanded="false"></div>
+  <main class="sy-main w-full max-sm:max-w-full print:pt-6">
+<div class="sy-breadcrumbs" role="navigation">
+  <div class="sy-breadcrumbs-inner flex items-center">
+    <div class="md:hidden mr-3">
+      <button class="js-menu" aria-label="Menu" type="button" aria-controls="lside" aria-expanded="false">
+        <i class="i-lucide menu"></i>
+      </button>
+    </div>
+    <ol class="flex-1" itemscope itemtype="https://schema.org/BreadcrumbList"><li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+        <a itemprop="item" href="../../../../index.html"><span itemprop="name">CoreLens</span></a>
+        <span>/</span>
+        <meta itemprop="position" content="1" />
+      </li><li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+        <a itemprop="item" href="../../../index.html"><span itemprop="name">API Reference</span></a>
+        <span>/</span>
+        <meta itemprop="position" content="2" />
+      </li><li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+        <a itemprop="item" href="../../index.html"><span itemprop="name">core_lens</span></a>
+        <span>/</span>
+        <meta itemprop="position" content="3" />
+      </li><li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+        <a itemprop="item" href="../index.html"><span itemprop="name">core_lens.utils</span></a>
+        <span>/</span>
+        <meta itemprop="position" content="4" />
+      </li><li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+        <strong itemprop="name">core_lens.utils.spatial</strong>
+        <meta itemprop="position" content="5" />
+      </li></ol>
+    <div class="xl:hidden ml-1">
+      <button class="js-menu" aria-label="Show table of contents" type="button" aria-controls="rside"
+        aria-expanded="false">
+        <i class="i-lucide outdent"></i>
+      </button>
+    </div>
+  </div>
+</div><div class="flex flex-col break-words justify-between">
+      <div class="relative min-w-0 max-w-6xl px-6 pb-6 pt-8 xl:px-12">
+  <article class="yue" role="main">
+          <section id="module-core_lens.utils.spatial">
+<span id="core-lens-utils-spatial"></span><h1>core_lens.utils.spatial<a class="headerlink" href="#module-core_lens.utils.spatial" title="Link to this heading">¶</a></h1>
+<p>Spatial helpers for in-memory index construction and geometry filtering.</p>
+<section id="functions">
+<h2>Functions<a class="headerlink" href="#functions" title="Link to this heading">¶</a></h2>
+<div class="table-wrapper autosummary longtable docutils container">
+<table class="autosummary longtable docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#core_lens.utils.spatial.resolve_path" title="core_lens.utils.spatial.resolve_path"><code class="xref py py-obj docutils literal notranslate"><span class="pre">resolve_path</span></code></a>(→ str)</p></td>
+<td><p>Return an absolute path string, resolving relative paths against cwd.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#core_lens.utils.spatial.build_bbox_index" title="core_lens.utils.spatial.build_bbox_index"><code class="xref py py-obj docutils literal notranslate"><span class="pre">build_bbox_index</span></code></a>(→ polars.DataFrame)</p></td>
+<td><p>Build the in-memory <code class="docutils literal notranslate"><span class="pre">(key_cols...,</span> <span class="pre">minx,</span> <span class="pre">miny,</span> <span class="pre">maxx,</span> <span class="pre">maxy)</span></code> index.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#core_lens.utils.spatial.bbox_intersects_geometry" title="core_lens.utils.spatial.bbox_intersects_geometry"><code class="xref py py-obj docutils literal notranslate"><span class="pre">bbox_intersects_geometry</span></code></a>(→ polars.DataFrame)</p></td>
+<td><p>Return the index rows whose bounding box overlaps <code class="docutils literal notranslate"><span class="pre">geometry</span></code>'s bounds.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#core_lens.utils.spatial.exact_spatial_filter" title="core_lens.utils.spatial.exact_spatial_filter"><code class="xref py py-obj docutils literal notranslate"><span class="pre">exact_spatial_filter</span></code></a>(→ polars.DataFrame)</p></td>
+<td><p>Refine a bbox candidate set to rows that match <code class="docutils literal notranslate"><span class="pre">aoi_geometry</span></code>.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#core_lens.utils.spatial.execute_spatial_join" title="core_lens.utils.spatial.execute_spatial_join"><code class="xref py py-obj docutils literal notranslate"><span class="pre">execute_spatial_join</span></code></a>(→ polars.DataFrame)</p></td>
+<td><p>Materialise a cross-entity spatial join and return enriched DataFrame.</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+<section id="module-contents">
+<h2>Module Contents<a class="headerlink" href="#module-contents" title="Link to this heading">¶</a></h2>
+<dl class="py function">
+<dt class="sig sig-object py" id="core_lens.utils.spatial.resolve_path">
+<span class="sig-prename descclassname"><span class="pre">core_lens.utils.spatial.</span></span><span class="sig-name descname"><span class="pre">resolve_path</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">str</span></span></span><a class="headerlink" href="#core_lens.utils.spatial.resolve_path" title="Link to this definition">¶</a></dt>
+<dd><p>Return an absolute path string, resolving relative paths against cwd.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>path</strong> (<em>str</em>) – A filesystem path, absolute or relative.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>An absolute path string.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>str</p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>FileNotFoundError</strong> – If the resolved path does not exist.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="core_lens.utils.spatial.build_bbox_index">
+<span class="sig-prename descclassname"><span class="pre">core_lens.utils.spatial.</span></span><span class="sig-name descname"><span class="pre">build_bbox_index</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">static_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">key_cols</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bbox_cols</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">geometry_col</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">geometry_type</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">polars.DataFrame</span></span></span><a class="headerlink" href="#core_lens.utils.spatial.build_bbox_index" title="Link to this definition">¶</a></dt>
+<dd><p>Build the in-memory <code class="docutils literal notranslate"><span class="pre">(key_cols...,</span> <span class="pre">minx,</span> <span class="pre">miny,</span> <span class="pre">maxx,</span> <span class="pre">maxy)</span></code> index.</p>
+<p>Reads the static GeoParquet file using only the key and spatial columns —
+no attribute data is pulled into memory.  If pre-computed bbox columns are
+present in the file they are read directly; otherwise the geometry column
+is decoded and bounds are computed via Shapely.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>static_path</strong> (<em>str</em>) – Absolute path to the static GeoParquet file.</p></li>
+<li><p><strong>key_cols</strong> (<em>list</em><em>[</em><em>str</em><em>]</em>) – Column name(s) that form the entity’s unique key.</p></li>
+<li><p><strong>bbox_cols</strong> (<em>tuple</em><em>[</em><em>str</em><em>, </em><em>str</em><em>, </em><em>str</em><em>, </em><em>str</em><em>] </em><em>| </em><em>None</em>) – Four-column <code class="docutils literal notranslate"><span class="pre">(minx,</span> <span class="pre">miny,</span> <span class="pre">maxx,</span> <span class="pre">maxy)</span></code> tuple if the
+static file carries pre-computed bounding boxes, otherwise <code class="docutils literal notranslate"><span class="pre">None</span></code>.</p></li>
+<li><p><strong>geometry_col</strong> (<em>str</em>) – Name of the geometry column.</p></li>
+<li><p><strong>geometry_type</strong> (<em>str</em>) – One of <code class="docutils literal notranslate"><span class="pre">&quot;wkb&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;wkt&quot;</span></code>, or <code class="docutils literal notranslate"><span class="pre">&quot;latlon&quot;</span></code>.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>A <code class="docutils literal notranslate"><span class="pre">pl.DataFrame</span></code> with columns <code class="docutils literal notranslate"><span class="pre">(*key_cols,</span> <span class="pre">minx,</span> <span class="pre">miny,</span> <span class="pre">maxx,</span> <span class="pre">maxy)</span></code>.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>pl.DataFrame</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="core_lens.utils.spatial.bbox_intersects_geometry">
+<span class="sig-prename descclassname"><span class="pre">core_lens.utils.spatial.</span></span><span class="sig-name descname"><span class="pre">bbox_intersects_geometry</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">index_df</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">polars.DataFrame</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">geometry</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">shapely.Geometry</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">polars.DataFrame</span></span></span><a class="headerlink" href="#core_lens.utils.spatial.bbox_intersects_geometry" title="Link to this definition">¶</a></dt>
+<dd><p>Return the index rows whose bounding box overlaps <code class="docutils literal notranslate"><span class="pre">geometry</span></code>’s bounds.</p>
+<p>This is a fast rectangular pre-filter in pure Polars — no STRtree.  It
+returns a superset of the exact result, which is then refined by
+<a class="reference internal" href="#core_lens.utils.spatial.exact_spatial_filter" title="core_lens.utils.spatial.exact_spatial_filter"><code class="xref py py-func docutils literal notranslate"><span class="pre">exact_spatial_filter()</span></code></a>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>index_df</strong> (<em>pl.DataFrame</em>) – The in-memory index DataFrame with <code class="docutils literal notranslate"><span class="pre">minx,</span> <span class="pre">miny,</span> <span class="pre">maxx,</span> <span class="pre">maxy</span></code>
+columns produced by <a class="reference internal" href="#core_lens.utils.spatial.build_bbox_index" title="core_lens.utils.spatial.build_bbox_index"><code class="xref py py-func docutils literal notranslate"><span class="pre">build_bbox_index()</span></code></a>.</p></li>
+<li><p><strong>geometry</strong> (<em>shapely.Geometry</em>) – Any Shapely geometry representing the area of interest.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The subset of <code class="docutils literal notranslate"><span class="pre">index_df</span></code> whose rows overlap the geometry bounds.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>pl.DataFrame</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="core_lens.utils.spatial.exact_spatial_filter">
+<span class="sig-prename descclassname"><span class="pre">core_lens.utils.spatial.</span></span><span class="sig-name descname"><span class="pre">exact_spatial_filter</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">candidates</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">polars.DataFrame</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">static_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">key_cols</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">geometry_col</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">geometry_type</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">aoi_geometry</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">shapely.Geometry</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">relationship</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'centroid'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">threshold</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.5</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">polars.DataFrame</span></span></span><a class="headerlink" href="#core_lens.utils.spatial.exact_spatial_filter" title="Link to this definition">¶</a></dt>
+<dd><p>Refine a bbox candidate set to rows that match <code class="docutils literal notranslate"><span class="pre">aoi_geometry</span></code>.</p>
+<p>Reads only the key and geometry columns for the candidate rows, decodes
+each geometry, and tests for the requested spatial relationship.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>candidates</strong> (<em>pl.DataFrame</em>) – The DataFrame from <a class="reference internal" href="#core_lens.utils.spatial.bbox_intersects_geometry" title="core_lens.utils.spatial.bbox_intersects_geometry"><code class="xref py py-func docutils literal notranslate"><span class="pre">bbox_intersects_geometry()</span></code></a> —
+only the key columns are used here; the bbox columns are ignored.</p></li>
+<li><p><strong>static_path</strong> (<em>str</em>) – Absolute path to the static GeoParquet file.</p></li>
+<li><p><strong>key_cols</strong> (<em>list</em><em>[</em><em>str</em><em>]</em>) – Column name(s) that form the entity’s unique key.</p></li>
+<li><p><strong>geometry_col</strong> (<em>str</em>) – Name of the geometry column in the static file.</p></li>
+<li><p><strong>geometry_type</strong> (<em>str</em>) – One of <code class="docutils literal notranslate"><span class="pre">&quot;wkb&quot;</span></code> or <code class="docutils literal notranslate"><span class="pre">&quot;wkt&quot;</span></code>.</p></li>
+<li><p><strong>aoi_geometry</strong> (<em>shapely.Geometry</em>) – The Area of Interest geometry to test against.</p></li>
+<li><p><strong>relationship</strong> (<em>str</em><em>, </em><em>optional</em>) – <p>Spatial relationship mode.</p>
+<ul>
+<li><p><code class="docutils literal notranslate"><span class="pre">&quot;centroid&quot;</span></code> (default) — entity centroid must lie <strong>within</strong>
+<code class="docutils literal notranslate"><span class="pre">aoi_geometry</span></code>.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">&quot;area&quot;</span></code> — fraction of the entity’s area covered by the
+intersection must exceed <code class="docutils literal notranslate"><span class="pre">threshold</span></code>.</p></li>
+</ul>
+</p></li>
+<li><p><strong>threshold</strong> (<em>float</em><em>, </em><em>optional</em>) – Minimum intersection-to-entity area ratio used in
+<code class="docutils literal notranslate"><span class="pre">&quot;area&quot;</span></code> mode.  Ignored in <code class="docutils literal notranslate"><span class="pre">&quot;centroid&quot;</span></code> mode.  Default 0.5.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>A <code class="docutils literal notranslate"><span class="pre">pl.DataFrame</span></code> containing only the key columns for entities that
+satisfy the spatial relationship.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>pl.DataFrame</p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>ValueError</strong> – If <code class="docutils literal notranslate"><span class="pre">relationship</span></code> is not one of the valid options.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="core_lens.utils.spatial.execute_spatial_join">
+<span class="sig-prename descclassname"><span class="pre">core_lens.utils.spatial.</span></span><span class="sig-name descname"><span class="pre">execute_spatial_join</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">primary_df</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">polars.DataFrame</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">primary_key_cols</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">primary_geom_col</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">primary_geom_type</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">other_entity</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Any</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">agg</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">other_entity_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">polars.DataFrame</span></span></span><a class="headerlink" href="#core_lens.utils.spatial.execute_spatial_join" title="Link to this definition">¶</a></dt>
+<dd><p>Materialise a cross-entity spatial join and return enriched DataFrame.</p>
+<p>For each entity in <code class="docutils literal notranslate"><span class="pre">primary_df</span></code>, finds the overlapping entities in
+<code class="docutils literal notranslate"><span class="pre">other_entity</span></code> and aggregates the requested columns.  Result columns are
+named <code class="docutils literal notranslate"><span class="pre">{other_entity_name}_{column_name}</span></code> to avoid clashes.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>primary_df</strong> (<em>pl.DataFrame</em>) – The primary entity DataFrame (must contain
+<code class="docutils literal notranslate"><span class="pre">primary_geom_col</span></code> unless geometry is in a separate column).</p></li>
+<li><p><strong>primary_key_cols</strong> (<em>list</em><em>[</em><em>str</em><em>]</em>) – Key column(s) of the primary entity.</p></li>
+<li><p><strong>primary_geom_col</strong> (<em>str</em>) – Name of the WKB geometry column in <code class="docutils literal notranslate"><span class="pre">primary_df</span></code>.</p></li>
+<li><p><strong>primary_geom_type</strong> (<em>str</em>) – Geometry encoding — <code class="docutils literal notranslate"><span class="pre">&quot;wkb&quot;</span></code> or <code class="docutils literal notranslate"><span class="pre">&quot;wkt&quot;</span></code>.</p></li>
+<li><p><strong>other_entity</strong> (<a class="reference internal" href="../../base/entity/index.html#core_lens.base.entity.BaseEntity" title="core_lens.base.entity.BaseEntity"><em>BaseEntity</em></a>) – A <a class="reference internal" href="../../base/entity/index.html#core_lens.base.entity.BaseEntity" title="core_lens.base.entity.BaseEntity"><code class="xref py py-class docutils literal notranslate"><span class="pre">BaseEntity</span></code></a> instance
+to join against.</p></li>
+<li><p><strong>agg</strong> (<em>dict</em><em>[</em><em>str</em><em>, </em><em>str</em><em>]</em>) – Mapping <code class="docutils literal notranslate"><span class="pre">{column:</span> <span class="pre">aggregation}</span></code> — which columns from
+<code class="docutils literal notranslate"><span class="pre">other_entity</span></code> to bring in and how to aggregate them.  Valid
+aggregations: <code class="docutils literal notranslate"><span class="pre">&quot;count&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;mean&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;sum&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;min&quot;</span></code>,
+<code class="docutils literal notranslate"><span class="pre">&quot;max&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;area&quot;</span></code>.</p></li>
+<li><p><strong>other_entity_name</strong> (<em>str</em>) – Used to prefix result column names.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><code class="docutils literal notranslate"><span class="pre">primary_df</span></code> with additional columns
+<code class="docutils literal notranslate"><span class="pre">{other_entity_name}_{col}</span></code> appended for each <code class="docutils literal notranslate"><span class="pre">agg</span></code> entry.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>pl.DataFrame</p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+</section>
+
+        </article><button class="back-to-top" type="button">
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+    <path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8v12z"></path>
+  </svg>
+  <span>Back to top</span>
+</button><div class="navigation flex print:hidden"><div class="navigation-prev">
+    <a href="../season/index.html">
+      <i class="i-lucide chevron-left"></i>
+      <div class="page-info">
+        <span>Previous</span><div class="title">core_lens.utils.season</div></div>
+    </a>
+  </div></div></div>
+    </div>
+  </main>
+</div>
+<footer class="sy-foot">
+  <div class="sy-foot-inner sy-container mx-auto">
+    <div class="sy-foot-reserved md:flex justify-between items-center">
+      <div class="sy-foot-copyright"><p>2026, Apoorva Kashyap</p>
+  
+  <p>
+    Made with
+    
+    <a href="https://www.sphinx-doc.org/">Sphinx</a> and
+    
+    <a href="https://shibuya.lepture.com">Shibuya theme</a>.
+  </p>
+</div>
+      <div class="sy-foot-socials"></div>
+    </div>
+  </div>
+</footer>
+      <script src="../../../../_static/documentation_options.js?v=5929fcd5"></script>
+      <script src="../../../../_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="../../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
+      <script src="../../../../_static/clipboard.min.js?v=a7894cd8"></script>
+      <script src="../../../../_static/copybutton.js?v=f281be69"></script>
+      <script src="../../../../_static/shibuya.js?v=50760d75"></script></body>
+</html>

@@ -1,0 +1,155 @@
+core_lens.schema.profile
+========================
+
+.. py:module:: core_lens.schema.profile
+
+.. autoapi-nested-parse::
+
+   Pydantic model describing the schema of one entity's data files.
+
+
+
+Classes
+-------
+
+.. autoapisummary::
+
+   core_lens.schema.profile.Resolution
+   core_lens.schema.profile.SchemaProfile
+
+
+Module Contents
+---------------
+
+.. py:class:: Resolution
+
+   Bases: :py:obj:`str`, :py:obj:`enum.Enum`
+
+
+   Temporal resolution of a dataset.
+
+
+   .. py:attribute:: STATIC
+      :value: 'static'
+
+
+
+   .. py:attribute:: ANNUAL
+      :value: 'annual'
+
+
+
+   .. py:attribute:: FORTNIGHTLY
+      :value: 'fortnightly'
+
+
+
+.. py:class:: SchemaProfile(/, **data: Any)
+
+   Bases: :py:obj:`pydantic.BaseModel`
+
+
+   Validated descriptor for the column layout of one entity's Parquet files.
+
+   ``SchemaProfile`` is a Pydantic model, so all fields are validated at
+   construction time.  It is built once per entity — either declared
+   explicitly in a concrete :class:`~core_lens.base.entity.BaseEntity`
+   subclass, or produced lazily by the schema detection layer when a path is
+   first accessed.
+
+   The model is intentionally narrow: it captures only what the rest of the
+   library needs to adapt to schema changes at runtime (key identities, geometry
+   encoding, time column names, optional bbox columns).  Columns not listed in
+   one of the ``extra_*`` fields are ignored rather than rejected, so adding
+   a new attribute column to a Parquet file is always a non-breaking change.
+
+   :ivar key_cols: Column name(s) that form the unique identifier for one entity
+                   instance.  Must be present in the static file and in every temporal
+                   file that references the entity.
+   :ivar geometry_col: Name of the geometry column in the static GeoParquet file.
+   :ivar geometry_type: Encoding of the geometry column.  ``"wkb"`` for WKB-encoded
+                        bytes (standard GeoParquet), ``"wkt"`` for WKT strings, ``"latlon"``
+                        for separate latitude/longitude columns (requires ``bbox_cols`` to be
+                        set or a specific lat/lon pair to be documented separately).
+   :ivar annual_time_col: Name of the date/year column in the annual Parquet file,
+                          or ``None`` if the entity has no annual data.
+   :ivar fortnightly_time_col: Name of the date column in the fortnightly Parquet
+                               file, or ``None`` if the entity has no fortnightly data.
+   :ivar bbox_cols: Four-tuple ``(minx, miny, maxx, maxy)`` of column names
+                    holding the pre-computed bounding box for each entity instance in the
+                    static file.  Used to build the in-memory index without a geometry
+                    decode pass.  ``None`` if the static file does not carry bbox columns
+                    (the index will be built by decoding the geometry column instead).
+   :ivar extra_static_cols: Additional attribute columns in the static file that
+                            the library should surface.  Columns absent from this list are still
+                            readable via :meth:`~core_lens.base.result.Result.df`; this field
+                            is used for validation and documentation only.
+   :ivar extra_annual_cols: Additional attribute columns in the annual file.
+   :ivar extra_fortnightly_cols: Additional attribute columns in the fortnightly file.
+
+
+
+   .. py:attribute:: model_config
+
+      Configuration for the model, should be a dictionary conforming to [`ConfigDict`][pydantic.config.ConfigDict].
+
+
+   .. py:attribute:: key_cols
+      :type:  list[str]
+
+
+   .. py:attribute:: geometry_col
+      :type:  str
+
+
+   .. py:attribute:: geometry_type
+      :type:  Literal['wkb', 'wkt', 'latlon']
+
+
+   .. py:attribute:: annual_time_col
+      :type:  str | None
+
+
+   .. py:attribute:: fortnightly_time_col
+      :type:  str | None
+
+
+   .. py:attribute:: bbox_cols
+      :type:  tuple[str, str, str, str] | None
+
+
+   .. py:attribute:: extra_static_cols
+      :type:  list[str]
+      :value: []
+
+
+
+   .. py:attribute:: extra_annual_cols
+      :type:  list[str]
+      :value: []
+
+
+
+   .. py:attribute:: extra_fortnightly_cols
+      :type:  list[str]
+      :value: []
+
+
+
+   .. py:method:: from_file(path: str | pathlib.Path) -> SchemaProfile
+      :classmethod:
+
+
+      Load a schema profile from a JSON file.
+
+      :param path: Path to the JSON configuration file.
+      :type path: str | pathlib.Path
+
+      :returns: A new :class:`SchemaProfile` instance.
+      :rtype: SchemaProfile
+
+      :raises ValueError: If the file is not valid JSON.
+      :raises FileNotFoundError: If the file does not exist.
+
+
+
