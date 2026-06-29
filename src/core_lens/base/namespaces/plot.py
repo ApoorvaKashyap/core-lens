@@ -144,12 +144,33 @@ def _wkb_to_arrow_table(
     idx = arrow_table.schema.get_field_index(geom_col)
     schema = arrow_table.schema.remove(idx)
 
-    tbl_cols = [ac.ChunkedArray(arrow_table.column(c)) for c in schema.names]
-    tbl_cols.insert(idx, ac.ChunkedArray([ac.Array(geo_col)]))
-    names = list(schema.names)
-    names.insert(idx, geom_col)
+    import json
 
-    tbl = ac.Table.from_arrays(tbl_cols, names=names)
+    arr_geo = ac.Array(geo_col)
+    ac_geo = ac.ChunkedArray([arr_geo])
+    geom_field = arr_geo.field.with_name(geom_col)
+
+    ext_meta = dict(geom_field.metadata or {})
+    geo_meta = {}
+    if b"ARROW:extension:metadata" in ext_meta:
+        try:
+            geo_meta = json.loads(ext_meta[b"ARROW:extension:metadata"].decode("utf-8"))
+        except Exception:
+            pass
+    geo_meta["crs"] = "EPSG:4326"
+    ext_meta[b"ARROW:extension:metadata"] = json.dumps(geo_meta).encode("utf-8")
+    new_geom_field = geom_field.with_metadata(ext_meta)
+
+    new_fields = [
+        ac.Field.from_arrow(schema.field(i)) for i in range(len(schema.names))
+    ]
+    new_fields.insert(idx, new_geom_field)
+    new_schema = ac.Schema(new_fields)
+
+    tbl_cols = [ac.ChunkedArray(arrow_table.column(c)) for c in schema.names]
+    tbl_cols.insert(idx, ac_geo)
+
+    tbl = ac.Table.from_arrays(tbl_cols, schema=new_schema)
     return tbl
 
 
