@@ -468,8 +468,9 @@ class PlotNamespace:
                     size=5,
                 )
 
-            fig.legend.location = "top_left"
-            fig.legend.click_policy = "hide"
+            if fig.legend:
+                fig.legend.location = "top_left"
+                fig.legend.click_policy = "hide"
             _apply_theme(fig, self.result, title)
             return fig
 
@@ -573,8 +574,9 @@ class PlotNamespace:
                     size=8,
                     alpha=0.7,
                 )
-            fig.legend.location = "top_left"
-            fig.legend.click_policy = "hide"
+            if fig.legend:
+                fig.legend.location = "top_left"
+                fig.legend.click_policy = "hide"
             _apply_theme(fig, self.result, "Scatter Distribution")
             return fig
 
@@ -642,8 +644,9 @@ class PlotNamespace:
                     alpha=0.6,
                     legend_label=str(entity),
                 )
-            fig.legend.location = "top_right"
-            fig.legend.click_policy = "hide"
+            if fig.legend:
+                fig.legend.location = "top_right"
+                fig.legend.click_policy = "hide"
             _apply_theme(fig, self.result, "Distribution")
             return fig
 

@@ -31,6 +31,7 @@ from __future__ import annotations
 import polars as pl
 import shapely.geometry as sgeom
 from bokeh.io import save
+from bokeh.resources import CDN
 
 from core_lens import AoI, SeasonConfig
 from core_lens.entities import MWSEntity
@@ -260,7 +261,7 @@ except Exception:
 
 try:
     line_fig = result_annual.plot.timeseries(x="year", y="dw_et")
-    save(line_fig, filename="mws_et_trend.html")
+    save(line_fig, filename="mws_et_trend.html", resources=CDN, title="MWS ET Trend")
     print("Saved line plot to mws_et_trend.html")
 except Exception:
     pass
@@ -269,7 +270,12 @@ except Exception:
 # ── 21. Plot — scatter ───────────────────────────────────────────────────────
 try:
     scatter_fig = result_static_derived.plot.scatter(x="area_km2", y="dryspell_score")
-    save(scatter_fig, filename="mws_scatter.html")
+    save(
+        scatter_fig,
+        filename="mws_scatter.html",
+        resources=CDN,
+        title="MWS Scatter Distribution",
+    )
 except Exception:
     pass
 
