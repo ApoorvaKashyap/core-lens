@@ -49,6 +49,7 @@ core = [
     "pyarrow>=23.0.0,<25",
     "pydantic>=2.13.3,<3",
     "loguru>=0.7.3",
+    "awscrt>=0.23.0",
 ]
 spatial = [
     "core-lens[core]",
@@ -82,7 +83,11 @@ dev = [
     "scalene>=2.3.0",
     "twine>=6.2.0",
 ]
-types = ["types-geopandas>=1.1.3.20260518", "types-shapely>=2.1.0.20260518"]
+types = [
+    "scipy-stubs>=1.18.0.0",
+    "types-geopandas>=1.1.3.20260518",
+    "types-shapely>=2.1.0.20260518",
+]
 docs = [
     "myst-parser>=5.1.0",
     "shibuya>=2026.5.19",
@@ -102,7 +107,7 @@ disallow_untyped_defs = false
 disallow_incomplete_defs = false
 
 [[tool.mypy.overrides]]
-module = ["bokeh.*"]
+module = ["bokeh.*", "pyarrow.*"]
 ignore_missing_imports = true
 
 [[tool.uv.index]]

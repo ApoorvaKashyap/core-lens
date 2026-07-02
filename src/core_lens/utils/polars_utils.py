@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 import polars as pl
 
 _GPU_AVAILABLE: bool | None = None  # None = not yet probed
@@ -78,6 +80,7 @@ def scan_with_key_filter(
     key_cols: list[str],
     key_values: pl.DataFrame,
     time_expr: pl.Expr | None = None,
+    storage_options: dict[str, Any] | None = None,
 ) -> pl.LazyFrame:
     """Return a ``pl.LazyFrame`` filtered to the given keys and optional time range.
 
@@ -93,17 +96,20 @@ def scan_with_key_filter(
        also pushed down if the Parquet file carries column statistics.
 
     Args:
-        path (str): Absolute path to a Parquet file.
+        path (str): Absolute path or cloud URI to a Parquet file.
         key_cols (list[str]): Column name(s) that form the entity's unique key.
         key_values (pl.DataFrame): A narrow ``pl.DataFrame`` containing only the key
             column(s) with the exact values to retain.
         time_expr (pl.Expr | None, optional): An optional Polars filter expression for the time column,
             as produced by :func:`~core_lens.utils.season.resolve_time_filter`.
+        storage_options (dict[str, Any] | None, optional): Cloud credential / configuration
+            options forwarded to ``pl.scan_parquet``.  ``None`` uses ambient credentials.
 
     Returns:
         pl.LazyFrame: A ``pl.LazyFrame`` ready to be ``.collect()``-ed.
     """
-    lf = pl.scan_parquet(path, hive_partitioning=True)
+    _so = storage_options or {}
+    lf = pl.scan_parquet(path, hive_partitioning=True, storage_options=_so or None)
 
     # Use an inner join to filter the parquet file down to the exact requested keys.
     # This avoids building a massive literal expression tree (which consumes gigabytes

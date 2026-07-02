@@ -168,6 +168,7 @@ class StatsNamespace:
         by: str = "column",
     ) -> "Result":
         """Per-column or per-entity descriptive statistics.
+        Uses polars' in-built methods for mean, std, min, max, quantiles etc.
 
         Args:
             columns (list[str] | None, optional): Numeric columns to describe. Defaults to all numeric cols.
@@ -248,7 +249,7 @@ class StatsNamespace:
                 f"StatsNamespace.correlate: method must be a CorrelateMethod. Valid options: {[e.name for e in CorrelateMethod]}."
             )
 
-        import scipy.stats as sp  # type: ignore[import-untyped]
+        import scipy.stats as sp
 
         df = self._r.data
         n_obs = len(df)
@@ -514,7 +515,8 @@ class StatsNamespace:
                 y = sub[column].to_numpy().astype(float)
                 if len(y) < 2:
                     continue
-                slope, _, r_val, _, _ = sp.linregress(x, y)
+                lr = sp.linregress(x, y)
+                slope, r_val = lr.slope, lr.rvalue
                 rows.append(
                     {
                         key: eid,
@@ -731,7 +733,9 @@ class StatsNamespace:
 
                 else:  # stl
                     try:
-                        from statsmodels.tsa.seasonal import STL  # type: ignore[import-untyped]
+                        from statsmodels.tsa.seasonal import (  # type: ignore[import-untyped]
+                            STL,
+                        )
 
                         full_vals = sub[column].to_numpy().astype(float)
                         if len(full_vals) < min_obs:
@@ -973,7 +977,9 @@ class StatsNamespace:
             dists = 1.0 - (norm @ tvec) / (row_norms * tnorm)
         else:  # mahalanobis
             try:
-                from scipy.spatial.distance import mahalanobis  # type: ignore[import-untyped]
+                from scipy.spatial.distance import (
+                    mahalanobis,
+                )
 
                 cov = np.cov(norm.T)
                 vi = np.linalg.pinv(cov)

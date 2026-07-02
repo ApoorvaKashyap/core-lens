@@ -9,35 +9,42 @@ import polars as pl
 import shapely
 from loguru import logger
 
+from core_lens.utils.paths import is_cloud_uri, path_exists, resolve_fs_and_path
+
 if TYPE_CHECKING:
     pass
 
 
 def resolve_path(path: str) -> str:
-    """Return an absolute path string, resolving relative paths against cwd.
+    """Return an absolute path or cloud URI string, resolving local relative paths against cwd.
 
     Args:
-        path (str): A filesystem path, absolute or relative.
+        path (str): A filesystem path (absolute or relative) or cloud URI.
 
     Returns:
-        str: An absolute path string.
+        str: An absolute path string or cloud URI.
 
     Raises:
-        FileNotFoundError: If the resolved path does not exist.
+        FileNotFoundError: If the resolved local path does not exist.
     """
+    if is_cloud_uri(path):
+        return path
     p = pathlib.Path(path)
     if not p.is_absolute():
         p = pathlib.Path.cwd() / p
-    if not p.exists():
+    resolved = str(p)
+    if not path_exists(resolved):
         logger.error(
-            "Path resolution failed: '{}' (resolved to {}) does not exist.", path, p
+            "Path resolution failed: '{}' (resolved to {}) does not exist.",
+            path,
+            resolved,
         )
         raise FileNotFoundError(
-            f"Entity path {path!r} (resolved to {p}) does not exist. "
+            f"Entity path {path!r} (resolved to {resolved!r}) does not exist. "
             "Provide an absolute path or ensure the file exists relative to "
             "the current working directory."
         )
-    return str(p)
+    return resolved
 
 
 def build_bbox_index(
@@ -46,6 +53,7 @@ def build_bbox_index(
     bbox_cols: tuple[str, str, str, str] | None,
     geometry_col: str,
     geometry_type: str,
+    storage_options: dict[str, Any] | None = None,
 ) -> pl.DataFrame:
     """Build the in-memory ``(key_cols..., minx, miny, maxx, maxy)`` index.
 
@@ -55,20 +63,26 @@ def build_bbox_index(
     is decoded and bounds are computed via Shapely.
 
     Args:
-        static_path (str): Absolute path to the static GeoParquet file.
+        static_path (str): Absolute path or cloud URI to the static GeoParquet file.
         key_cols (list[str]): Column name(s) that form the entity's unique key.
         bbox_cols (tuple[str, str, str, str] | None): Four-column ``(minx, miny, maxx, maxy)`` tuple if the
             static file carries pre-computed bounding boxes, otherwise ``None``.
         geometry_col (str): Name of the geometry column.
         geometry_type (str): One of ``"wkb"``, ``"wkt"``, or ``"latlon"``.
+        storage_options (dict[str, Any] | None, optional): Cloud credential / configuration
+            options forwarded to ``pyarrow.fs`` and ``polars.read_parquet``.
+            ``None`` uses ambient credentials.
 
     Returns:
         pl.DataFrame: A ``pl.DataFrame`` with columns ``(*key_cols, minx, miny, maxx, maxy)``.
     """
+    _so = storage_options or {}
     if bbox_cols is not None:
         logger.debug("Using pre-computed bbox columns: {}", bbox_cols)
         cols_to_read = key_cols + list(bbox_cols)
-        df = pl.read_parquet(static_path, columns=cols_to_read)
+        df = pl.read_parquet(
+            static_path, columns=cols_to_read, storage_options=_so or None
+        )
         minx_col, miny_col, maxx_col, maxy_col = bbox_cols
         return df.rename(
             {minx_col: "minx", miny_col: "miny", maxx_col: "maxx", maxy_col: "maxy"}
@@ -85,14 +99,16 @@ def build_bbox_index(
             + "Cannot compute bounds from separate lat/lon columns without bbox hints."
         )
 
-    import pyarrow.dataset as ds  # type: ignore[import-untyped]
+    import pyarrow.dataset as ds
 
     logger.debug(
         "No pre-computed bbox found in {}; falling back to Shapely decoding",
         static_path,
     )
 
-    dataset = ds.dataset(static_path)
+    # Resolve filesystem for cloud paths so pyarrow.dataset can open the file.
+    fs, arrow_path = resolve_fs_and_path(static_path)
+    dataset = ds.dataset(arrow_path, filesystem=fs)
     chunks = []
 
     for batch in dataset.to_batches(columns=cols_to_read, batch_size=25_000):
@@ -119,7 +135,9 @@ def build_bbox_index(
     if chunks:
         return pl.concat(chunks)
 
-    empty_df = pl.read_parquet(static_path, columns=key_cols)
+    empty_df = pl.read_parquet(
+        static_path, columns=key_cols, storage_options=_so or None
+    )
     return empty_df.with_columns(
         pl.Series("minx", [], dtype=pl.Float64),
         pl.Series("miny", [], dtype=pl.Float64),

@@ -120,7 +120,7 @@ class TestAoIDataRoot:
         aoi = AoI(str(tmp_path), bbox=(73.0, 15.0, 74.0, 16.0))
 
         assert aoi.data_root == tmp_path.resolve()
-        assert aoi.data_root.is_absolute()
+        assert isinstance(aoi.data_root, pathlib.Path) and aoi.data_root.is_absolute()
 
 
 class TestAoISeasons:

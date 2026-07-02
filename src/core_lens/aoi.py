@@ -15,6 +15,7 @@ import polars as pl
 from loguru import logger
 
 from core_lens.base.entity import BaseEntity, EntityValidationError
+from core_lens.utils.paths import is_cloud_uri
 
 if TYPE_CHECKING:
     import shapely
@@ -151,20 +152,26 @@ class AoI:
         bbox: tuple[float, float, float, float] | None = None,
         geometry: "shapely.Geometry | None" = None,
         seasons: SeasonConfig | None = None,
+        storage_options: dict[str, Any] | None = None,
         **entity_kwargs: str | list[str],
     ) -> None:
         """Resolve the AoI boundary and scope all registered entities.
 
         Args:
-            data_root (str): Path to the root data directory.  Prepended to every
-                relative entity path that does not start with ``/`` or a URI
-                scheme.
+            data_root (str): Path to the root data directory or cloud URI
+                prefix (e.g. ``"s3://my-bucket/data"``).  Prepended to every
+                relative entity path.
             bbox (tuple[float, float, float, float] | None, optional): Bounding box as ``(minx, miny, maxx, maxy)`` in WGS-84.
                 Mutually exclusive with ``geometry`` and ``entity_kwargs``.
             geometry (shapely.Geometry | None, optional): Arbitrary Shapely geometry.  Used as-is.  Mutually
                 exclusive with ``bbox`` and ``entity_kwargs``.
             seasons (SeasonConfig | None, optional): :class:`SeasonConfig` override.  Defaults to the library
                 agronomic defaults.
+            storage_options (dict[str, Any] | None, optional): Cloud credential / configuration
+                options forwarded to all ``pyarrow.fs`` and ``polars.scan_parquet``
+                calls.  For S3 the common keys are ``"region"``,
+                ``"access_key"``, and ``"secret_key"``.  ``None`` (default)
+                uses ambient credentials (env-vars / ``~/.aws/``).
             **entity_kwargs (str | list[str]): Named filter pairs that identify the boundary,
                 e.g. ``tehsil="Pangi"``, ``district="Chamba"``,
                 ``state="Himachal Pradesh"``, ``mws_id="13_551"``.
@@ -176,7 +183,14 @@ class AoI:
             :class:`~core_lens.base.EntityValidationError`: If a boundary entity referenced in
                 ``entity_kwargs`` is not registered.
         """
-        self.data_root = pathlib.Path(data_root).resolve()
+        # Preserve cloud URIs as-is; resolve local paths to absolute.
+        data_root_str = str(data_root)
+        if is_cloud_uri(data_root_str):
+            self.data_root: pathlib.Path | str = data_root_str
+        else:
+            self.data_root = pathlib.Path(data_root_str).resolve()
+
+        self._storage_options: dict[str, Any] = storage_options or {}
         self.seasons: SeasonConfig = seasons or SeasonConfig()
         logger.info("Initializing AoI with data_root={}", self.data_root)
 
@@ -201,10 +215,12 @@ class AoI:
             )
 
         # Instantiate and validate all registered entities with this data_root.
-        # This is where relative paths are resolved and checked.
         self._entity_instances: dict[str, BaseEntity] = {}
         for name, entity_cls in _REGISTRY.items():
-            entity = entity_cls(data_root=self.data_root)
+            entity = entity_cls(
+                data_root=self.data_root,
+                storage_options=self._storage_options or None,
+            )
             _validate_entity(entity, name)
             self._entity_instances[name] = entity
 
@@ -421,10 +437,10 @@ class AoI:
         # Probe with a no-root instance to check if paths are absolute.
         probe = entity_cls()
         static = probe.static_path
-        if _pathlib.Path(static).is_absolute():
-            # Absolute path entity: validate now.
+        if _pathlib.Path(static).is_absolute() and not is_cloud_uri(static):
+            # Absolute local path entity: validate now.
             _validate_entity(probe, name)
-        # Relative path entity: validation deferred to AoI.__init__.
+        # Relative path or cloud URI entity: validation deferred to AoI.__init__.
         _REGISTRY[name] = entity_cls
 
     @classmethod
@@ -479,7 +495,10 @@ def _validate_entity(entity: BaseEntity, name: str) -> None:
             f"Entity {name!r}: static_path {entity.static_path!r} does not exist."
         )
 
-    if not os.path.exists(static):
+    # For local paths perform an eager existence check; for cloud paths we rely
+    # on the schema-read below to surface a missing-file error (avoids an extra
+    # HeadObject call per entity at startup).
+    if not is_cloud_uri(static) and not os.path.exists(static):
         logger.error(
             "Validation failed for entity {}: static path '{}' does not exist.",
             name,
@@ -489,8 +508,13 @@ def _validate_entity(entity: BaseEntity, name: str) -> None:
             f"Entity {name!r}: static_path {static!r} does not exist."
         )
 
+    storage_opts = entity._storage_options or {}
     try:
-        schema = pl.read_parquet_schema(static)
+        schema = pl.scan_parquet(
+            static,
+            hive_partitioning=True,
+            storage_options=storage_opts or None,
+        ).collect_schema()
     except Exception as exc:
         logger.error(
             "Validation failed for entity {}: could not read schema from '{}': {}",
@@ -532,7 +556,21 @@ def _validate_entity(entity: BaseEntity, name: str) -> None:
                 abs_path = entity._resolve(path)
             except FileNotFoundError:
                 abs_path = None
-            if abs_path is None or not os.path.exists(abs_path):
+            if (
+                abs_path is not None
+                and not is_cloud_uri(abs_path)
+                and not os.path.exists(abs_path)
+            ):
+                logger.error(
+                    "Validation failed for entity {}: {} path '{}' does not exist.",
+                    name,
+                    label,
+                    path,
+                )
+                raise EntityValidationError(
+                    f"Entity {name!r}: {label}_path {path!r} does not exist."
+                )
+            elif abs_path is None:
                 logger.error(
                     "Validation failed for entity {}: {} path '{}' does not exist.",
                     name,

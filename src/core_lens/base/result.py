@@ -144,9 +144,10 @@ class Result:
         geom_col = self.entity.geometry_col
         key_cols = self.key_cols
         static_path = self.entity._resolve(self.entity.static_path)
+        _so = self.entity._storage_options or {}
 
         geo_df = collect_lf(
-            pl.scan_parquet(static_path)
+            pl.scan_parquet(static_path, storage_options=_so or None)
             .select(key_cols + [geom_col])
             .join(self.data.select(key_cols).lazy(), on=key_cols, how="semi")
         )

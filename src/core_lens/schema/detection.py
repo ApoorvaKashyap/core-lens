@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import polars as pl
 from typing_extensions import Literal
@@ -44,6 +44,7 @@ def detect(
     geometry_col: str,
     annual_path: str | None = None,
     fortnightly_path: str | None = None,
+    storage_options: dict[str, Any] | None = None,
 ) -> SchemaProfile:
     """Introspect Parquet file schemas and return a validated SchemaProfile.
 
@@ -66,11 +67,13 @@ def detect(
       and time columns are accounted for.
 
     Args:
-        static_path (str): Path to the static GeoParquet file.
+        static_path (str): Path or cloud URI to the static GeoParquet file.
         key_cols (list[str]): Entity key column name(s), as declared on the entity.
         geometry_col (str): Geometry column name, as declared on the entity.
-        annual_path (str | None, optional): Path to the annual Parquet file, or ``None``.
-        fortnightly_path (str | None, optional): Path to the fortnightly Parquet file, or ``None``.
+        annual_path (str | None, optional): Path or cloud URI to the annual Parquet file, or ``None``.
+        fortnightly_path (str | None, optional): Path or cloud URI to the fortnightly Parquet file, or ``None``.
+        storage_options (dict[str, Any] | None, optional): Cloud credential / configuration
+            options forwarded to ``pl.scan_parquet``.  ``None`` uses ambient credentials.
 
     Returns:
         SchemaProfile: A validated :class:`~core_lens.schema.profile.SchemaProfile`.
@@ -79,7 +82,10 @@ def detect(
         SchemaDetectionError: If a required column is absent, the geometry
             type cannot be inferred, or any other detection step fails.
     """
-    static_schema = _read_schema(static_path, label="static")
+    _so = storage_options or {}
+    static_schema = _read_schema(
+        static_path, label="static", storage_options=_so or None
+    )
 
     _require_cols(static_schema, key_cols, static_path)
     _require_cols(static_schema, [geometry_col], static_path)
@@ -99,7 +105,9 @@ def detect(
     annual_time_col: str | None = None
     extra_annual_cols: list[str] = []
     if annual_path:
-        annual_schema = _read_schema(annual_path, label="annual")
+        annual_schema = _read_schema(
+            annual_path, label="annual", storage_options=_so or None
+        )
         annual_time_col = _infer_time_col(annual_schema, annual_path)
         reserved_annual = set(key_cols) | (
             {annual_time_col} if annual_time_col else set()
@@ -109,7 +117,9 @@ def detect(
     fortnightly_time_col: str | None = None
     extra_fortnightly_cols: list[str] = []
     if fortnightly_path:
-        fortnightly_schema = _read_schema(fortnightly_path, label="fortnightly")
+        fortnightly_schema = _read_schema(
+            fortnightly_path, label="fortnightly", storage_options=_so or None
+        )
         fortnightly_time_col = _infer_time_col(fortnightly_schema, fortnightly_path)
         reserved_fn = set(key_cols) | (
             {fortnightly_time_col} if fortnightly_time_col else set()
@@ -129,9 +139,18 @@ def detect(
     )
 
 
-def _read_schema(path: str, label: str) -> pl.Schema:
+def _read_schema(
+    path: str,
+    label: str,
+    storage_options: dict[str, Any] | None = None,
+) -> pl.Schema:
+    _so = storage_options or {}
     try:
-        return pl.scan_parquet(path).collect_schema()
+        return pl.scan_parquet(
+            path,
+            hive_partitioning=True,
+            storage_options=_so or None,
+        ).collect_schema()
     except Exception as exc:
         raise SchemaDetectionError(
             f"Could not read Parquet schema from {label} file {path!r}: {exc}"

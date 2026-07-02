@@ -80,6 +80,8 @@ class View:
         # season_config is only needed at materialisation time when a season
         # time_filter is present.  Carried forward by between() to new Views.
         self._season_config = season_config
+        # Inherit storage_options from entity so all I/O uses the same credentials.
+        self._storage_options: dict[str, Any] = dict(entity._storage_options)
 
     def where(self, **kwargs: Any) -> "View":
         """Return a new View further filtered by attributes.
@@ -103,6 +105,7 @@ class View:
             path=static,
             key_cols=self.entity.key_cols,
             key_values=self.keys,
+            storage_options=self._storage_options or None,
         )
         keys = lf.filter(filter_expr).select(self.entity.key_cols).collect()
 
@@ -413,7 +416,10 @@ class View:
                 # _date_range_expr can branch at expression-build time (avoids
                 # the cast-to-string + runtime when/then triple-copy).
                 try:
-                    pq_schema = pl.read_parquet_schema(abs_path)
+                    pq_schema = pl.scan_parquet(
+                        abs_path,
+                        storage_options=self._storage_options or None,
+                    ).collect_schema()
                     _time_dtype = pq_schema.get(time_col)
                     _is_year_col = _time_dtype is not None and _time_dtype in (
                         pl.Int32,
@@ -436,6 +442,7 @@ class View:
             key_cols=self.entity.key_cols,
             key_values=self.keys,
             time_expr=time_expr,
+            storage_options=self._storage_options or None,
         )
         data = collect_lf(lf)
 
@@ -467,6 +474,7 @@ class View:
                 geom_df = pl.read_parquet(
                     self.entity._resolve(self.entity.static_path),
                     columns=self.entity.key_cols + [geom_col],
+                    storage_options=self._storage_options or None,
                 )
                 data = data.join(geom_df, on=self.entity.key_cols, how="left")
 

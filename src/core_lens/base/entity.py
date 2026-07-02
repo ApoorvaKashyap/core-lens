@@ -18,6 +18,11 @@ from typing import TYPE_CHECKING, Any
 import polars as pl
 from loguru import logger
 
+from core_lens.utils.paths import (
+    is_cloud_uri,
+    join_uri,
+    path_exists,
+)
 from core_lens.utils.spatial import (
     bbox_intersects_geometry,
     build_bbox_index,
@@ -81,50 +86,80 @@ class BaseEntity(ABC):
     Any failure raises :class:`~core_lens.base.entity.EntityValidationError`.
     """
 
-    def __init__(self, data_root: pathlib.Path | None = None) -> None:
+    def __init__(
+        self,
+        data_root: str | pathlib.Path | None = None,
+        storage_options: dict[str, Any] | None = None,
+    ) -> None:
         """Initialise the entity with an optional data root directory.
 
         Args:
-            data_root (pathlib.Path | None, optional): Absolute path to the root data directory.  When
-                supplied, relative :attr:`static_path`, :attr:`annual_path`,
-                and :attr:`fortnightly_path` values are resolved against this
-                directory.  Defaults to ``None``, in which case relative paths
-                are resolved against the current working directory (legacy
-                behaviour, preserved for plugin authors that use absolute paths).
+            data_root (str | pathlib.Path | None, optional): Root data directory or cloud
+                URI prefix (e.g. ``"s3://bucket/data"``).  Relative
+                :attr:`static_path`, :attr:`annual_path`, and
+                :attr:`fortnightly_path` values are resolved against this
+                root.  Defaults to ``None`` (resolved against cwd).
+            storage_options (dict[str, Any] | None, optional): Cloud credential /
+                configuration options forwarded to ``pyarrow.fs`` and
+                ``polars.scan_parquet``.  For S3 the common keys are
+                ``"region"``, ``"access_key"``, and ``"secret_key"``.
+                ``None`` uses ambient credentials (env-vars / ``~/.aws/``).
         """
-        self._data_root = data_root
+        # Store as str so cloud URIs (s3://…) are never coerced through pathlib.
+        self._data_root: str | None = str(data_root) if data_root is not None else None
+        self._storage_options: dict[str, Any] = storage_options or {}
 
     def _resolve(self, path: str) -> str:
-        """Return an absolute path string for *path*.
+        """Return an absolute path or cloud URI string for *path*.
 
-        Relative paths are resolved against :attr:`_data_root` if set,
-        otherwise against the current working directory.
+        Relative paths are resolved against :attr:`_data_root` (which may be a
+        cloud URI such as ``s3://bucket/prefix``) using :func:`~core_lens.utils.paths.join_uri`.
+        Absolute local paths and fully-qualified cloud URIs are returned as-is.
+
+        **Cloud paths**: existence is *not* checked here to avoid unnecessary
+        remote ``HeadObject`` calls on every resolve.  Validation happens once
+        inside :func:`~core_lens.aoi._validate_entity` via the schema-read path.
 
         Args:
-            path (str): A filesystem path, absolute or relative.
+            path (str): A filesystem path (absolute or relative) or a cloud URI.
 
         Returns:
-            str: An absolute path string.
+            str: An absolute path or cloud URI string.
 
         Raises:
-            FileNotFoundError: If the resolved path does not exist.
+            FileNotFoundError: For *local* paths that do not exist after resolution.
         """
-        p = pathlib.Path(path)
+        # Fully-qualified cloud URI — return as-is.
+        if is_cloud_uri(path):
+            return path
+
+        # Relative path — join against data_root (which may itself be a cloud URI).
+        import pathlib as _pathlib
+
+        p = _pathlib.Path(path)
         if not p.is_absolute():
             root = (
-                self._data_root if self._data_root is not None else pathlib.Path.cwd()
+                self._data_root
+                if self._data_root is not None
+                else str(_pathlib.Path.cwd())
             )
-            p = root / p
-        if not p.exists():
+            resolved = join_uri(root, path)
+        else:
+            resolved = str(p)
+
+        # For local resolved paths only: eager existence check.
+        if not is_cloud_uri(resolved) and not path_exists(resolved):
             logger.error(
-                "Path resolution failed: '{}' (resolved to {}) does not exist.", path, p
+                "Path resolution failed: '{}' (resolved to {}) does not exist.",
+                path,
+                resolved,
             )
             raise FileNotFoundError(
-                f"Entity path {path!r} (resolved to {p}) does not exist. "
+                f"Entity path {path!r} (resolved to {resolved!r}) does not exist. "
                 "Provide an absolute path or ensure the file exists relative to "
                 "the AoI data_root directory."
             )
-        return str(p)
+        return resolved
 
     @property
     @abstractmethod
@@ -217,6 +252,7 @@ class BaseEntity(ABC):
                     if self.fortnightly_path is not None
                     else None
                 ),
+                storage_options=self._storage_options or None,
             )
         return self._schema_profile
 
@@ -233,6 +269,7 @@ class BaseEntity(ABC):
                 bbox_cols=profile.bbox_cols,
                 geometry_col=profile.geometry_col,
                 geometry_type=profile.geometry_type,
+                storage_options=self._storage_options or None,
             )
         return self._cached_index
 
