@@ -247,28 +247,39 @@ def exact_spatial_filter(
     else:
         geoms = shapely.from_wkt(geom_array)
 
+    import numpy as np
+
     if relationship == "centroid":
         # Centroid mode: entity centroid must lie within the AoI geometry.
-        # STRtree.query(aoi_geometry, predicate="contains") returns i where
-        # aoi_geometry.contains(centroid[i]) — i.e. centroid inside the AoI.
-        test_geoms = [g.centroid for g in geoms]
-        tree = shapely.STRtree(test_geoms)
-        hit_indices = tree.query(aoi_geometry, predicate="contains").tolist()
+        # STRtree is overkill for a single-query containment test — building
+        # the tree costs O(n log n) with no payoff when there is only one query
+        # geometry.  Vectorised shapely ops stay in C and avoid the overhead.
+        centroids = shapely.centroid(geoms)  # vectorised, C-level
+        mask = shapely.contains(aoi_geometry, centroids)  # vectorised bool array
+        hit_indices = np.where(mask)[0].tolist()
 
     else:  # area mode
-        # Area mode: intersection area / entity area > threshold.
+        # Area mode: intersection area / entity area >= threshold.
+        # Vectorise: compute all areas and intersections in C via numpy arrays.
         tree = shapely.STRtree(geoms)
-        # Candidate indices whose envelope intersects aoi_geometry.
-        intersect_idx = tree.query(aoi_geometry, predicate="intersects").tolist()
-        hit_indices = []
-        for i in intersect_idx:
-            entity_geom = geoms[i]
-            entity_area = entity_geom.area  # pyright: ignore[reportAttributeAccessIssue]
-            if entity_area == 0.0:
-                continue
-            inter_area = entity_geom.intersection(aoi_geometry).area  # pyright: ignore[reportAttributeAccessIssue]
-            if inter_area / entity_area >= threshold:
-                hit_indices.append(i)
+        intersect_idx = np.asarray(
+            tree.query(aoi_geometry, predicate="intersects"), dtype=np.intp
+        )
+        if len(intersect_idx) == 0:
+            hit_indices = []
+        else:
+            candidate_geoms = geoms[intersect_idx]
+            entity_areas = shapely.area(candidate_geoms)  # vectorised
+            valid = entity_areas > 0
+            if not valid.any():
+                hit_indices = []
+            else:
+                inter_geoms = shapely.intersection(
+                    candidate_geoms[valid], aoi_geometry
+                )  # vectorised
+                inter_areas = shapely.area(inter_geoms)  # vectorised
+                ratios = inter_areas / entity_areas[valid]
+                hit_indices = intersect_idx[valid][ratios >= threshold].tolist()
 
     del geoms  # free all decoded Shapely geometries before assembling result
 
