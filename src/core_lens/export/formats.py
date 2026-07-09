@@ -162,12 +162,17 @@ def geoparquet(result: "Result", path: str | pathlib.Path, **kwargs: Any) -> Non
 def geojson(result: "Result", path: str | pathlib.Path, **kwargs: Any) -> None:
     """Export the result data to a GeoJSON file.
 
-    This function uses DuckDB to write the data frame with spatial extensions.
+    This function uses GeoPandas to write the data frame.  It prefers the
+    ``pyogrio`` engine (faster, C-backed) when available and falls back to
+    ``fiona`` automatically.  The ``engine`` kwarg can override this:
+    ``engine="fiona"`` or ``engine="pyogrio"``.
 
     Args:
         result (Result): The Result object to export.
         path (str | pathlib.Path): Destination path for the GeoJSON file.
-        **kwargs (Any): Additional options to pass to DuckDB's COPY statement.
+        **kwargs (Any): Additional options forwarded to
+            ``GeoDataFrame.to_file()`` (e.g. ``driver="GeoJSON"``,
+            ``engine="pyogrio"``).
 
     Example:
         >>> from core_lens.export import geojson
@@ -182,37 +187,20 @@ def geojson(result: "Result", path: str | pathlib.Path, **kwargs: Any) -> None:
             "Call .with_geometry() first to join the static geometry column before exporting to geojson."
         )
 
-    df = result.df()
-    geom_col = result.entity.geometry_col
+    gdf = result.gdf()
 
-    cols = []
-    for c in df.columns:
-        if c == geom_col:
-            cols.append(f'ST_GeomFromWKB("{c}") AS "{c}"')
-        else:
-            cols.append(f'"{c}"')
+    # Resolve write engine: prefer pyogrio (C-backed, no GDAL Python overhead),
+    # fall back to fiona if not installed.
+    engine = kwargs.pop("engine", None)
+    if engine is None:
+        try:
+            import pyogrio as _  # type: ignore[import-untyped]  # noqa: F401
 
-    select_clause = ", ".join(cols)
+            engine = "pyogrio"
+        except ModuleNotFoundError:
+            engine = "fiona"
 
-    conn = _get_duckdb_conn()
+    # Always write as GeoJSON unless the caller overrides driver.
+    kwargs.setdefault("driver", "GeoJSON")
 
-    path_str = str(path).replace("'", "''")
-
-    options = ["FORMAT GDAL", "DRIVER 'GeoJSON'"]
-    for k, v in kwargs.items():
-        if isinstance(v, bool):
-            options.append(f"{k.upper()} {'TRUE' if v else 'FALSE'}")
-        elif isinstance(v, str):
-            options.append(f"{k.upper()} '{v}'")
-        else:
-            options.append(f"{k.upper()} {v}")
-
-    options_str = ", ".join(options)
-
-    query = f"""
-    COPY (
-        SELECT {select_clause}
-        FROM df
-    ) TO '{path_str}' ({options_str});
-    """
-    conn.execute(query)
+    gdf.to_file(path, engine=engine, **kwargs)

@@ -100,10 +100,12 @@ class Result:
                 "Call .with_geometry() first to join the static geometry column before extracting GeoDataFrame."
             )
         import geopandas as gpd
-        import shapely.wkb as wkb
+        import shapely
 
         geometry_col = self.entity.geometry_col
-        geometries = [wkb.loads(b) for b in self.data[geometry_col].to_list()]
+        # Vectorised C-level decode — shapely.from_wkb operates on the whole
+        # numpy array at once, avoiding a Python-loop per row.
+        geometries = shapely.from_wkb(self.data[geometry_col].to_numpy())
         geo_series = gpd.GeoSeries(geometries, crs="EPSG:4326")
         return gpd.GeoDataFrame(
             self.data.drop(geometry_col).to_pandas(),
