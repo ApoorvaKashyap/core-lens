@@ -2,7 +2,6 @@ name: Blank Proposal
 description: Use this for all proposals.
 title: "[Proposal]: "
 labels: ["proposal"]
-type: proposal
 body:
   - type: textarea
     id: issue

@@ -2,7 +2,6 @@ name: Bug Report
 description: File a bug report.
 title: "[Bug]: "
 labels: ["bug"]
-type: bug
 body:
   - type: textarea
     id: what-happened
@@ -61,3 +60,4 @@ body:
       description: If applicable, add screenshots to help explain your problem.
     validations:
       required: false
+      accept: ".png,.jpg,.gif,.log,.txt,.zip"
