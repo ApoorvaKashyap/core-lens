@@ -22,7 +22,7 @@ if TYPE_CHECKING:
     from core_lens.base.view import View
 
 
-@dataclass
+@dataclass(frozen=True)
 class SeasonConfig:
     """Date-range definitions for the three Indian crop seasons.
 
@@ -94,6 +94,29 @@ def _md_in_range(md: str, start: str, end: str) -> bool:
         return start <= md <= end
     # Year-crossing range (e.g. rabi: 11-01 to 03-31)
     return md >= start or md <= end
+
+
+# Singleton for the default SeasonConfig — constructed once per process.
+# SeasonConfig.__post_init__ runs 6× datetime.strptime calls for validation;
+# sharing the default instance eliminates that cost for every AoI() call
+# that does not supply a custom season config.
+_DEFAULT_SEASON_CONFIG: SeasonConfig | None = None
+
+
+def _default_season_config() -> SeasonConfig:
+    """Return the shared default :class:`SeasonConfig` instance.
+
+    Constructed once per process and reused thereafter.  Callers that need
+    a custom config should construct their own :class:`SeasonConfig` and
+    pass it to :class:`AoI`.
+
+    Returns:
+        SeasonConfig: The shared default instance.
+    """
+    global _DEFAULT_SEASON_CONFIG
+    if _DEFAULT_SEASON_CONFIG is None:
+        _DEFAULT_SEASON_CONFIG = SeasonConfig()
+    return _DEFAULT_SEASON_CONFIG
 
 
 # Class-level registry: entity name → entity **class**.
@@ -191,7 +214,7 @@ class AoI:
             self.data_root = pathlib.Path(data_root_str).resolve()
 
         self._storage_options: dict[str, Any] = storage_options or {}
-        self.seasons: SeasonConfig = seasons or SeasonConfig()
+        self.seasons: SeasonConfig = seasons or _default_season_config()
         logger.info("Initializing AoI with data_root={}", self.data_root)
 
         n_modes = sum(

@@ -69,6 +69,12 @@ class SchemaProfile(BaseModel):
     extra_static_cols: list[str] = []
     extra_annual_cols: list[str] = []
     extra_fortnightly_cols: list[str] = []
+    # Whether the time column is an integer-year column (True), a Date/Datetime
+    # column (False), or absent/unknown (None).  Determined at detect() time from
+    # the Parquet schema — eliminates a redundant collect_schema() call in
+    # View._materialise for every .annual / .fortnightly access.
+    annual_is_year_col: bool | None = None
+    fortnightly_is_year_col: bool | None = None
 
     @classmethod
     def from_file(cls, path: str | pathlib.Path) -> "SchemaProfile":

@@ -407,28 +407,18 @@ class View:
             if time_col is not None:
                 from core_lens.utils.season import resolve_time_filter
 
-                # Fall back to a no-op SeasonConfig if none was supplied on this View.
-                from core_lens.aoi import SeasonConfig
+                # Fall back to the default SeasonConfig if none was supplied on this View.
+                from core_lens.aoi import _default_season_config
 
-                season_cfg = self._season_config or SeasonConfig()
+                season_cfg = self._season_config or _default_season_config()
 
-                # Detect whether the time column is an integer year column so
-                # _date_range_expr can branch at expression-build time (avoids
-                # the cast-to-string + runtime when/then triple-copy).
-                try:
-                    pq_schema = pl.scan_parquet(
-                        abs_path,
-                        storage_options=self._storage_options or None,
-                    ).collect_schema()
-                    _time_dtype = pq_schema.get(time_col)
-                    _is_year_col = _time_dtype is not None and _time_dtype in (
-                        pl.Int32,
-                        pl.Int64,
-                        pl.UInt32,
-                        pl.UInt16,
-                    )
-                except Exception:
-                    _is_year_col = False
+                # Read is_year_col from the cached schema profile — populated at
+                # detect() time from the Parquet schema, so no extra I/O here.
+                _is_year_col: bool | None = (
+                    profile.annual_is_year_col
+                    if resolution == Resolution.ANNUAL
+                    else profile.fortnightly_is_year_col
+                )
 
                 # Pass as a private hint inside the filter dict (non-mutating copy).
                 _tf = dict(self.time_filter)
@@ -454,9 +444,9 @@ class View:
             and profile.fortnightly_time_col is not None
         ):
             from core_lens.utils.season import add_temporal_columns
-            from core_lens.aoi import SeasonConfig
+            from core_lens.aoi import _default_season_config
 
-            season_cfg = self._season_config or SeasonConfig()
+            season_cfg = self._season_config or _default_season_config()
             data = add_temporal_columns(data, profile.fortnightly_time_col, season_cfg)
 
         if self.join_spec is not None:

@@ -104,6 +104,7 @@ def detect(
 
     annual_time_col: str | None = None
     extra_annual_cols: list[str] = []
+    annual_is_year_col: bool | None = None
     if annual_path:
         annual_schema = _read_schema(
             annual_path, label="annual", storage_options=_so or None
@@ -113,9 +114,11 @@ def detect(
             {annual_time_col} if annual_time_col else set()
         )
         extra_annual_cols = [c for c in annual_schema if c not in reserved_annual]
+        annual_is_year_col = _is_year_col_from_schema(annual_schema, annual_time_col)
 
     fortnightly_time_col: str | None = None
     extra_fortnightly_cols: list[str] = []
+    fortnightly_is_year_col: bool | None = None
     if fortnightly_path:
         fortnightly_schema = _read_schema(
             fortnightly_path, label="fortnightly", storage_options=_so or None
@@ -125,6 +128,9 @@ def detect(
             {fortnightly_time_col} if fortnightly_time_col else set()
         )
         extra_fortnightly_cols = [c for c in fortnightly_schema if c not in reserved_fn]
+        fortnightly_is_year_col = _is_year_col_from_schema(
+            fortnightly_schema, fortnightly_time_col
+        )
 
     return SchemaProfile(
         key_cols=key_cols,
@@ -136,6 +142,8 @@ def detect(
         extra_static_cols=extra_static_cols,
         extra_annual_cols=extra_annual_cols,
         extra_fortnightly_cols=extra_fortnightly_cols,
+        annual_is_year_col=annual_is_year_col,
+        fortnightly_is_year_col=fortnightly_is_year_col,
     )
 
 
@@ -237,3 +245,31 @@ def _infer_time_col(schema: pl.Schema, path: str) -> str | None:
             return col
 
     return None
+
+
+_YEAR_COL_DTYPES = (pl.Int32, pl.Int64, pl.UInt32, pl.UInt16)
+
+
+def _is_year_col_from_schema(
+    schema: pl.Schema,
+    time_col: str | None,
+) -> bool | None:
+    """Return whether *time_col* is an integer-year column, or ``None`` if absent.
+
+    ``True``  — integer dtype (``Int32`` / ``Int64`` / ``UInt32`` / ``UInt16``).
+    ``False`` — ``Date`` / ``Datetime`` column.
+    ``None``  — *time_col* is ``None`` or not found in *schema*.
+
+    Args:
+        schema (pl.Schema): The Parquet schema returned by ``collect_schema()``.
+        time_col (str | None): The name of the time column, or ``None``.
+
+    Returns:
+        bool | None: ``True`` for integer-year, ``False`` for Date/Datetime, ``None`` if absent.
+    """
+    if time_col is None:
+        return None
+    dtype = schema.get(time_col)
+    if dtype is None:
+        return None
+    return dtype in _YEAR_COL_DTYPES
