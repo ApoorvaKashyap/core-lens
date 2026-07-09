@@ -315,38 +315,7 @@ def execute_spatial_join(
         "Starting execute_spatial_join for other_entity_name={}", other_entity_name
     )
 
-    other_profile = other_entity.schema_profile
-    other_static = other_entity._resolve(other_entity.static_path)
-    other_geom_col = other_profile.geometry_col
-    other_geom_type = other_profile.geometry_type
-    other_key_cols = other_entity.key_cols
-
-    # Read other entity: key + geometry + agg columns.
-    agg_col_names = [c for c in agg if c not in ("count", "area")]
-    other_cols = list(dict.fromkeys(other_key_cols + [other_geom_col] + agg_col_names))
-    other_df = pl.read_parquet(other_static, columns=other_cols)
-
-    # Decode other geometries.
-    other_geom_array = other_df[other_geom_col].to_numpy()
-    if other_geom_type == "wkb":
-        other_geoms = shapely.from_wkb(other_geom_array)
-    else:
-        other_geoms = shapely.from_wkt(other_geom_array)
-
-    # Build STRtree from other entity geometries.
-    other_tree = shapely.STRtree(other_geoms)
-
-    # Only convert the columns we actually need to aggregate to Pandas, avoiding
-    # a massive memory copy of the WKB geometry strings and unused keys.
-    agg_cols_only = [
-        c for c in agg.keys() if c not in ("count", "area") and c in other_df.columns
-    ]
-    if agg_cols_only:
-        other_df_np = other_df.select(agg_cols_only).to_pandas()
-    else:
-        other_df_np = None
-
-    # Decode primary geometries.
+    # Decode primary geometries first so we can bound the other entity read.
     if primary_geom_col not in primary_df.columns:
         logger.error(
             "execute_spatial_join failed: geometry column '{}' not found in primary DataFrame.",
@@ -363,6 +332,85 @@ def execute_spatial_join(
         primary_geoms = shapely.from_wkb(primary_geom_array)
     else:
         primary_geoms = shapely.from_wkt(primary_geom_array)
+
+    if len(primary_geoms) == 0:
+        logger.debug("execute_spatial_join: primary_df is empty; returning early.")
+        for col in agg.keys():
+            primary_df = primary_df.with_columns(
+                pl.lit(None).alias(f"{other_entity_name}_{col}")
+            )
+        return primary_df
+
+    # Compute bounding box of all primary geometries
+    import numpy as np
+
+    bnds = shapely.bounds(primary_geoms)
+    valid_bnds = bnds[~np.isnan(bnds).any(axis=1)]
+    if len(valid_bnds) > 0:
+        minx, miny, maxx, maxy = (
+            valid_bnds[:, 0].min(),
+            valid_bnds[:, 1].min(),
+            valid_bnds[:, 2].max(),
+            valid_bnds[:, 3].max(),
+        )
+        primary_total_box = shapely.box(minx, miny, maxx, maxy)
+    else:
+        primary_total_box = None
+
+    other_profile = other_entity.schema_profile
+    other_static = other_entity._resolve(other_entity.static_path)
+    other_geom_col = other_profile.geometry_col
+    other_geom_type = other_profile.geometry_type
+    other_key_cols = other_entity.key_cols
+
+    agg_col_names = [c for c in agg if c not in ("count", "area")]
+    other_cols = list(dict.fromkeys(other_key_cols + [other_geom_col] + agg_col_names))
+
+    if (
+        primary_total_box is not None
+        and getattr(other_entity, "_index", None) is not None
+    ):
+        # Pre-filter other_entity using its in-memory bounding box index
+        candidates = bbox_intersects_geometry(other_entity._index, primary_total_box)
+        if candidates.is_empty():
+            other_df = pl.DataFrame(schema={c: pl.Utf8 for c in other_cols})
+        else:
+            other_df = (
+                pl.scan_parquet(other_static)
+                .select(other_cols)
+                .join(
+                    candidates.select(other_key_cols).lazy(),
+                    on=other_key_cols,
+                    how="semi",
+                )
+                .collect()
+            )
+    else:
+        other_df = pl.read_parquet(other_static, columns=other_cols)
+
+    if other_df.is_empty():
+        other_geoms = np.array([])
+        other_tree = shapely.STRtree([])
+    else:
+        # Decode other geometries.
+        other_geom_array = other_df[other_geom_col].to_numpy()
+        if other_geom_type == "wkb":
+            other_geoms = shapely.from_wkb(other_geom_array)
+        else:
+            other_geoms = shapely.from_wkt(other_geom_array)
+
+        # Build STRtree from other entity geometries.
+        other_tree = shapely.STRtree(other_geoms)
+
+    # Only convert the columns we actually need to aggregate to Pandas, avoiding
+    # a massive memory copy of the WKB geometry strings and unused keys.
+    agg_cols_only = [
+        c for c in agg.keys() if c not in ("count", "area") and c in other_df.columns
+    ]
+    if agg_cols_only and not other_df.is_empty():
+        other_df_np = other_df.select(agg_cols_only).to_pandas()
+    else:
+        other_df_np = None
 
     # For each primary entity, find overlapping other entities and aggregate.
     result_rows: list[dict[str, Any]] = []
