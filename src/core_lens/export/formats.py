@@ -187,20 +187,50 @@ def geojson(result: "Result", path: str | pathlib.Path, **kwargs: Any) -> None:
             "Call .with_geometry() first to join the static geometry column before exporting to geojson."
         )
 
-    gdf = result.gdf()
+    geom_col = result.entity.geometry_col
+    data = result.data
 
-    # Resolve write engine: prefer pyogrio (C-backed, no GDAL Python overhead),
-    # fall back to fiona if not installed.
-    engine = kwargs.pop("engine", None)
-    if engine is None:
-        try:
-            import pyogrio as _  # type: ignore[import-untyped]  # noqa: F401
+    driver = kwargs.pop("driver", "GeoJSON")
+    is_seq = driver == "GeoJSONSeq"
 
-            engine = "pyogrio"
-        except ModuleNotFoundError:
-            engine = "fiona"
+    if kwargs:
+        from loguru import logger
 
-    # Always write as GeoJSON unless the caller overrides driver.
-    kwargs.setdefault("driver", "GeoJSON")
+        logger.warning(
+            "geojson() now uses a custom streaming Polars writer. "
+            "Driver-specific kwargs ({}) are ignored.",
+            list(kwargs.keys()),
+        )
 
-    gdf.to_file(path, engine=engine, **kwargs)
+    import shapely
+    import tempfile
+
+    wkb_arr = data[geom_col].to_numpy()
+    geoms = shapely.from_wkb(wkb_arr)
+    geom_strs = shapely.to_geojson(geoms)
+
+    with tempfile.NamedTemporaryFile(mode="w+") as tmp:
+        data.drop(geom_col).write_ndjson(tmp.name)
+        tmp.seek(0)
+
+        with open(path, "w") as out:
+            if not is_seq:
+                out.write('{"type": "FeatureCollection", "features": [\n')
+
+            first = True
+            for i, prop_json_str in enumerate(tmp):
+                if not first:
+                    out.write("\n" if is_seq else ",\n")
+                else:
+                    first = False
+
+                # construct the Feature JSON manually to avoid parsing/re-serialising
+                out.write(
+                    f'{{"type": "Feature", "geometry": {geom_strs[i]}, '
+                    f'"properties": {prop_json_str.strip()}}}'
+                )
+
+            if not is_seq:
+                out.write("\n]}\n")
+            else:
+                out.write("\n")
