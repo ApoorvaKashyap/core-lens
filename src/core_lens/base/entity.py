@@ -11,6 +11,7 @@ Plugin authors import from the public surface::
 
 from __future__ import annotations
 
+import functools
 import pathlib
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Any
@@ -33,6 +34,96 @@ if TYPE_CHECKING:
     import shapely
     from core_lens.base.view import View
     from core_lens.schema.profile import SchemaProfile
+
+
+# ---------------------------------------------------------------------------
+# Process-level caches — shared across all BaseEntity instances in a process.
+#
+# Both caches are backed by functools.cache (lru_cache with maxsize=None).
+# maxsize=None means unbounded — intentional: evicting an index or schema
+# profile forces an expensive rebuild on the next access.
+#
+# _cached_detect       eliminates repeated detect() calls (OPT-2).
+# _cached_build_index  eliminates repeated build_bbox_index() calls (OPT-1).
+#
+# Cache diagnostics:  _cached_detect.cache_info() / _cached_build_index.cache_info()
+# Cache reset (tests): _cached_detect.cache_clear() / _cached_build_index.cache_clear()
+# ---------------------------------------------------------------------------
+
+
+def _so_key(storage_options: dict[str, Any]) -> tuple[tuple[str, Any], ...]:
+    """Convert a ``storage_options`` dict to a hashable, order-stable tuple.
+
+    All args passed to :func:`_cached_detect` and :func:`_cached_build_index`
+    must be hashable (``functools.cache`` requirement).  ``storage_options``
+    is a plain dict, so we convert it here before passing to the cached
+    functions.  Different cloud credentials for the same path produce
+    different cache keys.
+
+    Args:
+        storage_options (dict[str, Any]): Cloud credential / configuration dict.
+
+    Returns:
+        tuple[tuple[str, Any], ...]: A sorted tuple of ``(key, value)`` pairs.
+    """
+    return tuple(sorted(storage_options.items()))
+
+
+@functools.cache
+def _cached_detect(
+    static_path: str,
+    key_cols: tuple[str, ...],
+    geometry_col: str,
+    annual_path: str | None,
+    fortnightly_path: str | None,
+    storage_options_key: tuple[tuple[str, Any], ...],
+) -> "SchemaProfile":
+    """Cached wrapper around :func:`~core_lens.schema.detection.detect`.
+
+    All arguments must be hashable so they can form the cache key.  Pass
+    ``storage_options`` through :func:`_so_key` before calling this function.
+
+    Returns:
+        SchemaProfile: Detected schema profile for the given entity paths.
+    """
+    from core_lens.schema.detection import detect
+
+    return detect(
+        static_path=static_path,
+        key_cols=list(key_cols),
+        geometry_col=geometry_col,
+        annual_path=annual_path,
+        fortnightly_path=fortnightly_path,
+        storage_options=dict(storage_options_key) or None,
+    )
+
+
+@functools.cache
+def _cached_build_index(
+    static_path: str,
+    key_cols: tuple[str, ...],
+    bbox_cols: tuple[str, str, str, str] | None,
+    geometry_col: str,
+    geometry_type: str,
+    storage_options_key: tuple[tuple[str, Any], ...],
+) -> pl.DataFrame:
+    """Cached wrapper around :func:`~core_lens.utils.spatial.build_bbox_index`.
+
+    All arguments must be hashable so they can form the cache key.  Pass
+    ``storage_options`` through :func:`_so_key` before calling this function.
+
+    Returns:
+        pl.DataFrame: The bounding-box index DataFrame.
+    """
+    logger.debug("Building bbox index for {} (cache miss)", static_path)
+    return build_bbox_index(
+        static_path=static_path,
+        key_cols=list(key_cols),
+        bbox_cols=bbox_cols,
+        geometry_col=geometry_col,
+        geometry_type=geometry_type,
+        storage_options=dict(storage_options_key) or None,
+    )
 
 
 class BaseEntity(ABC):
@@ -228,19 +319,29 @@ class BaseEntity(ABC):
     def schema_profile(self) -> "SchemaProfile":
         """Validated schema descriptor for this entity's data files.
 
-        Auto-detected from Parquet file metadata on first access and cached on
-        the instance.  Override in subclasses to provide an explicit profile
-        instead of relying on detection.
+        Auto-detected from Parquet file metadata on first access.  The result
+        is cached at two levels:
+
+        1. **Instance level** — ``_schema_profile`` attribute set on ``self``
+           so that repeated property access within the same instance is a bare
+           attribute lookup with no dict overhead.
+        2. **Process level** — :func:`_cached_detect` (backed by
+           ``functools.cache``) keyed on the resolved paths and entity
+           configuration.  Different ``AoI()`` calls that point at the same
+           data directory share one ``SchemaProfile`` object, avoiding
+           redundant ``collect_schema()`` I/O.
+
+        Override in subclasses to provide an explicit profile instead of
+        relying on detection.
 
         Returns:
             SchemaProfile: A fully-validated :class:`~core_lens.schema.profile.SchemaProfile`.
         """
         if not hasattr(self, "_schema_profile"):
-            from core_lens.schema.detection import detect
-
-            self._schema_profile: SchemaProfile = detect(
+            _so = self._storage_options or {}
+            self._schema_profile: SchemaProfile = _cached_detect(
                 static_path=self._resolve(self.static_path),
-                key_cols=self.key_cols,
+                key_cols=tuple(self.key_cols),
                 geometry_col=self.geometry_col,
                 annual_path=(
                     self._resolve(self.annual_path)
@@ -252,24 +353,36 @@ class BaseEntity(ABC):
                     if self.fortnightly_path is not None
                     else None
                 ),
-                storage_options=self._storage_options or None,
+                storage_options_key=_so_key(_so),
             )
         return self._schema_profile
 
     @property
     def _index(self) -> pl.DataFrame:
+        """In-memory bounding-box index for spatial pre-filtering.
+
+        Cached at two levels (same strategy as :attr:`schema_profile`):
+
+        1. **Instance level** — ``_cached_index`` attribute on ``self``.
+        2. **Process level** — :func:`_cached_build_index` (backed by
+           ``functools.cache``) keyed on the resolved static path, key
+           columns, and bbox/geometry schema.  All entity instances that
+           resolve to the same static file share one index ``pl.DataFrame``,
+           eliminating repeated geometry decodes.
+
+        Returns:
+            pl.DataFrame: DataFrame with columns ``(*key_cols, minx, miny, maxx, maxy)``.
+        """
         if not hasattr(self, "_cached_index"):
-            logger.debug(
-                "Building lazy bounding box index for {}", self.__class__.__name__
-            )
-            profile = self.schema_profile
-            self._cached_index: pl.DataFrame = build_bbox_index(
+            profile = self.schema_profile  # already cached — no extra I/O
+            _so = self._storage_options or {}
+            self._cached_index: pl.DataFrame = _cached_build_index(
                 static_path=self._resolve(self.static_path),
-                key_cols=self.key_cols,
+                key_cols=tuple(self.key_cols),
                 bbox_cols=profile.bbox_cols,
                 geometry_col=profile.geometry_col,
                 geometry_type=profile.geometry_type,
-                storage_options=self._storage_options or None,
+                storage_options_key=_so_key(_so),
             )
         return self._cached_index
 
