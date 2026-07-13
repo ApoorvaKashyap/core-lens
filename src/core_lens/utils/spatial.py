@@ -5,7 +5,9 @@ from __future__ import annotations
 import pathlib
 from typing import TYPE_CHECKING, Any
 
+import numpy as np
 import polars as pl
+import pyarrow.dataset as ds
 import shapely
 from loguru import logger
 
@@ -13,6 +15,98 @@ from core_lens.utils.paths import is_cloud_uri, path_exists, resolve_fs_and_path
 
 if TYPE_CHECKING:
     pass
+
+# ---------------------------------------------------------------------------
+# Bbox index sidecar helpers
+#
+# A sidecar Parquet file caches the pre-computed bounding-box index so that
+# the expensive WKB-decode loop in build_bbox_index is only paid once per
+# dataset (not once per process).  Subsequent runs load the index directly
+# from the sidecar — no geometry decoding required.
+#
+# Sidecar location priority:
+#   1. Alongside the static parquet directory/file (requires write access).
+#   2. ~/.cache/core_lens/ (fallback for read-only data roots).
+# ---------------------------------------------------------------------------
+
+_SIDECAR_SUFFIX = ".bbox_index.parquet"
+_CACHE_DIR = pathlib.Path.home() / ".cache" / "core_lens"
+
+
+def _bbox_sidecar_path(static_path: str) -> pathlib.Path | None:
+    """Return the preferred path for the bbox index sidecar, or ``None`` for cloud URIs.
+
+    Tries the directory alongside ``static_path`` first; if that directory is
+    not writable (e.g. read-only data root), falls back to
+    ``~/.cache/core_lens/``.
+
+    Args:
+        static_path (str): Absolute local path to the static parquet file/directory.
+
+    Returns:
+        pathlib.Path | None: Sidecar path, or ``None`` if ``static_path`` is a cloud URI.
+    """
+    if is_cloud_uri(static_path):
+        return None
+    p = pathlib.Path(static_path)
+    # For a partitioned directory dataset, the sidecar lives inside the directory.
+    # For a single file, it lives next to it.
+    parent = p if p.is_dir() else p.parent
+    sidecar = parent / (p.name + _SIDECAR_SUFFIX)
+    # Check if the parent directory is writable.
+    if not parent.exists() or not parent.stat().st_mode & 0o200:
+        # Fallback to user cache dir.
+        import hashlib
+
+        fingerprint = hashlib.sha1(static_path.encode()).hexdigest()[:16]
+        _CACHE_DIR.mkdir(parents=True, exist_ok=True)
+        sidecar = _CACHE_DIR / (fingerprint + _SIDECAR_SUFFIX)
+    return sidecar
+
+
+def _read_bbox_sidecar(sidecar: pathlib.Path, static_path: str) -> pl.DataFrame | None:
+    """Read the sidecar if it exists and is newer than the static data.
+
+    Args:
+        sidecar (pathlib.Path): Candidate sidecar path.
+        static_path (str): Absolute local path to the static parquet file/directory.
+
+    Returns:
+        pl.DataFrame | None: The cached index, or ``None`` if the sidecar is
+        absent or stale.
+    """
+    if not sidecar.exists():
+        return None
+    try:
+        static_mtime = pathlib.Path(static_path).stat().st_mtime
+        sidecar_mtime = sidecar.stat().st_mtime
+        if sidecar_mtime < static_mtime:
+            logger.debug(
+                "Bbox sidecar {} is stale (older than {}), rebuilding.",
+                sidecar,
+                static_path,
+            )
+            return None
+        logger.debug("Loading bbox index from sidecar: {}", sidecar)
+        return pl.read_parquet(str(sidecar))
+    except Exception as exc:
+        logger.warning("Failed to read bbox sidecar {}: {}", sidecar, exc)
+        return None
+
+
+def _write_bbox_sidecar(df: pl.DataFrame, sidecar: pathlib.Path) -> None:
+    """Write ``df`` to the sidecar file, silently ignoring any write errors.
+
+    Args:
+        df (pl.DataFrame): The bbox index DataFrame to persist.
+        sidecar (pathlib.Path): Destination sidecar path.
+    """
+    try:
+        sidecar.parent.mkdir(parents=True, exist_ok=True)
+        df.write_parquet(str(sidecar))
+        logger.debug("Wrote bbox index sidecar: {}", sidecar)
+    except Exception as exc:
+        logger.debug("Could not write bbox index sidecar {}: {}", sidecar, exc)
 
 
 def resolve_path(path: str) -> str:
@@ -99,7 +193,15 @@ def build_bbox_index(
             + "Cannot compute bounds from separate lat/lon columns without bbox hints."
         )
 
-    import pyarrow.dataset as ds
+    # --- Sidecar fast path (local paths only) --------------------------------
+    # Check for a pre-built index sidecar before doing the expensive WKB loop.
+    sidecar: pathlib.Path | None = None
+    if not is_cloud_uri(static_path):
+        sidecar = _bbox_sidecar_path(static_path)
+        if sidecar is not None:
+            cached = _read_bbox_sidecar(sidecar, static_path)
+            if cached is not None:
+                return cached
 
     logger.debug(
         "No pre-computed bbox found in {}; falling back to Shapely decoding",
@@ -133,17 +235,23 @@ def build_bbox_index(
             chunks.append(chunk)
 
     if chunks:
-        return pl.concat(chunks)
+        result = pl.concat(chunks)
+    else:
+        empty_df = pl.read_parquet(
+            static_path, columns=key_cols, storage_options=_so or None
+        )
+        result = empty_df.with_columns(
+            pl.Series("minx", [], dtype=pl.Float64),
+            pl.Series("miny", [], dtype=pl.Float64),
+            pl.Series("maxx", [], dtype=pl.Float64),
+            pl.Series("maxy", [], dtype=pl.Float64),
+        )
 
-    empty_df = pl.read_parquet(
-        static_path, columns=key_cols, storage_options=_so or None
-    )
-    return empty_df.with_columns(
-        pl.Series("minx", [], dtype=pl.Float64),
-        pl.Series("miny", [], dtype=pl.Float64),
-        pl.Series("maxx", [], dtype=pl.Float64),
-        pl.Series("maxy", [], dtype=pl.Float64),
-    )
+    # Persist the sidecar for future runs (local paths only, errors silenced).
+    if sidecar is not None:
+        _write_bbox_sidecar(result, sidecar)
+
+    return result
 
 
 def bbox_intersects_geometry(
@@ -213,8 +321,6 @@ def exact_spatial_filter(
     Raises:
         ValueError: If ``relationship`` is not one of the valid options.
     """
-    import shapely
-
     logger.debug(
         "Refining {} candidates with exact spatial filter (relationship='{}')",
         len(candidates),
@@ -246,8 +352,6 @@ def exact_spatial_filter(
         geoms = shapely.from_wkb(geom_array)
     else:
         geoms = shapely.from_wkt(geom_array)
-
-    import numpy as np
 
     if relationship == "centroid":
         # Centroid mode: entity centroid must lie within the AoI geometry.
@@ -320,8 +424,6 @@ def execute_spatial_join(
         pl.DataFrame: ``primary_df`` with additional columns
         ``{other_entity_name}_{col}`` appended for each ``agg`` entry.
     """
-    import shapely
-
     logger.info(
         "Starting execute_spatial_join for other_entity_name={}", other_entity_name
     )
@@ -353,8 +455,6 @@ def execute_spatial_join(
         return primary_df
 
     # Compute bounding box of all primary geometries
-    import numpy as np
-
     bnds = shapely.bounds(primary_geoms)
     valid_bnds = bnds[~np.isnan(bnds).any(axis=1)]
     if len(valid_bnds) > 0:

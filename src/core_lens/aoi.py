@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import functools
 import os
 import pathlib
 from dataclasses import dataclass
@@ -12,13 +13,15 @@ if TYPE_CHECKING:
     from core_lens.base.result import Result
 
 import polars as pl
+import shapely
+import shapely.geometry as sgeom
+import shapely.ops as sops
 from loguru import logger
 
 from core_lens.base.entity import BaseEntity, EntityValidationError
 from core_lens.utils.paths import is_cloud_uri
 
 if TYPE_CHECKING:
-    import shapely
     from core_lens.base.view import View
 
 
@@ -123,6 +126,121 @@ def _default_season_config() -> SeasonConfig:
 # Shared across all AoI instances in a process.  Explicit registration is
 # required; there is no auto-discovery (design §6.1).
 _REGISTRY: dict[str, type[BaseEntity]] = {}
+
+
+# ---------------------------------------------------------------------------
+# Process-level boundary cache — shared across all AoI instances.
+#
+# Keyed on (data_root, storage_options_key, entity_kwargs_key).
+# Returns a (geometry_wkb, entity_name, key_rows_tuple) triple so the
+# expensive scan + WKB decode + unary_union is only paid once per process
+# per unique boundary specification.
+#
+# Cache diagnostics: _cached_resolve_boundary.cache_info()
+# Cache reset (tests): _cached_resolve_boundary.cache_clear()
+# ---------------------------------------------------------------------------
+
+
+@functools.cache
+def _cached_resolve_boundary(
+    data_root: str,
+    storage_options_key: tuple[tuple[str, Any], ...],
+    entity_kwargs_key: tuple[tuple[str, Any], ...],
+) -> tuple[bytes, str, tuple[tuple[Any, ...], ...]]:
+    """Cached boundary resolution: return ``(geometry_wkb, entity_name, key_rows)``.
+
+    All arguments must be hashable.  ``entity_kwargs`` must be converted to a
+    sorted tuple of ``(key, value)`` pairs before calling this function.
+
+    The returned triple contains:
+
+    * **geometry_wkb** — WKB bytes of the unioned boundary geometry.
+    * **entity_name** — name of the entity that defined the boundary
+      (e.g. ``"mws"`` or ``"tehsil"``).
+    * **key_rows** — tuple of key-value tuples for the matched rows
+      (e.g. ``(("mws_id", "13_551"),)`` for a single-row result).
+
+    Args:
+        data_root (str): Resolved data root path or cloud URI.
+        storage_options_key (tuple): Sorted ``storage_options`` items (hashable).
+        entity_kwargs_key (tuple): Sorted ``entity_kwargs`` items (hashable).
+
+    Returns:
+        tuple: ``(geometry_wkb, entity_name, key_rows)``.
+    """
+    from core_lens.base.entity import _entity_name as _ename
+
+    entity_kwargs: dict[str, Any] = dict(entity_kwargs_key)
+    storage_options: dict[str, Any] = dict(storage_options_key)
+
+    # Instantiate a throw-away AoI-like context to run the resolution logic.
+    # We cannot use a live AoI instance here (would be circular), so we
+    # inline the logic from _resolve_named_boundary.
+    candidate: BaseEntity | None = None
+
+    # First pass: find entity whose schema columns match the kwargs.
+    for ename in _REGISTRY:
+        entity_cls = _REGISTRY[ename]
+        entity = entity_cls(
+            data_root=data_root,
+            storage_options=storage_options or None,
+        )
+        schema = entity.schema_profile  # uses _cached_detect — I/O only once
+        if any(
+            k in schema.key_cols or k in schema.extra_static_cols for k in entity_kwargs
+        ):
+            candidate = entity
+            break
+
+    # Fallback: entity name matches a kwarg key.
+    if candidate is None:
+        for ename in _REGISTRY:
+            if ename in entity_kwargs:
+                entity_cls = _REGISTRY[ename]
+                candidate = entity_cls(
+                    data_root=data_root,
+                    storage_options=storage_options or None,
+                )
+                break
+
+    if candidate is None:
+        raise EntityValidationError(
+            f"No registered entity can satisfy the filters {entity_kwargs}. "
+            f"Registered entities: {sorted(_REGISTRY)}."
+        )
+
+    schema = candidate.schema_profile
+    geom_col = schema.geometry_col
+    static_path = candidate._resolve(candidate.static_path)
+
+    lf = pl.scan_parquet(static_path, storage_options=storage_options or None)
+    filter_expr = pl.lit(True)
+    for col, val in entity_kwargs.items():
+        if col in schema.key_cols or col in schema.extra_static_cols:
+            if isinstance(val, list):
+                lf = lf.filter(pl.col(col).is_in(val))
+            else:
+                filter_expr = filter_expr & (pl.col(col) == val)
+
+    df = lf.filter(filter_expr).select(candidate.key_cols + [geom_col]).collect()
+
+    if df.is_empty():
+        raise ValueError(
+            f"No rows matched the filters {entity_kwargs} in {candidate.static_path!r}."
+        )
+
+    geoms = shapely.from_wkb(df[geom_col].to_numpy())
+    unified = sops.unary_union(geoms) if len(geoms) > 1 else geoms[0]
+    geom_wkb: bytes = shapely.to_wkb(unified)
+
+    entity_name = _ename(type(candidate))
+    # Serialise key DataFrame as a tuple-of-tuples for the cache return value.
+    key_rows = tuple(
+        tuple(row[c] for c in candidate.key_cols)
+        for row in df.select(candidate.key_cols).to_dicts()
+    )
+
+    return geom_wkb, entity_name, key_rows
 
 
 class AoI:
@@ -365,7 +483,9 @@ class AoI:
                 data_root=self.data_root,
                 storage_options=self._storage_options or None,
             )
-            _validate_entity(entity, name)
+            # Only validate path existence here — schema detection (parquet
+            # footer reads) is deferred to first data access via schema_profile.
+            _validate_entity_paths(entity, name)
             self._entity_instances[name] = entity
         return self._entity_instances[name]
 
@@ -427,9 +547,11 @@ class AoI:
     ) -> "shapely.Geometry":
         """Resolve a set of named attribute filters to a Shapely geometry.
 
-        The entity whose key column matches one of the kwargs is queried.
-        Multiple kwargs act as AND-filters (e.g. tehsil + district narrows to
-        the unique matching row).
+        Delegates to the process-level :func:`_cached_resolve_boundary` cache
+        so that the expensive Parquet scan + WKB decode + ``unary_union`` is
+        only paid once per unique ``(data_root, entity_kwargs)`` combination
+        within a Python process.  Subsequent ``AoI()`` calls with the same
+        boundary specification reconstruct the geometry from cached WKB bytes.
 
         Args:
             entity_kwargs (dict[str, str | list[str]]): Column–value pairs used to identify the boundary.
@@ -441,85 +563,47 @@ class AoI:
             :class:`~core_lens.base.EntityValidationError`: If no registered entity can satisfy the filters.
             ValueError: If the filters match zero rows.
         """
-        import shapely.ops as sops
-
         logger.debug("Resolving named boundary using kwargs: {}", entity_kwargs)
 
-        # Find the registered entity whose key_col or known attribute column
-        # matches one of the filter keys.  Entities are lazily instantiated
-        # via _get_entity() — only those inspected during the search are built.
-        candidate: BaseEntity | None = None
-        for name in _REGISTRY:
-            entity = self._get_entity(name)
-            schema = entity.schema_profile
-            if any(
-                k in schema.key_cols or k in schema.extra_static_cols
-                for k in entity_kwargs
-            ):
-                candidate = entity
-                break
+        from core_lens.base.entity import _so_key
 
-        # Fall back: look for an entity whose name matches a kwarg key
-        # (e.g. tehsil="Pangi" → TehsilEntity if registered as "tehsil").
-        if candidate is None:
-            logger.debug(
-                "No direct column match found for kwargs, attempting entity name fallback"
+        # Build hashable cache key from entity_kwargs.
+        # list values are converted to tuples so they are hashable.
+        kwargs_hashable: dict[str, Any] = {
+            k: tuple(v) if isinstance(v, list) else v for k, v in entity_kwargs.items()
+        }
+        entity_kwargs_key = tuple(sorted(kwargs_hashable.items()))
+        data_root_str = str(self.data_root)
+        so_key = _so_key(self._storage_options)
+
+        # Delegate to the process-level cache.  On a cache miss this runs the
+        # full scan + WKB decode + unary_union; on a hit it returns instantly.
+        geom_wkb, boundary_entity_name, key_rows = _cached_resolve_boundary(
+            data_root_str, so_key, entity_kwargs_key
+        )
+
+        # Reconstruct the boundary geometry from cached WKB bytes (fast).
+        geometry: shapely.Geometry = shapely.from_wkb(geom_wkb)
+
+        # Reconstruct _boundary_keys DataFrame from cached key_rows.
+        # We need the key column names — get them from the boundary entity.
+        boundary_entity_cls = _REGISTRY.get(boundary_entity_name)
+        if boundary_entity_cls is not None:
+            key_cols = boundary_entity_cls().key_cols
+            self._boundary_entity_name = boundary_entity_name
+            self._boundary_keys = pl.DataFrame(
+                {col: [row[i] for row in key_rows] for i, col in enumerate(key_cols)}
             )
-            for name in _REGISTRY:
-                if name in entity_kwargs:
-                    candidate = self._get_entity(name)
-                    break
-
-        if candidate is None:
-            logger.error(
-                "Boundary resolution failed: no registered entity matched filters {}",
-                entity_kwargs,
+        else:
+            # Registry changed since cache was populated — defensive fallback.
+            logger.warning(
+                "Boundary cache returned entity name '{}' not found in current registry.",
+                boundary_entity_name,
             )
-            raise EntityValidationError(
-                f"No registered entity can satisfy the filters {entity_kwargs}. "
-                f"Registered entities: {sorted(_REGISTRY)}."
-            )
+            self._boundary_entity_name = None
+            self._boundary_keys = None
 
-        schema = candidate.schema_profile
-        geom_col = schema.geometry_col
-
-        # Build a lazy frame to push filters down into the Parquet reader.
-        # This avoids loading the entire geometry column into memory.
-        lf = pl.scan_parquet(candidate._resolve(candidate.static_path))
-
-        filter_expr = pl.lit(True)
-        for col, val in entity_kwargs.items():
-            if (
-                col in candidate.schema_profile.key_cols
-                or col in candidate.schema_profile.extra_static_cols
-            ):
-                if isinstance(val, list):
-                    lf = lf.filter(pl.col(col) == val)
-                else:
-                    filter_expr = filter_expr & (pl.col(col) == val)
-
-        df = lf.filter(filter_expr).select(candidate.key_cols + [geom_col]).collect()
-
-        # Cache the boundary-defining entity's name and its exact key rows so
-        # that __getattr__ can short-circuit the spatial_filter for this one
-        # entity — the keys are already known, no need to rebuild the bbox
-        # index or re-run a geometric predicate.
-        self._boundary_entity_name = _entity_name(type(candidate))
-        self._boundary_keys = df.select(candidate.key_cols)
-
-        if df.is_empty():
-            logger.error(
-                "Boundary resolution failed: no rows matched filters {}", entity_kwargs
-            )
-            raise ValueError(
-                f"No rows matched the filters {entity_kwargs} "
-                f"in {candidate.static_path!r}."
-            )
-
-        import shapely
-
-        geoms = shapely.from_wkb(df[geom_col].to_numpy())
-        return sops.unary_union(geoms) if len(geoms) > 1 else geoms[0]
+        return geometry
 
     @classmethod
     def register(cls, entity_cls: type[BaseEntity]) -> None:
@@ -588,27 +672,29 @@ def _entity_name(entity_cls: type[BaseEntity]) -> str:
 def _bbox_to_polygon(
     bbox: tuple[float, float, float, float],
 ) -> "shapely.Geometry":
-    import shapely.geometry as sgeom
-
     minx, miny, maxx, maxy = bbox
     return sgeom.box(minx, miny, maxx, maxy)
 
 
-def _validate_entity(entity: BaseEntity, name: str) -> None:
-    """Validate an entity's paths and schema.
+def _validate_entity_paths(entity: BaseEntity, name: str) -> None:
+    """Validate an entity's path existence only — no Parquet I/O.
 
-    File-existence checks are performed eagerly for local paths.  Schema
-    validation (key columns, geometry column) is delegated to
-    :attr:`BaseEntity.schema_profile`, which routes through the process-level
-    :func:`_cached_detect` cache — so the second ``AoI()`` pointed at the
-    same ``data_root`` pays zero Parquet footer reads for validation.
+    Checks that ``static_path``, ``annual_path``, and ``fortnightly_path``
+    resolve to existing local files.  Schema validation (key columns,
+    geometry column, geometry type) is intentionally deferred to first data
+    access via :attr:`BaseEntity.schema_profile`, which routes through the
+    process-level :func:`~core_lens.base.entity._cached_detect` cache.
+
+    This is the fast variant called from :meth:`AoI._get_entity`.  Use
+    :func:`_validate_entity` for the full eager check (e.g. in
+    :meth:`AoI.validate` or for absolute-path entities at register time).
 
     Args:
         entity (BaseEntity): The entity instance to validate.
         name (str): Human-readable entity name for error messages.
 
     Raises:
-        EntityValidationError: If any validation check fails.
+        EntityValidationError: If any path does not exist.
     """
     # --- Static path existence check ----------------------------------------
     try:
@@ -623,9 +709,6 @@ def _validate_entity(entity: BaseEntity, name: str) -> None:
             f"Entity {name!r}: static_path {entity.static_path!r} does not exist."
         )
 
-    # For local paths perform an eager existence check; for cloud paths we rely
-    # on the schema-read below to surface a missing-file error (avoids an extra
-    # HeadObject call per entity at startup).
     if not is_cloud_uri(static) and not os.path.exists(static):
         logger.error(
             "Validation failed for entity {}: static path '{}' does not exist.",
@@ -636,26 +719,7 @@ def _validate_entity(entity: BaseEntity, name: str) -> None:
             f"Entity {name!r}: static_path {static!r} does not exist."
         )
 
-    # --- Schema validation (key_cols, geometry_col, geometry_type) -----------
-    # Delegate to schema_profile which routes through _cached_detect.
-    # detect() internally calls _require_cols for key_cols and geometry_col,
-    # and infers geometry_type — so this covers the same checks that the old
-    # _validate_entity did with a raw pl.scan_parquet().collect_schema(), but
-    # without a redundant footer read.
-    try:
-        _ = entity.schema_profile
-    except Exception as exc:
-        logger.error(
-            "Validation failed for entity {}: could not read schema from '{}': {}",
-            name,
-            static,
-            exc,
-        )
-        raise EntityValidationError(
-            f"Entity {name!r}: could not read schema from {static!r}: {exc}"
-        ) from exc
-
-    # --- Temporal path existence checks -------------------------------------
+    # --- Temporal path existence checks (no schema read) --------------------
     for attr, label in [("annual_path", "annual"), ("fortnightly_path", "fortnightly")]:
         path = getattr(entity, attr)
         if path is not None:
@@ -663,10 +727,8 @@ def _validate_entity(entity: BaseEntity, name: str) -> None:
                 abs_path = entity._resolve(path)
             except FileNotFoundError:
                 abs_path = None
-            if (
-                abs_path is not None
-                and not is_cloud_uri(abs_path)
-                and not os.path.exists(abs_path)
+            if abs_path is None or (
+                not is_cloud_uri(abs_path) and not os.path.exists(abs_path)
             ):
                 logger.error(
                     "Validation failed for entity {}: {} path '{}' does not exist.",
@@ -677,13 +739,47 @@ def _validate_entity(entity: BaseEntity, name: str) -> None:
                 raise EntityValidationError(
                     f"Entity {name!r}: {label}_path {path!r} does not exist."
                 )
-            elif abs_path is None:
-                logger.error(
-                    "Validation failed for entity {}: {} path '{}' does not exist.",
-                    name,
-                    label,
-                    path,
-                )
-                raise EntityValidationError(
-                    f"Entity {name!r}: {label}_path {path!r} does not exist."
-                )
+
+
+def _validate_entity(entity: BaseEntity, name: str) -> None:
+    """Validate an entity's paths and schema (full eager check).
+
+    Runs path existence checks via :func:`_validate_entity_paths`, then
+    triggers schema detection (Parquet footer reads) by accessing
+    :attr:`BaseEntity.schema_profile`.  The result is cached by
+    :func:`~core_lens.base.entity._cached_detect`, so the second call for the
+    same ``data_root`` pays no I/O.
+
+    Called by :meth:`AoI.validate` and by :meth:`AoI.register` for
+    entities with absolute paths.  Normal lazy instantiation via
+    :meth:`AoI._get_entity` uses the cheaper :func:`_validate_entity_paths`.
+
+    Args:
+        entity (BaseEntity): The entity instance to validate.
+        name (str): Human-readable entity name for error messages.
+
+    Raises:
+        EntityValidationError: If any validation check fails.
+    """
+    # Fast path-only check first.
+    _validate_entity_paths(entity, name)
+
+    # --- Schema validation (key_cols, geometry_col, geometry_type) -----------
+    # Accessing schema_profile triggers _cached_detect, which reads Parquet
+    # footer metadata.  Subsequent calls for the same data_root are free.
+    try:
+        static = entity._resolve(entity.static_path)
+        _ = entity.schema_profile
+    except EntityValidationError:
+        raise
+    except Exception as exc:
+        static = entity.static_path  # best-effort for the error message
+        logger.error(
+            "Validation failed for entity {}: could not read schema from '{}': {}",
+            name,
+            static,
+            exc,
+        )
+        raise EntityValidationError(
+            f"Entity {name!r}: could not read schema from {static!r}: {exc}"
+        ) from exc
