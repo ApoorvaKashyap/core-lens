@@ -25,18 +25,18 @@ AoI.register(MWSEntity)
 AoI.register(TehsilEntity)
 ```
 
-Create an `AoI` (Area of Interest) by specifying the `data_root` and your boundary (either by name, bounding box, or Shapely geometry):
+Create an `AoI` (Area of Interest) by specifying the `data_root` (which can be a local path or a cloud URI like `s3://bucket/data`) and your boundary (either by name, bounding box, or Shapely geometry):
 
 ```python
-# Create an AoI scoped to a specific Tehsil
+# Create an AoI scoped to a specific Tehsil using a local path
 aoi = AoI(
     data_root="/path/to/data",
     tehsil="Pangi"
 )
 
-# Or scope it directly to a specific list of entity IDs
+# Or scope it directly to a specific list of entity IDs using an S3 bucket
 aoi_specific = AoI(
-    data_root="/path/to/data",
+    data_root="s3://my-cloud-bucket/core-lens-data",
     mws_id=["13_001", "13_002"]
 )
 

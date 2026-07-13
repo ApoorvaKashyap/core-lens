@@ -13,4 +13,6 @@ CoreLens provides a unified interface over microwatersheds, administrative bound
 - **Temporal & Seasonal Awareness**: Native support for agronomic seasons (Kharif, Rabi, Zaid) and time-range filtering.
 - **Spatial Statistics & Analysis**: Built-in methods for anomaly detection, spatial similarity, temporal correlation, and hypothesis testing.
 - **Interactive Visualisation**: Generate interactive maps using Lonboard with zero-copy GeoArrow rendering directly from Polars, and timeseries/scatter plots using Bokeh.
-- **High-Performance Exports**: Export results directly to Parquet, JSON, CSV, or spatially-enabled GeoParquet and GeoJSON using integrated DuckDB spatial extensions.
+- **Cloud & Local Data**: Native support for reading Parquet data from local filesystems or directly from cloud storage (e.g., `s3://`).
+- **High-Performance Exports**: Export results directly to Parquet, JSON, CSV, or spatially-enabled GeoParquet and GeoJSON (with a fast streaming writer).
+- **Advanced Caching**: Transparently caches boundaries and pre-computes spatial indices (via on-disk sidecars) to achieve sub-second query initialisation times.

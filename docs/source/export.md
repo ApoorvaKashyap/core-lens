@@ -41,7 +41,13 @@ geoparquet(
 
 # Export to GeoJSON
 geojson(spatial_res, "output.json")
+
+# Export to newline-delimited GeoJSON (GeoJSONSeq)
+geojson(spatial_res, "output.ndjson", driver="GeoJSONSeq")
 ```
 
-> [!NOTE]
-> Exporting to geospatial formats automatically uses DuckDB to cast WKB geometries to proper spatial types via the `spatial` extension. CoreLens handles the installation and loading of the extension seamlessly under the hood.
+```{note}
+Exporting to **GeoParquet** uses DuckDB to cast WKB geometries to proper spatial types via the `spatial` extension. CoreLens handles the installation and loading of the extension seamlessly under the hood.
+
+Exporting to **GeoJSON** is fully natively streamed directly from Polars and Shapely without invoking GDAL or DuckDB, making it extremely fast for large datasets. Driver-specific kwargs for GeoJSON are ignored.
+```

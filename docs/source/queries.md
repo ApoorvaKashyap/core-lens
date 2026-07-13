@@ -58,5 +58,6 @@ joined_view = aoi.mws.spatial_join(
 # res = joined_view.annual
 ```
 
-> [!NOTE]
-> Cross-entity spatial join execution (materialisation) is currently under development and will be added in a subsequent release. Calling materialisation methods (like `.annual`, `.static`, or `.fortnightly`) on a joined view will raise a `NotImplementedError` in the current version.
+```{note}
+Cross-entity spatial join execution (materialisation) is currently under development and will be added in a subsequent release. Calling materialisation methods (like `.annual`, `.static`, or `.fortnightly`) on a joined view will raise a `NotImplementedError` in the current version.
+```
