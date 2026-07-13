@@ -173,14 +173,27 @@ def build_bbox_index(
     _so = storage_options or {}
     if bbox_cols is not None:
         logger.debug("Using pre-computed bbox columns: {}", bbox_cols)
-        cols_to_read = key_cols + list(bbox_cols)
+        base_bbox_cols = list(dict.fromkeys(c.split(".")[0] for c in bbox_cols))
+        cols_to_read = key_cols + base_bbox_cols
         df = pl.read_parquet(
             static_path, columns=cols_to_read, storage_options=_so or None
         )
         minx_col, miny_col, maxx_col, maxy_col = bbox_cols
-        return df.rename(
-            {minx_col: "minx", miny_col: "miny", maxx_col: "maxx", maxy_col: "maxy"}
-        )
+
+        for alias, col_path in zip(
+            ["minx", "miny", "maxx", "maxy"],
+            [minx_col, miny_col, maxx_col, maxy_col],
+        ):
+            parts = col_path.split(".")
+            if len(parts) == 1:
+                df = df.rename({col_path: alias})
+            else:
+                expr = pl.col(parts[0])
+                for p in parts[1:]:
+                    expr = expr.struct.field(p)
+                df = df.with_columns(expr.alias(alias))
+
+        return df.select(key_cols + ["minx", "miny", "maxx", "maxy"])
 
     cols_to_read = key_cols + [geometry_col]
     if geometry_type == "latlon":

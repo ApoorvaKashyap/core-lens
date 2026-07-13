@@ -178,6 +178,14 @@ def _infer_bbox_cols(schema: pl.Schema) -> tuple[str, str, str, str] | None:
     for pattern in _BBOX_PATTERNS:
         if all(col in schema for col in pattern):
             return pattern
+
+    for col_name, dtype in schema.items():
+        if isinstance(dtype, pl.Struct):
+            struct_fields = [f.name for f in dtype.fields]
+            for pattern in _BBOX_PATTERNS:
+                if all(f in struct_fields for f in pattern):
+                    return tuple(f"{col_name}.{f}" for f in pattern)  # type: ignore
+
     return None
 
 
