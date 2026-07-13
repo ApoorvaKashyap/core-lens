@@ -28,6 +28,7 @@ def _make_result(
 
     Returns:
         A ``Result`` ready for assertion.
+
     """
     if data is None:
         data = pl.DataFrame({"mws_id": ["13_001", "13_002"], "ndvi_mean": [0.45, 0.50]})

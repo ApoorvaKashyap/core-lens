@@ -29,6 +29,7 @@ def _sf(x: object) -> float:
 
     Returns:
         float: The numeric value as a float, or NaN if the input is None.
+
     """
     if x is None:
         return float("nan")
@@ -42,6 +43,7 @@ class CorrelateMethod(Enum):
         PEARSON: Pearson correlation coefficient.
         SPEARMAN: Spearman rank correlation.
         KENDALL: Kendall Tau correlation.
+
     """
 
     PEARSON = "pearson"
@@ -58,6 +60,7 @@ class TestMethod(Enum):
         WILCOXON: Wilcoxon signed-rank test.
         KS: Kolmogorov-Smirnov test.
         CHI_SQUARE: Chi-square test.
+
     """
 
     __test__ = False
@@ -75,6 +78,7 @@ class ChangeMethod(Enum):
         ABSOLUTE: Absolute difference between periods.
         PERCENTAGE: Percentage change between periods.
         TREND: Linear trend over time.
+
     """
 
     ABSOLUTE = "absolute"
@@ -90,6 +94,7 @@ class AnomalyCrossMethod(Enum):
         IQR: Interquartile range method.
         PERCENTILE: Percentile-based method.
         THRESHOLD: Fixed threshold method.
+
     """
 
     ZSCORE = "zscore"
@@ -105,6 +110,7 @@ class AnomalyTsMethod(Enum):
         STL: Seasonal-Trend decomposition using LOESS.
         CUSUM: Cumulative sum control chart.
         MAD: Median Absolute Deviation.
+
     """
 
     STL = "stl"
@@ -120,6 +126,7 @@ class SimilarityMethod(Enum):
         COSINE: Cosine similarity.
         MAHALANOBIS: Mahalanobis distance.
         MANHATTAN: Manhattan distance.
+
     """
 
     EUCLIDEAN = "euclidean"
@@ -167,7 +174,8 @@ class StatsNamespace:
         columns: list[str] | None = None,
         by: str = "column",
     ) -> "Result":
-        """Per-column or per-entity descriptive statistics.
+        r"""Per-column or per-entity descriptive statistics.
+
         Uses polars' in-built methods for mean, std, min, max, quantiles etc.
 
         Args:
@@ -180,6 +188,7 @@ class StatsNamespace:
 
         Raises:
             ValueError: If ``by`` is not ``\"column\"`` or ``\"entity\"``.
+
         """
         df = self._r.data
         cols = columns if columns is not None else self._numeric_cols(df)
@@ -239,6 +248,7 @@ class StatsNamespace:
         Raises:
             CorrelationError: If fewer than 2 columns supplied.
             ValueError: If ``method`` is not recognised.
+
         """
         if len(columns) < 2:
             raise CorrelationError(
@@ -313,6 +323,7 @@ class StatsNamespace:
         Raises:
             ValueError: If none of ``groups``, ``periods``, ``against`` supplied,
                 or if ``method`` is not recognised.
+
         """
         import scipy.stats as sp
 
@@ -460,6 +471,7 @@ class StatsNamespace:
 
         Raises:
             ValueError: If ``method`` is not recognised or year column absent.
+
         """
         if not isinstance(method, ChangeMethod):
             raise ValueError(
@@ -566,6 +578,7 @@ class StatsNamespace:
 
         Raises:
             ValueError: If ``mode``, ``method``, or observation count invalid.
+
         """
         df = self._r.data
         key = self._r.key_cols[0]
@@ -835,6 +848,7 @@ class StatsNamespace:
         Raises:
             ValueError: If ``method`` is invalid, no columns can be resolved,
                 or ``target`` is not found.
+
         """
         if not isinstance(method, SimilarityMethod):
             raise ValueError(

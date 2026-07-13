@@ -81,6 +81,7 @@ def detect(
     Raises:
         SchemaDetectionError: If a required column is absent, the geometry
             type cannot be inferred, or any other detection step fails.
+
     """
     _so = storage_options or {}
     static_schema = _read_schema(
@@ -274,6 +275,7 @@ def _is_year_col_from_schema(
 
     Returns:
         bool | None: ``True`` for integer-year, ``False`` for Date/Datetime, ``None`` if absent.
+
     """
     if time_col is None:
         return None

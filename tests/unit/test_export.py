@@ -154,7 +154,8 @@ def test_geoparquet_options_partition(
 def test_geojson_options(sample_result: Result, tmp_path: pathlib.Path) -> None:
     """Unknown kwargs are forwarded to the write engine; unrecognised ones raise
     ValueError (pyogrio) rather than silently being ignored.  The test simply
-    verifies the call path is exercised without an unexpected exception type."""
+    verifies the call path is exercised without an unexpected exception type.
+    """
     result_with_geom = sample_result.with_geometry()
 
     out_path = tmp_path / "out_opts.json"

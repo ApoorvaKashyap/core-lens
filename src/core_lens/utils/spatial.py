@@ -45,6 +45,7 @@ def _bbox_sidecar_path(static_path: str) -> pathlib.Path | None:
 
     Returns:
         pathlib.Path | None: Sidecar path, or ``None`` if ``static_path`` is a cloud URI.
+
     """
     if is_cloud_uri(static_path):
         return None
@@ -74,6 +75,7 @@ def _read_bbox_sidecar(sidecar: pathlib.Path, static_path: str) -> pl.DataFrame 
     Returns:
         pl.DataFrame | None: The cached index, or ``None`` if the sidecar is
         absent or stale.
+
     """
     if not sidecar.exists():
         return None
@@ -100,6 +102,7 @@ def _write_bbox_sidecar(df: pl.DataFrame, sidecar: pathlib.Path) -> None:
     Args:
         df (pl.DataFrame): The bbox index DataFrame to persist.
         sidecar (pathlib.Path): Destination sidecar path.
+
     """
     try:
         sidecar.parent.mkdir(parents=True, exist_ok=True)
@@ -120,6 +123,7 @@ def resolve_path(path: str) -> str:
 
     Raises:
         FileNotFoundError: If the resolved local path does not exist.
+
     """
     if is_cloud_uri(path):
         return path
@@ -169,6 +173,7 @@ def build_bbox_index(
 
     Returns:
         pl.DataFrame: A ``pl.DataFrame`` with columns ``(*key_cols, minx, miny, maxx, maxy)``.
+
     """
     _so = storage_options or {}
     if bbox_cols is not None:
@@ -284,6 +289,7 @@ def bbox_intersects_geometry(
 
     Returns:
         pl.DataFrame: The subset of ``index_df`` whose rows overlap the geometry bounds.
+
     """
     gminx, gminy, gmaxx, gmaxy = geometry.bounds  # type: ignore[attr-defined]
     return index_df.filter(
@@ -333,6 +339,7 @@ def exact_spatial_filter(
 
     Raises:
         ValueError: If ``relationship`` is not one of the valid options.
+
     """
     logger.debug(
         "Refining {} candidates with exact spatial filter (relationship='{}')",
@@ -436,6 +443,7 @@ def execute_spatial_join(
     Returns:
         pl.DataFrame: ``primary_df`` with additional columns
         ``{other_entity_name}_{col}`` appended for each ``agg`` entry.
+
     """
     logger.info(
         "Starting execute_spatial_join for other_entity_name={}", other_entity_name

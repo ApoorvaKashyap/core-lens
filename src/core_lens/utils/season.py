@@ -42,6 +42,7 @@ def resolve_time_filter(
 
     Raises:
         ValueError: If ``time_filter`` has an unrecognised structure.
+
     """
     if "start" in time_filter and "end" in time_filter:
         start = time_filter["start"]
@@ -93,6 +94,7 @@ def _date_range_expr(
 
     Returns:
         pl.Expr: A Polars expression.
+
     """
     start_date = datetime.date.fromisoformat(start)
     end_date = datetime.date.fromisoformat(end)
@@ -141,6 +143,7 @@ def _season_expr(
 
     Returns:
         pl.Expr: A Polars expression.
+
     """
     start_md, end_md = getattr(season_config, season_name)
     year_crossing = start_md > end_md
@@ -182,6 +185,7 @@ def _parse_md(md: str) -> tuple[int, int]:
 
     Returns:
         tuple[int, int]: A tuple containing ``(month, day)`` as integers.
+
     """
     month, day = md.split("-")
     return int(month), int(day)
@@ -198,6 +202,7 @@ def _year_bounds(year: int | tuple[int, int] | None) -> tuple[int, int]:
 
     Returns:
         tuple[int, int]: A tuple containing ``(from_year, to_year)``.
+
     """
     # When year is None use a wide range covering past and future data.
     if year is None:
@@ -238,6 +243,7 @@ def add_temporal_columns(
 
     Returns:
         pl.DataFrame: A new DataFrame with the temporal grouping columns appended.
+
     """
     existing = set(df.columns)
 
@@ -285,6 +291,7 @@ def add_temporal_columns(
 
             Returns:
                 pl.Expr: A Polars boolean expression handling year rollover.
+
             """
             if start <= end:
                 # is_between with bare strings → column-name lookup; use pl.lit().

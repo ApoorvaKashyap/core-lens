@@ -1,5 +1,4 @@
-"""
-demo_tehsil.py — core_lens TehsilEntity capability demonstration
+"""demo_tehsil.py — core_lens TehsilEntity capability demonstration
 =================================================================
 Walks through every meaningful operation available on a static-only
 entity: registration, AoI construction, filtering, materialisation,

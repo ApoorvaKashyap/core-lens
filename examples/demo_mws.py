@@ -1,5 +1,4 @@
-"""
-demo_mws.py — core_lens MWSEntity capability demonstration
+"""demo_mws.py — core_lens MWSEntity capability demonstration
 =========================================================
 Walks through every meaningful operation available on a spatiotemporal
 entity: registration, AoI construction, filtering, materialisation,

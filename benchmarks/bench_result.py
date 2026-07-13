@@ -1,5 +1,4 @@
-"""
-bench_result.py — Benchmark for core_lens.base.result.Result
+"""bench_result.py — Benchmark for core_lens.base.result.Result
 =============================================================
 Targets:
   - Result.df()                 zero-copy accessor

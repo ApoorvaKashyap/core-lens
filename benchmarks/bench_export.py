@@ -1,5 +1,4 @@
-"""
-bench_export.py — Benchmark for core_lens.export.formats
+"""bench_export.py — Benchmark for core_lens.export.formats
 =========================================================
 Targets:
   - export.parquet()            Polars write_parquet (no geometry)

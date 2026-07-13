@@ -1,5 +1,4 @@
-"""
-bench_schema.py — Benchmark for core_lens.schema.detection
+"""bench_schema.py — Benchmark for core_lens.schema.detection
 ============================================================
 Targets:
   - detect()                    full schema auto-detection from Parquet metadata

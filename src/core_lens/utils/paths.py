@@ -34,6 +34,7 @@ def is_cloud_uri(uri: str) -> bool:
 
     Returns:
         bool: ``True`` for URIs starting with a recognised cloud scheme.
+
     """
     return any(uri.startswith(scheme) for scheme in _CLOUD_SCHEMES)
 
@@ -50,6 +51,7 @@ def resolve_fs_and_path(uri: str) -> tuple[pafs.FileSystem, str]:
     Returns:
         tuple[pyarrow.fs.FileSystem, str]: The resolved filesystem and the
         normalised path within that filesystem.
+
     """
     if is_cloud_uri(uri):
         fs, path = pafs.FileSystem.from_uri(uri)
@@ -72,6 +74,7 @@ def path_exists(uri: str) -> bool:
 
     Returns:
         bool: ``True`` if the path exists (file or directory).
+
     """
     try:
         fs, path = resolve_fs_and_path(uri)
@@ -95,6 +98,7 @@ def join_uri(root: str, rel: str) -> str:
 
     Returns:
         str: The joined URI or absolute path string.
+
     """
     if is_cloud_uri(root):
         return root.rstrip("/") + "/" + rel.lstrip("/")

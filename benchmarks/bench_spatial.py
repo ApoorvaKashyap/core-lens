@@ -1,5 +1,4 @@
-"""
-bench_spatial.py — Benchmark for core_lens.utils.spatial
+"""bench_spatial.py — Benchmark for core_lens.utils.spatial
 =========================================================
 Targets:
   - build_bbox_index()          cold build (Shapely decode path) vs pre-computed bbox path

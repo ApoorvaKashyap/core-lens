@@ -33,6 +33,7 @@ def _write_static(path: pathlib.Path, geometry_col_dtype: str = "wkb") -> None:
         path: Destination path.
         geometry_col_dtype: ``"wkb"`` for Binary, ``"wkt"`` for String,
             ``"latlon"`` for separate lat/lon float columns.
+
     """
     if geometry_col_dtype == "wkb":
         data = {"mws_id": ["1"], "geometry": [_wkb_bytes()]}

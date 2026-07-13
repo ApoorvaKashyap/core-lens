@@ -1,5 +1,4 @@
-"""
-bench_aoi.py — Benchmark for core_lens.aoi
+"""bench_aoi.py — Benchmark for core_lens.aoi
 ===========================================
 Targets:
   - AoI.register()              entity registration + path probe

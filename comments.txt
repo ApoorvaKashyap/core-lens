@@ -1,0 +1,220 @@
+src/core_lens/base/namespaces/plot.py:83:    # WKB type detection: slice byte 1 (skip endian flag) — single byte covers
+src/core_lens/base/namespaces/plot.py:84:    # all standard types 1-7.  bin.slice returns BinaryView in this Polars build
+src/core_lens/base/namespaces/plot.py:85:    # which cannot be cast to UInt8 directly, so we extract the int value via
+src/core_lens/base/namespaces/plot.py:86:    # map_elements on the already-sliced 1-byte series (no endian logic, no
+src/core_lens/base/namespaces/plot.py:87:    # int.from_bytes on 4 bytes — still much cheaper than the original path).
+src/core_lens/base/namespaces/plot.py:94:    # --- Fast path: pure Polygon / MultiPolygon rows (no Shapely) ---
+src/core_lens/base/namespaces/plot.py:98:    # --- Slow path: GeometryCollection rows — extract polygon parts via Shapely ---
+src/core_lens/base/namespaces/plot.py:135:        # Return an empty table with the correct schema rather than crashing.
+src/core_lens/base/namespaces/plot.py:297:            # Render most-recent unique value of subplot_on only.
+src/core_lens/base/namespaces/plot.py:298:            # True multi-panel subplots not supported by Lonboard's single-Map API.
+src/core_lens/base/namespaces/plot.py:303:        # --- Direct Polars → GeoArrow → Lonboard path (zero Shapely, zero GeoPandas) ---
+src/core_lens/base/namespaces/plot.py:308:        # Extract colormap values from the already-filtered arrow_table.
+src/core_lens/base/namespaces/plot.py:309:        # arrow_table has the same row order as df post-filter, so indices align.
+src/core_lens/base/namespaces/plot.py:413:                # One sub-panel per unique subplot_col value via colour coding.
+src/core_lens/base/namespaces/stats.py:333:        # auto-select
+src/core_lens/base/namespaces/stats.py:593:            # baseline subset for computing reference stats
+src/core_lens/base/namespaces/stats.py:862:        # --- Build feature DataFrame ------------------------------------------
+src/core_lens/base/namespaces/stats.py:863:        # Universe of entity keys from result.data.
+src/core_lens/base/namespaces/stats.py:868:                # Pull from result.data directly.
+src/core_lens/base/namespaces/stats.py:871:                # else silently skip — not in data and no spec provided
+src/core_lens/base/namespaces/stats.py:874:            # spec = (resolution_str, filter_dict)
+src/core_lens/base/namespaces/stats.py:912:            # Apply year filter.
+src/core_lens/base/namespaces/stats.py:921:                # Fallback: look for a literal "year" integer column.
+src/core_lens/base/namespaces/stats.py:930:            # Apply season filter.
+src/core_lens/base/namespaces/stats.py:934:            # Aggregate over time per entity.
+src/core_lens/base/namespaces/stats.py:946:                # Static: no grouping needed — one row per entity.
+src/core_lens/base/namespaces/stats.py:974:        # z-score normalise before computing distances.
+src/core_lens/base/entity.py:39:# ---------------------------------------------------------------------------
+src/core_lens/base/entity.py:40:# Process-level caches — shared across all BaseEntity instances in a process.
+src/core_lens/base/entity.py:41:#
+src/core_lens/base/entity.py:42:# Both caches are backed by functools.cache (lru_cache with maxsize=None).
+src/core_lens/base/entity.py:43:# maxsize=None means unbounded — intentional: evicting an index or schema
+src/core_lens/base/entity.py:44:# profile forces an expensive rebuild on the next access.
+src/core_lens/base/entity.py:45:#
+src/core_lens/base/entity.py:46:# _cached_detect       eliminates repeated detect() calls (OPT-2).
+src/core_lens/base/entity.py:47:# _cached_build_index  eliminates repeated build_bbox_index() calls (OPT-1).
+src/core_lens/base/entity.py:48:#
+src/core_lens/base/entity.py:49:# Cache diagnostics:  _cached_detect.cache_info() / _cached_build_index.cache_info()
+src/core_lens/base/entity.py:50:# Cache reset (tests): _cached_detect.cache_clear() / _cached_build_index.cache_clear()
+src/core_lens/base/entity.py:51:# ---------------------------------------------------------------------------
+src/core_lens/base/entity.py:203:        # Store as str so cloud URIs (s3://…) are never coerced through pathlib.
+src/core_lens/base/entity.py:228:        # Fully-qualified cloud URI — return as-is.
+src/core_lens/base/entity.py:232:        # Relative path — join against data_root (which may itself be a cloud URI).
+src/core_lens/base/entity.py:246:        # For local resolved paths only: eager existence check.
+src/core_lens/base/entity.py:439:        # Validate entity-kwargs early so we give a useful error message.
+src/core_lens/base/entity.py:453:        # --- Attribute filter -----------------------------------------------
+src/core_lens/base/entity.py:465:            # No attribute filter: start with all entities.
+src/core_lens/base/entity.py:468:        # --- Spatial entity lookups -----------------------------------------
+src/core_lens/base/entity.py:476:            # Find the geometry of the named entity.
+src/core_lens/base/entity.py:507:            # Spatial filter: narrow keys to those whose centroid is within the geometry.
+src/core_lens/base/result.py:109:        # Vectorised C-level decode — shapely.from_wkb operates on the whole
+src/core_lens/base/result.py:110:        # numpy array at once, avoiding a Python-loop per row.
+src/core_lens/base/result.py:251:            # Temporal grouping columns are expected to already exist on the
+src/core_lens/base/result.py:252:            # frame (added by the materialisation layer from the time column).
+src/core_lens/base/result.py:299:        # Thin copy-with-modification helper to keep the public methods clean.
+src/core_lens/base/result.py:300:        # metadata is intentionally carried forward so chained derive() calls
+src/core_lens/base/result.py:301:        # preserve stats context from an earlier step.
+src/core_lens/base/view.py:81:        # season_config is only needed at materialisation time when a season
+src/core_lens/base/view.py:82:        # time_filter is present.  Carried forward by between() to new Views.
+src/core_lens/base/view.py:84:        # Inherit storage_options from entity so all I/O uses the same credentials.
+src/core_lens/base/view.py:406:        # Build a time filter expression when a time_filter is present and the
+src/core_lens/base/view.py:407:        # resolution is not static (static files have no time column).
+src/core_lens/base/view.py:418:                # Fall back to the default SeasonConfig if none was supplied on this View.
+src/core_lens/base/view.py:423:                # Read is_year_col from the cached schema profile — populated at
+src/core_lens/base/view.py:424:                # detect() time from the Parquet schema, so no extra I/O here.
+src/core_lens/base/view.py:431:                # Pass as a private hint inside the filter dict (non-mutating copy).
+src/core_lens/base/view.py:447:        # For fortnightly results, inject temporal grouping columns so that
+src/core_lens/base/view.py:448:        # aggregate(by="year"), aggregate(by="season"), etc. work out of the
+src/core_lens/base/view.py:449:        # box without callers having to derive them manually.
+src/core_lens/base/view.py:468:            # Ensure geometry is present in data for the join.
+src/core_lens/base/view.py:469:            # For non-static resolutions, load geometry from static file.
+src/core_lens/schema/profile.py:73:    # Whether the time column is an integer-year column (True), a Date/Datetime
+src/core_lens/schema/profile.py:74:    # column (False), or absent/unknown (None).  Determined at detect() time from
+src/core_lens/schema/profile.py:75:    # the Parquet schema — eliminates a redundant collect_schema() call in
+src/core_lens/schema/profile.py:76:    # View._materialise for every .annual / .fortnightly access.
+src/core_lens/schema/profile.py:109:        # For latlon encoding the library cannot derive a bounding box without
+src/core_lens/schema/profile.py:110:        # the bbox_cols hint, because there is no single geometry column to decode.
+src/core_lens/schema/detection.py:206:    # Float geometry column → assume it is a latitude column; look for a lon companion.
+src/core_lens/schema/detection.py:225:    # Heuristic: if the lat column is named "lat" or "latitude", look for the
+src/core_lens/schema/detection.py:226:    # obvious lon counterpart.  Returns None if nothing matches.
+src/core_lens/schema/detection.py:240:    # Prefer columns whose names are in the known set first so that e.g. a
+src/core_lens/schema/detection.py:241:    # column named "year" wins over an unnamed Datetime column.
+src/core_lens/schema/detection.py:246:    # Fall back: first Date or Datetime column regardless of name.
+src/core_lens/schema/detection.py:251:    # An integer column named after a year pattern is acceptable for annual files.
+src/core_lens/export/formats.py:138:    # We must escape single quotes in path if any exist.
+src/core_lens/export/formats.py:232:                # construct the Feature JSON manually to avoid parsing/re-serialising
+src/core_lens/utils/season.py:52:        # _is_year_col is injected by _materialise when the parquet schema is
+src/core_lens/utils/season.py:53:        # available.  When absent (e.g. direct test calls) pass None so that
+src/core_lens/utils/season.py:54:        # _date_range_expr uses its runtime when/then fallback.
+src/core_lens/utils/season.py:104:        # Integer year column — compare year integers directly, no string cast.
+src/core_lens/utils/season.py:108:        # Date column — compare against date literals directly.
+src/core_lens/utils/season.py:111:    # is_year_col is None — dtype unknown (e.g. direct test call without schema).
+src/core_lens/utils/season.py:112:    # Use a runtime when/then that handles both representations.
+src/core_lens/utils/season.py:156:        # Simple case: season stays within a single calendar year.
+src/core_lens/utils/season.py:157:        # Build concrete date literals for the year range.
+src/core_lens/utils/season.py:162:    # Year-crossing season: split into two halves.
+src/core_lens/utils/season.py:163:    # For rabi (11-01 → 03-31) in years [y_from, y_to]:
+src/core_lens/utils/season.py:164:    #   - Nov–Dec of year in [y_from, y_to]
+src/core_lens/utils/season.py:165:    #   - Jan–Mar of year in [y_from+1, y_to+1]
+src/core_lens/utils/season.py:207:    # When year is None use a wide range covering past and future data.
+src/core_lens/utils/season.py:250:    # --- year / month / year_month -----------------------------------------
+src/core_lens/utils/season.py:270:    # --- season / season_year -----------------------------------------------
+src/core_lens/utils/season.py:271:    # Vectorized via Polars when/then on MM-DD string — no Python loop,
+src/core_lens/utils/season.py:272:    # no .to_list(), no Python date objects per row.
+src/core_lens/utils/season.py:297:                # is_between with bare strings → column-name lookup; use pl.lit().
+src/core_lens/utils/season.py:299:            # Year-crossing: e.g. rabi 11-01 → 03-31
+src/core_lens/utils/paths.py:25:# URI scheme prefixes that indicate a cloud / non-local filesystem.
+src/core_lens/utils/paths.py:59:    # Local path — normalise to absolute.
+src/core_lens/utils/polars_utils.py:117:    # Use an inner join to filter the parquet file down to the exact requested keys.
+src/core_lens/utils/polars_utils.py:118:    # This avoids building a massive literal expression tree (which consumes gigabytes
+src/core_lens/utils/polars_utils.py:119:    # of RAM) that occurs when passing large lists to pl.col().is_in().
+src/core_lens/utils/spatial.py:19:# ---------------------------------------------------------------------------
+src/core_lens/utils/spatial.py:20:# Bbox index sidecar helpers
+src/core_lens/utils/spatial.py:21:#
+src/core_lens/utils/spatial.py:22:# A sidecar Parquet file caches the pre-computed bounding-box index so that
+src/core_lens/utils/spatial.py:23:# the expensive WKB-decode loop in build_bbox_index is only paid once per
+src/core_lens/utils/spatial.py:24:# dataset (not once per process).  Subsequent runs load the index directly
+src/core_lens/utils/spatial.py:25:# from the sidecar — no geometry decoding required.
+src/core_lens/utils/spatial.py:26:#
+src/core_lens/utils/spatial.py:27:# Sidecar location priority:
+src/core_lens/utils/spatial.py:28:#   1. Alongside the static parquet directory/file (requires write access).
+src/core_lens/utils/spatial.py:29:#   2. ~/.cache/core_lens/ (fallback for read-only data roots).
+src/core_lens/utils/spatial.py:30:# ---------------------------------------------------------------------------
+src/core_lens/utils/spatial.py:53:    # For a partitioned directory dataset, the sidecar lives inside the directory.
+src/core_lens/utils/spatial.py:54:    # For a single file, it lives next to it.
+src/core_lens/utils/spatial.py:57:    # Check if the parent directory is writable.
+src/core_lens/utils/spatial.py:59:        # Fallback to user cache dir.
+src/core_lens/utils/spatial.py:205:        # For latlon, bbox_cols must be set — this path should not be reached.
+src/core_lens/utils/spatial.py:214:    # --- Sidecar fast path (local paths only) --------------------------------
+src/core_lens/utils/spatial.py:215:    # Check for a pre-built index sidecar before doing the expensive WKB loop.
+src/core_lens/utils/spatial.py:229:    # Resolve filesystem for cloud paths so pyarrow.dataset can open the file.
+src/core_lens/utils/spatial.py:268:    # Persist the sidecar for future runs (local paths only, errors silenced).
+src/core_lens/utils/spatial.py:362:    # Build a lazy scan and push down an inner join to load only required geometries.
+src/core_lens/utils/spatial.py:377:        # Centroid mode: entity centroid must lie within the AoI geometry.
+src/core_lens/utils/spatial.py:378:        # STRtree is overkill for a single-query containment test — building
+src/core_lens/utils/spatial.py:379:        # the tree costs O(n log n) with no payoff when there is only one query
+src/core_lens/utils/spatial.py:380:        # geometry.  Vectorised shapely ops stay in C and avoid the overhead.
+src/core_lens/utils/spatial.py:386:        # Area mode: intersection area / entity area >= threshold.
+src/core_lens/utils/spatial.py:387:        # Vectorise: compute all areas and intersections in C via numpy arrays.
+src/core_lens/utils/spatial.py:452:    # Decode primary geometries first so we can bound the other entity read.
+src/core_lens/utils/spatial.py:478:    # Compute bounding box of all primary geometries
+src/core_lens/utils/spatial.py:505:        # Pre-filter other_entity using its in-memory bounding box index
+src/core_lens/utils/spatial.py:527:        # Decode other geometries.
+src/core_lens/utils/spatial.py:534:        # Build STRtree from other entity geometries.
+src/core_lens/utils/spatial.py:537:    # Only convert the columns we actually need to aggregate to Pandas, avoiding
+src/core_lens/utils/spatial.py:538:    # a massive memory copy of the WKB geometry strings and unused keys.
+src/core_lens/utils/spatial.py:547:    # For each primary entity, find overlapping other entities and aggregate.
+src/core_lens/utils/spatial.py:551:    # Vectorized STRtree query over all primary geometries at once
+src/core_lens/utils/spatial.py:552:    # Returns a 2D array of shape (2, N): [[primary_indices], [other_indices]]
+src/core_lens/utils/spatial.py:582:                # Sum of intersection areas (geographic, approx).
+src/core_lens/_version.py:1:# file generated by vcs-versioning
+src/core_lens/_version.py:2:# don't change, don't track in version control
+src/core_lens/aoi.py:63:                # Use a leap year (2000) to allow "02-29"
+src/core_lens/aoi.py:87:        # A date that falls in no season (can happen if ranges have gaps) is
+src/core_lens/aoi.py:88:        # assigned to the nearest season.  In practice the defaults cover the
+src/core_lens/aoi.py:89:        # whole year, so this branch should never fire with library defaults.
+src/core_lens/aoi.py:100:    # Year-crossing range (e.g. rabi: 11-01 to 03-31)
+src/core_lens/aoi.py:104:# Singleton for the default SeasonConfig — constructed once per process.
+src/core_lens/aoi.py:105:# SeasonConfig.__post_init__ runs 6× datetime.strptime calls for validation;
+src/core_lens/aoi.py:106:# sharing the default instance eliminates that cost for every AoI() call
+src/core_lens/aoi.py:107:# that does not supply a custom season config.
+src/core_lens/aoi.py:128:# Class-level registry: entity name → entity **class**.
+src/core_lens/aoi.py:129:# Shared across all AoI instances in a process.  Explicit registration is
+src/core_lens/aoi.py:130:# required; there is no auto-discovery (design §6.1).
+src/core_lens/aoi.py:134:# ---------------------------------------------------------------------------
+src/core_lens/aoi.py:135:# Process-level boundary cache — shared across all AoI instances.
+src/core_lens/aoi.py:136:#
+src/core_lens/aoi.py:137:# Keyed on (data_root, storage_options_key, entity_kwargs_key).
+src/core_lens/aoi.py:138:# Returns a (geometry_wkb, entity_name, key_rows_tuple) triple so the
+src/core_lens/aoi.py:139:# expensive scan + WKB decode + unary_union is only paid once per process
+src/core_lens/aoi.py:140:# per unique boundary specification.
+src/core_lens/aoi.py:141:#
+src/core_lens/aoi.py:142:# Cache diagnostics: _cached_resolve_boundary.cache_info()
+src/core_lens/aoi.py:143:# Cache reset (tests): _cached_resolve_boundary.cache_clear()
+src/core_lens/aoi.py:144:# ---------------------------------------------------------------------------
+src/core_lens/aoi.py:180:    # Instantiate a throw-away AoI-like context to run the resolution logic.
+src/core_lens/aoi.py:181:    # We cannot use a live AoI instance here (would be circular), so we
+src/core_lens/aoi.py:182:    # inline the logic from _resolve_named_boundary.
+src/core_lens/aoi.py:185:    # First pass: find entity whose schema columns match the kwargs.
+src/core_lens/aoi.py:199:    # Fallback: entity name matches a kwarg key.
+src/core_lens/aoi.py:241:    # Serialise key DataFrame as a tuple-of-tuples for the cache return value.
+src/core_lens/aoi.py:341:        # Preserve cloud URIs as-is; resolve local paths to absolute.
+src/core_lens/aoi.py:372:        # Entity instances are created lazily on first access via _get_entity().
+src/core_lens/aoi.py:375:        # Initialise boundary-entity cache.  Only populated by the
+src/core_lens/aoi.py:376:        # named-boundary path (_resolve_named_boundary); bbox= / geometry=
+src/core_lens/aoi.py:377:        # construction leaves these as None so __getattr__ falls through
+src/core_lens/aoi.py:378:        # to the normal spatial_filter path for every entity.
+src/core_lens/aoi.py:389:        # Entity views are created lazily on demand in __getattr__.
+src/core_lens/aoi.py:392:        # Opt-in eager validation: instantiate + validate every registered
+src/core_lens/aoi.py:393:        # entity now so that a bad entity fails immediately rather than on
+src/core_lens/aoi.py:394:        # first access.  Useful for startup health-checks.
+src/core_lens/aoi.py:434:        # Base layer: single AoI boundary (one Shapely geom — GeoPandas is fine here).
+src/core_lens/aoi.py:445:            # We duck-type the overlay to avoid circular imports of Result
+src/core_lens/aoi.py:450:                # --- Direct Polars → GeoArrow → Lonboard (no Shapely, no GeoPandas) ---
+src/core_lens/aoi.py:496:            # Only validate path existence here — schema detection (parquet
+src/core_lens/aoi.py:497:            # footer reads) is deferred to first data access via schema_profile.
+src/core_lens/aoi.py:512:            # or:
+src/core_lens/aoi.py:525:        # Called only when normal attribute lookup has already failed, so this
+src/core_lens/aoi.py:526:        # never shadows real attributes.  Maps entity names to their scoped Views.
+src/core_lens/aoi.py:531:                    # This entity *defined* the AoI boundary — we already
+src/core_lens/aoi.py:532:                    # have its exact matching keys from
+src/core_lens/aoi.py:533:                    # _resolve_named_boundary.  Skip the bbox-index build
+src/core_lens/aoi.py:534:                    # and geometric predicate entirely.
+src/core_lens/aoi.py:582:        # Build hashable cache key from entity_kwargs.
+src/core_lens/aoi.py:583:        # list values are converted to tuples so they are hashable.
+src/core_lens/aoi.py:591:        # Delegate to the process-level cache.  On a cache miss this runs the
+src/core_lens/aoi.py:592:        # full scan + WKB decode + unary_union; on a hit it returns instantly.
+src/core_lens/aoi.py:597:        # Reconstruct the boundary geometry from cached WKB bytes (fast).
+src/core_lens/aoi.py:600:        # Reconstruct _boundary_keys DataFrame from cached key_rows.
+src/core_lens/aoi.py:601:        # We need the key column names — get them from the boundary entity.
+src/core_lens/aoi.py:610:            # Registry changed since cache was populated — defensive fallback.
+src/core_lens/aoi.py:646:        # Probe with a no-root instance to check if paths are absolute.
+src/core_lens/aoi.py:650:            # Absolute local path entity: validate now.
+src/core_lens/aoi.py:652:        # Relative path or cloud URI entity: validation deferred to AoI.__init__.
+src/core_lens/aoi.py:715:    # --- Static path existence check ----------------------------------------
+src/core_lens/aoi.py:738:    # --- Temporal path existence checks (no schema read) --------------------
+src/core_lens/aoi.py:781:    # Fast path-only check first.
+src/core_lens/aoi.py:784:    # --- Schema validation (key_cols, geometry_col, geometry_type) -----------
+src/core_lens/aoi.py:785:    # Accessing schema_profile triggers _cached_detect, which reads Parquet
+src/core_lens/aoi.py:786:    # footer metadata.  Subsequent calls for the same data_root are free.

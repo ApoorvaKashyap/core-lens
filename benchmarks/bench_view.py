@@ -1,5 +1,4 @@
-"""
-bench_view.py — Benchmark for core_lens.base.view.View
+"""bench_view.py — Benchmark for core_lens.base.view.View
 =======================================================
 Targets:
   - View.where()                attribute filter (Polars semi-join on static file)

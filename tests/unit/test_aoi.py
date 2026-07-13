@@ -19,6 +19,7 @@ def _write_parquet_no_key_col(path: pathlib.Path) -> None:
 
     Args:
         path: Destination file path.
+
     """
     pl.DataFrame(
         {"wrong_id": ["1"], "geometry": [swkb.dumps(sgeom.box(0, 0, 1, 1))]}
@@ -30,6 +31,7 @@ def _write_parquet_no_geom_col(path: pathlib.Path) -> None:
 
     Args:
         path: Destination file path.
+
     """
     pl.DataFrame({"mws_id": ["1"], "geom": [b"x"]}).write_parquet(path)
 
@@ -52,6 +54,7 @@ def _make_bad_entity(
 
     Returns:
         A ``BaseEntity`` subclass whose declared columns differ from the file.
+
     """
     _static = str(static)
     _key_cols = key_cols

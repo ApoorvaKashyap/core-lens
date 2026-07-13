@@ -24,6 +24,7 @@ def _make_static_parquet(path: pathlib.Path, *, extra_cols: bool = False) -> Non
     Args:
         path: Destination file path.
         extra_cols: When True, appends an ``area_ha`` float column.
+
     """
     wkb_bytes = swkb.dumps(sgeom.box(73.0, 15.0, 74.0, 16.0))
     data: dict[str, Any] = {
@@ -41,6 +42,7 @@ def _make_annual_parquet(path: pathlib.Path) -> None:
 
     Args:
         path: Destination file path.
+
     """
     pl.DataFrame(
         {
@@ -56,6 +58,7 @@ def _make_fortnightly_parquet(path: pathlib.Path) -> None:
 
     Args:
         path: Destination file path.
+
     """
     pl.DataFrame(
         {
@@ -86,6 +89,7 @@ def _make_entity_cls(
 
     Returns:
         A ``BaseEntity`` subclass ready for ``AoI.register``.
+
     """
     profile = SchemaProfile(
         key_cols=["mws_id"],
@@ -222,7 +226,6 @@ def minimal_schema() -> SchemaProfile:
 @pytest.fixture()
 def sample_result(entity_cls: Any) -> Result:
     """Return a ``Result`` with an in-memory DataFrame at annual resolution."""
-
     df = pl.DataFrame({"mws_id": ["13_001", "13_002"], "ndvi_mean": [0.45, 0.50]})
     return Result(
         data=df,

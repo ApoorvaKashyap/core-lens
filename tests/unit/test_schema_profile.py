@@ -17,6 +17,7 @@ def _valid_kwargs(**overrides: Any) -> dict[str, Any]:
 
     Returns:
         A dict suitable for ``SchemaProfile(**kwargs)``.
+
     """
     base = {
         "key_cols": ["mws_id"],

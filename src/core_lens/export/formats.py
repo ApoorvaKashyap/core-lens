@@ -33,6 +33,7 @@ def parquet(result: "Result", path: str | pathlib.Path, **kwargs: Any) -> None:
     Example:
         >>> from core_lens.export import parquet
         >>> parquet(result, "output.parquet", compression="zstd", compression_level=3)
+
     """
     if result.has_geometry:
         raise TypeError(
@@ -57,6 +58,7 @@ def json(result: "Result", path: str | pathlib.Path, **kwargs: Any) -> None:
     Example:
         >>> from core_lens.export import json
         >>> json(result, "output.json", pretty=True)
+
     """
     if result.has_geometry:
         raise TypeError(
@@ -81,6 +83,7 @@ def csv(result: "Result", path: str | pathlib.Path, **kwargs: Any) -> None:
     Example:
         >>> from core_lens.export import csv
         >>> csv(result, "output.csv", separator=",")
+
     """
     if result.has_geometry:
         raise TypeError(
@@ -110,6 +113,7 @@ def geoparquet(result: "Result", path: str | pathlib.Path, **kwargs: Any) -> Non
 
     Raises:
         TypeError: If the Result object does not have geometry.
+
     """
     if not result.has_geometry:
         raise TypeError(
@@ -180,6 +184,7 @@ def geojson(result: "Result", path: str | pathlib.Path, **kwargs: Any) -> None:
 
     Raises:
         TypeError: If the Result object does not have geometry.
+
     """
     if not result.has_geometry:
         raise TypeError(

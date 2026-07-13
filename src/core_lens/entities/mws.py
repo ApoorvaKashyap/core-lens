@@ -14,35 +14,50 @@ class MWSEntity(BaseEntity):
 
     @property
     def key_cols(self) -> list[str]:
-        """Returns:
-        list[str]: The key columns for the entity.
+        """Get the property value.
+
+        Returns:
+            list[str]: The key columns for the entity.
+
         """
         return ["mws_id"]
 
     @property
     def geometry_col(self) -> str:
-        """Returns:
-        str: The geometry column name.
+        """Get the property value.
+
+        Returns:
+            str: The geometry column name.
+
         """
         return "geometry"
 
     @property
     def static_path(self) -> str:
-        """Returns:
-        str: The relative path to the static data.
+        """Get the property value.
+
+        Returns:
+            str: The relative path to the static data.
+
         """
         return "mws/static"
 
     @property
     def annual_path(self) -> str | None:
-        """Returns:
-        str | None: The relative path to the annual data.
+        """Get the property value.
+
+        Returns:
+            str | None: The relative path to the annual data.
+
         """
         return "mws/annual"
 
     @property
     def fortnightly_path(self) -> str | None:
-        """Returns:
-        str | None: The relative path to the fortnightly data.
+        """Get the property value.
+
+        Returns:
+            str | None: The relative path to the fortnightly data.
+
         """
         return "mws/fortnightly"

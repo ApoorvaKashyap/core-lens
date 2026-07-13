@@ -61,6 +61,7 @@ class View:
         join_spec: A dict encoding a deferred :meth:`~BaseEntity.spatial_join`
             request, or ``None``.  Evaluated during materialisation after the
             primary scan is complete.
+
     """
 
     def __init__(
@@ -94,6 +95,7 @@ class View:
 
         Returns:
             View: A new lazy :class:`View` with the narrowed keys.
+
         """
         static = self.entity._resolve(self.entity.static_path)
 
@@ -141,6 +143,7 @@ class View:
 
         Raises:
             ValueError: If neither ``geometry`` nor ``bbox`` is provided.
+
         """
         import shapely.geometry as sgeom
         from core_lens.utils.spatial import (
@@ -198,6 +201,7 @@ class View:
 
         Returns:
             View: A new lazy :class:`View` with the join spec recorded.
+
         """
         if self.join_spec is not None:
             logger.error(
@@ -260,6 +264,7 @@ class View:
             ValueError: If the arguments are inconsistent (e.g. mixing date
                 range and season arguments, omitting required args, or
                 supplying ``year`` with ``season="current"``).
+
         """
         if season is not None and (start is not None or end is not None):
             logger.error(
@@ -329,6 +334,7 @@ class View:
         Raises:
             AttributeError: If the entity has no ``static_path`` (should not
                 happen in practice since ``static_path`` is mandatory).
+
         """
         return self._materialise(Resolution.STATIC)
 
@@ -342,6 +348,7 @@ class View:
 
         Raises:
             AttributeError: If the entity has no ``annual_path``.
+
         """
         return self._materialise(Resolution.ANNUAL)
 
@@ -355,6 +362,7 @@ class View:
 
         Raises:
             AttributeError: If the entity has no ``fortnightly_path``.
+
         """
         return self._materialise(Resolution.FORTNIGHTLY)
 

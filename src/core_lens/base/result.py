@@ -53,6 +53,7 @@ class Result:
         entity: Reference to the parent entity, retained so
             :meth:`with_geometry` can locate the static file without
             requiring callers to pass it again.
+
     """
 
     def __init__(
@@ -79,6 +80,7 @@ class Result:
 
         Returns:
             pl.DataFrame: The materialised data frame.
+
         """
         return self.data
 
@@ -93,6 +95,7 @@ class Result:
 
         Raises:
             TypeError: If :attr:`has_geometry` is ``False``.
+
         """
         if not self.has_geometry:
             raise TypeError(
@@ -121,6 +124,7 @@ class Result:
 
         Returns:
             pl.LazyFrame: A lazy frame backed by :attr:`data`.
+
         """
         return self.data.lazy()
 
@@ -139,6 +143,7 @@ class Result:
             Result: A new :class:`Result` with the geometry column merged in and
             ``has_geometry=True``.  If ``has_geometry`` is already ``True``,
             returns ``self`` unchanged.
+
         """
         if self.has_geometry:
             return self
@@ -172,6 +177,7 @@ class Result:
 
         Returns:
             Result: A new :class:`Result` with ``name`` appended to :attr:`data`.
+
         """
         new_data = self.data.with_columns(expr.alias(name))
         return self._replace(data=new_data)
@@ -219,6 +225,7 @@ class Result:
         Raises:
             ValueError: If ``by`` is incompatible with :attr:`resolution`, or
                 if ``by`` is not a recognised grouping name.
+
         """
         if by is not None and by not in _VALID_BY:
             raise ValueError(
@@ -263,6 +270,7 @@ class Result:
 
         Returns:
             StatsNamespace: The statistical analysis namespace.
+
         """
         from core_lens.base.namespaces.stats import StatsNamespace
 
@@ -281,6 +289,7 @@ class Result:
 
         Returns:
             PlotNamespace: The visualisation namespace.
+
         """
         from core_lens.base.namespaces.plot import PlotNamespace
 

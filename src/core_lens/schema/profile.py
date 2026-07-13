@@ -56,6 +56,7 @@ class SchemaProfile(BaseModel):
             is used for validation and documentation only.
         extra_annual_cols: Additional attribute columns in the annual file.
         extra_fortnightly_cols: Additional attribute columns in the fortnightly file.
+
     """
 
     model_config = {"frozen": True}
@@ -89,6 +90,7 @@ class SchemaProfile(BaseModel):
         Raises:
             ValueError: If the file is not valid JSON.
             FileNotFoundError: If the file does not exist.
+
         """
         import json
 

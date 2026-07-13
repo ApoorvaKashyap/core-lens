@@ -65,6 +65,7 @@ def _so_key(storage_options: dict[str, Any]) -> tuple[tuple[str, Any], ...]:
 
     Returns:
         tuple[tuple[str, Any], ...]: A sorted tuple of ``(key, value)`` pairs.
+
     """
     return tuple(sorted(storage_options.items()))
 
@@ -85,6 +86,7 @@ def _cached_detect(
 
     Returns:
         SchemaProfile: Detected schema profile for the given entity paths.
+
     """
     from core_lens.schema.detection import detect
 
@@ -114,6 +116,7 @@ def _cached_build_index(
 
     Returns:
         pl.DataFrame: The bounding-box index DataFrame.
+
     """
     logger.debug("Building bbox index for {} (cache miss)", static_path)
     return build_bbox_index(
@@ -127,7 +130,7 @@ def _cached_build_index(
 
 
 class BaseEntity(ABC):
-    """Abstract base class for every entity in the core_lens plugin system.
+    r"""Abstract base class for every entity in the core_lens plugin system.
 
     An entity represents a geospatial primitive (e.g. microwatershed, village,
     district) backed by one or more Parquet/GeoParquet files.  Entities are
@@ -195,6 +198,7 @@ class BaseEntity(ABC):
                 ``polars.scan_parquet``.  For S3 the common keys are
                 ``"region"``, ``"access_key"``, and ``"secret_key"``.
                 ``None`` uses ambient credentials (env-vars / ``~/.aws/``).
+
         """
         # Store as str so cloud URIs (s3://…) are never coerced through pathlib.
         self._data_root: str | None = str(data_root) if data_root is not None else None
@@ -219,6 +223,7 @@ class BaseEntity(ABC):
 
         Raises:
             FileNotFoundError: For *local* paths that do not exist after resolution.
+
         """
         # Fully-qualified cloud URI — return as-is.
         if is_cloud_uri(path):
@@ -255,13 +260,14 @@ class BaseEntity(ABC):
     @property
     @abstractmethod
     def key_cols(self) -> list[str]:
-        """Columns that uniquely identify one instance of this entity.
+        r"""Columns that uniquely identify one instance of this entity.
 
         For built-in entities this is always a single-element list (e.g.
         ``[\"mws_id\"]``), but the contract allows composite keys for plugins.
 
         Returns:
             list[str]: A list of column name strings present in the static file.
+
         """
 
     @property
@@ -274,6 +280,7 @@ class BaseEntity(ABC):
 
         Returns:
             str: The column name as a string.
+
         """
 
     @property
@@ -287,6 +294,7 @@ class BaseEntity(ABC):
 
         Returns:
             str: A path string.
+
         """
 
     @property
@@ -299,6 +307,7 @@ class BaseEntity(ABC):
 
         Returns:
             str | None: A path string, or ``None`` if the entity has no annual data.
+
         """
         return None
 
@@ -312,6 +321,7 @@ class BaseEntity(ABC):
 
         Returns:
             str | None: A path string, or ``None`` if the entity has no fortnightly data.
+
         """
         return None
 
@@ -336,6 +346,7 @@ class BaseEntity(ABC):
 
         Returns:
             SchemaProfile: A fully-validated :class:`~core_lens.schema.profile.SchemaProfile`.
+
         """
         if not hasattr(self, "_schema_profile"):
             _so = self._storage_options or {}
@@ -372,6 +383,7 @@ class BaseEntity(ABC):
 
         Returns:
             pl.DataFrame: DataFrame with columns ``(*key_cols, minx, miny, maxx, maxy)``.
+
         """
         if not hasattr(self, "_cached_index"):
             profile = self.schema_profile  # already cached — no extra I/O
@@ -409,6 +421,7 @@ class BaseEntity(ABC):
         Raises:
             ValueError: If a kwarg cannot be resolved as either an attribute
                 column or a registered entity name.
+
         """
         from core_lens.aoi import _REGISTRY
         from core_lens.base.view import View
@@ -544,6 +557,7 @@ class BaseEntity(ABC):
 
         Raises:
             ValueError: If neither ``geometry`` nor ``bbox`` is provided.
+
         """
         import shapely.geometry as sgeom
 
@@ -584,7 +598,7 @@ class BaseEntity(ABC):
         return View(keys=keys, entity=self, entity_name=entity_name)
 
     def spatial_join(self, other: "BaseEntity", agg: dict[str, str]) -> "View":
-        """Return a lazy :class:`~core_lens.base.view.View` with a cross-entity join pending.
+        r"""Return a lazy :class:`~core_lens.base.view.View` with a cross-entity join pending.
 
         The join is recorded in the View's ``join_spec`` and computed only at
         materialisation time (``.static``, ``.annual``, or ``.fortnightly``).
@@ -601,6 +615,7 @@ class BaseEntity(ABC):
         Returns:
             View: A lazy :class:`~core_lens.base.view.View` with the join spec
             recorded for deferred execution.
+
         """
         from core_lens.base.view import View
 

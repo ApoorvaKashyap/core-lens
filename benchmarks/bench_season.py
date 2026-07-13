@@ -1,5 +1,4 @@
-"""
-bench_season.py — Benchmark for core_lens.utils.season
+"""bench_season.py — Benchmark for core_lens.utils.season
 =======================================================
 Targets:
   - SeasonConfig.__post_init__      validation cost (datetime.strptime × 6)

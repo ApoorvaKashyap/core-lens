@@ -47,6 +47,7 @@ class SeasonConfig:
         kharif: Kharif (monsoon) season range as ``(start_MM-DD, end_MM-DD)``.
         rabi: Rabi (winter) season range.
         zaid: Zaid (summer) season range.
+
     """
 
     kharif: tuple[str, str] = ("07-01", "10-31")
@@ -76,6 +77,7 @@ class SeasonConfig:
 
         Returns:
             str: ``"kharif"``, ``"rabi"``, or ``"zaid"``.
+
         """
         md = f"{d.month:02d}-{d.day:02d}"
         for name in ("kharif", "rabi", "zaid"):
@@ -115,6 +117,7 @@ def _default_season_config() -> SeasonConfig:
 
     Returns:
         SeasonConfig: The shared default instance.
+
     """
     global _DEFAULT_SEASON_CONFIG
     if _DEFAULT_SEASON_CONFIG is None:
@@ -167,6 +170,7 @@ def _cached_resolve_boundary(
 
     Returns:
         tuple: ``(geometry_wkb, entity_name, key_rows)``.
+
     """
     from core_lens.base.entity import _entity_name as _ename
 
@@ -284,6 +288,7 @@ class AoI:
         data_root: Resolved path to the data directory.
         geometry: Shapely polygon representing the AoI boundary.
         seasons: :class:`SeasonConfig` in effect for this AoI.
+
     """
 
     def __init__(
@@ -331,6 +336,7 @@ class AoI:
                 one boundary mode is used simultaneously.
             :class:`~core_lens.base.EntityValidationError`: If a boundary entity referenced in
                 ``entity_kwargs`` is not registered.
+
         """
         # Preserve cloud URIs as-is; resolve local paths to absolute.
         data_root_str = str(data_root)
@@ -395,6 +401,7 @@ class AoI:
 
         Returns:
             str: ``"kharif"``, ``"rabi"``, or ``"zaid"``.
+
         """
         return self.seasons.season_for(date.today())
 
@@ -404,6 +411,7 @@ class AoI:
 
         Returns:
             int: Current year as an integer.
+
         """
         return date.today().year
 
@@ -416,6 +424,7 @@ class AoI:
 
         Returns:
             Any: A Lonboard Map object.
+
         """
         import lonboard
         import geopandas as gpd
@@ -476,6 +485,7 @@ class AoI:
         Raises:
             KeyError: If *name* is not in :data:`_REGISTRY`.
             :class:`~core_lens.base.EntityValidationError`: If validation fails.
+
         """
         if name not in self._entity_instances:
             entity_cls = _REGISTRY[name]
@@ -506,6 +516,7 @@ class AoI:
         Raises:
             :class:`~core_lens.base.EntityValidationError`: If any registered
                 entity fails validation.
+
         """
         for name in _REGISTRY:
             self._get_entity(name)
@@ -562,6 +573,7 @@ class AoI:
         Raises:
             :class:`~core_lens.base.EntityValidationError`: If no registered entity can satisfy the filters.
             ValueError: If the filters match zero rows.
+
         """
         logger.debug("Resolving named boundary using kwargs: {}", entity_kwargs)
 
@@ -625,6 +637,7 @@ class AoI:
         Raises:
             :class:`~core_lens.base.EntityValidationError`: If any validation check
                 fails (absolute-path entities only at register time).
+
         """
         import pathlib as _pathlib
 
@@ -647,6 +660,7 @@ class AoI:
 
         Args:
             entity_cls (type[BaseEntity]): The entity class to remove.
+
         """
         name = _entity_name(entity_cls)
         logger.info("Deregistering entity class: {}", name)
@@ -658,6 +672,7 @@ class AoI:
 
         Returns:
             list[str]: A sorted list of entity name strings.
+
         """
         return sorted(_REGISTRY)
 
@@ -695,6 +710,7 @@ def _validate_entity_paths(entity: BaseEntity, name: str) -> None:
 
     Raises:
         EntityValidationError: If any path does not exist.
+
     """
     # --- Static path existence check ----------------------------------------
     try:
@@ -760,6 +776,7 @@ def _validate_entity(entity: BaseEntity, name: str) -> None:
 
     Raises:
         EntityValidationError: If any validation check fails.
+
     """
     # Fast path-only check first.
     _validate_entity_paths(entity, name)

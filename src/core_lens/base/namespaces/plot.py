@@ -17,6 +17,7 @@ class SubplotOn(Enum):
         MONTH: Split data by month.
         SEASON: Split data by meteorological season.
         SEASON_YEAR: Split data by season and year.
+
     """
 
     YEAR = "year"
@@ -71,6 +72,7 @@ def _wkb_to_arrow_table(
 
     Returns:
         An ``arro3.core.Table`` whose geometry column is GeoArrow-typed.
+
     """
     import geoarrow.rust.core as ga
     import polars as pl
@@ -182,6 +184,7 @@ def _color_for(index: int) -> str:
 
     Returns:
         The hex color string.
+
     """
     return _PALETTE[index % len(_PALETTE)]
 
@@ -193,6 +196,7 @@ def _apply_theme(fig: Any, result: "Result", title: str) -> None:
         fig: The Bokeh figure.
         result: The parent Result object.
         title: The title text.
+
     """
     entity_name = getattr(result.entity, "__name__", "Unknown")
     if hasattr(result, "entity_name"):
@@ -202,7 +206,6 @@ def _apply_theme(fig: Any, result: "Result", title: str) -> None:
     fig.title.text_font = "Inter, sans-serif"
     fig.title.text_font_size = "14pt"
 
-    # Subtitle-style annotation in the bottom-right corner.
     from bokeh.models.annotations import Label
 
     subtitle = Label(
@@ -227,6 +230,7 @@ class PlotNamespace:
 
     Attributes:
         result: The parent Result object.
+
     """
 
     def __init__(self, result: "Result") -> None:
@@ -253,6 +257,7 @@ class PlotNamespace:
             ValueError: If ``column`` or ``subplot_on`` column not found in data.
             NotImplementedError: Lonboard does not support native subplot grids;
                 only single-value ``subplot_on`` is rendered when specified.
+
         """
         import lonboard
         from lonboard.colormap import apply_continuous_cmap
@@ -347,6 +352,7 @@ class PlotNamespace:
 
         Returns:
             Any: A Bokeh Tabs object (or a single Figure when ``aggregate=True``).
+
         """
         import polars as pl
         import polars.selectors as cs
@@ -474,7 +480,6 @@ class PlotNamespace:
             _apply_theme(fig, self.result, title)
             return fig
 
-        # --- Aggregated view --------------------------------------------------
         group_cols = [x, subplot_col] if subplot_col else [x]
         agg_pdf = (
             df.group_by(group_cols)
@@ -486,7 +491,6 @@ class PlotNamespace:
         if aggregate:
             return _make_fig(agg_pdf, "Timeseries (Aggregated Mean)")
 
-        # --- Per-entity view --------------------------------------------------
         entity_df = df.sort(x)
         unique_entities = entity_df[key_col].unique()
         if len(unique_entities) > top_n:
@@ -519,6 +523,7 @@ class PlotNamespace:
 
         Returns:
             Any: A Bokeh Figure or Tabs object.
+
         """
         import polars as pl
         import polars.selectors as cs
@@ -595,6 +600,7 @@ class PlotNamespace:
 
         Returns:
             Any: A Bokeh Figure or Tabs object.
+
         """
         import numpy as np
         import pandas as pd
@@ -665,6 +671,7 @@ class PlotNamespace:
 
         Returns:
             Any: A Bokeh Figure object.
+
         """
         import polars.selectors as cs
         from bokeh.models import BasicTicker, ColumnDataSource, LinearColorMapper
@@ -684,7 +691,6 @@ class PlotNamespace:
         corr = df.to_pandas().corr()
         cols = list(corr.columns)
 
-        # Build long-form data for rect glyphs.
         xs: list[str] = []
         ys: list[str] = []
         vals: list[float] = []
@@ -744,6 +750,7 @@ class PlotNamespace:
 
         Returns:
             Any: A Bokeh Figure object.
+
         """
         from bokeh.models import (
             BasicTicker,
@@ -769,7 +776,6 @@ class PlotNamespace:
         x_vals = [str(v) for v in pdf.columns.tolist()]
         y_vals = [str(v) for v in pdf.index.tolist()]
 
-        # Long-form
         xs2: list[str] = []
         ys2: list[str] = []
         vals2: list[float] = []
@@ -819,6 +825,7 @@ class PlotNamespace:
 
         Returns:
             Any: A Bokeh ``gridplot`` object.
+
         """
         import polars.selectors as cs
         from bokeh.layouts import gridplot

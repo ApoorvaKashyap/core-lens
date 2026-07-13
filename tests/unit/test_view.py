@@ -18,6 +18,7 @@ def _make_view(entity: Any, entity_name: str = "minimalmws") -> View:
 
     Returns:
         A ``View`` with no keys and no filters.
+
     """
     keys = pl.DataFrame({"mws_id": []}, schema={"mws_id": pl.String})
     return View(keys=keys, entity=entity, entity_name=entity_name)
@@ -242,7 +243,8 @@ class TestViewMaterialisation:
 
     def test_spatial_join_materialises_prefixed_columns(self, entity_cls: Any) -> None:
         """Materialising a View with join_spec executes the join and
-        returns columns prefixed ``{other_entity_name}_{col}``."""
+        returns columns prefixed ``{other_entity_name}_{col}``.
+        """
         import pathlib
         import tempfile
         import sys

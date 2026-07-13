@@ -1,5 +1,4 @@
-"""
-bench_polars_utils.py — Benchmark for core_lens.utils.polars_utils
+"""bench_polars_utils.py — Benchmark for core_lens.utils.polars_utils
 ===================================================================
 Targets:
   - _gpu_available()            module-level probe + caching
