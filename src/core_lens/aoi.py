@@ -176,6 +176,7 @@ class AoI:
         geometry: "shapely.Geometry | None" = None,
         seasons: SeasonConfig | None = None,
         storage_options: dict[str, Any] | None = None,
+        validate_all: bool = False,
         **entity_kwargs: str | list[str],
     ) -> None:
         """Resolve the AoI boundary and scope all registered entities.
@@ -195,6 +196,13 @@ class AoI:
                 calls.  For S3 the common keys are ``"region"``,
                 ``"access_key"``, and ``"secret_key"``.  ``None`` (default)
                 uses ambient credentials (env-vars / ``~/.aws/``).
+            validate_all (bool, optional): When ``True``, eagerly instantiate
+                and validate every registered entity at construction time,
+                preserving the original fail-fast behaviour.  When ``False``
+                (default), entities are built and validated lazily on first
+                access — a broken entity only surfaces an error when it is
+                actually used.  Use ``True`` in startup health-checks or
+                long-running services where early failure is preferable.
             **entity_kwargs (str | list[str]): Named filter pairs that identify the boundary,
                 e.g. ``tehsil="Pangi"``, ``district="Chamba"``,
                 ``state="Himachal Pradesh"``, ``mws_id="13_551"``.
@@ -237,15 +245,15 @@ class AoI:
                 "Provide exactly one boundary mode."
             )
 
-        # Instantiate and validate all registered entities with this data_root.
+        # Entity instances are created lazily on first access via _get_entity().
         self._entity_instances: dict[str, BaseEntity] = {}
-        for name, entity_cls in _REGISTRY.items():
-            entity = entity_cls(
-                data_root=self.data_root,
-                storage_options=self._storage_options or None,
-            )
-            _validate_entity(entity, name)
-            self._entity_instances[name] = entity
+
+        # Initialise boundary-entity cache.  Only populated by the
+        # named-boundary path (_resolve_named_boundary); bbox= / geometry=
+        # construction leaves these as None so __getattr__ falls through
+        # to the normal spatial_filter path for every entity.
+        self._boundary_entity_name: str | None = None
+        self._boundary_keys: pl.DataFrame | None = None
 
         if geometry is not None:
             self.geometry: "shapely.Geometry" = geometry
@@ -256,6 +264,12 @@ class AoI:
 
         # Entity views are created lazily on demand in __getattr__.
         self._scoped: dict[str, "View"] = {}
+
+        # Opt-in eager validation: instantiate + validate every registered
+        # entity now so that a bad entity fails immediately rather than on
+        # first access.  Useful for startup health-checks.
+        if validate_all:
+            self.validate()
 
     @property
     def current_season(self) -> str:
@@ -326,13 +340,79 @@ class AoI:
 
         return lonboard.Map(layers=layers)
 
+    def _get_entity(self, name: str) -> BaseEntity:
+        """Instantiate, validate, and cache an entity on first access.
+
+        Subsequent calls for the same *name* return the cached instance.
+        Validation delegates to :func:`_validate_entity` which routes
+        through the process-level :func:`_cached_detect` cache, so
+        repeated ``AoI()`` calls against the same ``data_root`` pay no
+        redundant Parquet footer reads.
+
+        Args:
+            name (str): The registered entity name (e.g. ``"mws"``).
+
+        Returns:
+            BaseEntity: The validated entity instance.
+
+        Raises:
+            KeyError: If *name* is not in :data:`_REGISTRY`.
+            :class:`~core_lens.base.EntityValidationError`: If validation fails.
+        """
+        if name not in self._entity_instances:
+            entity_cls = _REGISTRY[name]
+            entity = entity_cls(
+                data_root=self.data_root,
+                storage_options=self._storage_options or None,
+            )
+            _validate_entity(entity, name)
+            self._entity_instances[name] = entity
+        return self._entity_instances[name]
+
+    def validate(self) -> None:
+        """Eagerly validate every registered entity.
+
+        Instantiates and validates all entities in :data:`_REGISTRY` that
+        have not yet been accessed.  Raises on the first failure.
+
+        This is equivalent to the old eager-validation behaviour and is
+        useful for startup health-checks in long-running services::
+
+            aoi = AoI("data/", bbox=(...), validate_all=True)
+            # or:
+            aoi = AoI("data/", bbox=(...))
+            aoi.validate()  # explicit call, same effect
+
+        Raises:
+            :class:`~core_lens.base.EntityValidationError`: If any registered
+                entity fails validation.
+        """
+        for name in _REGISTRY:
+            self._get_entity(name)
+
     def __getattr__(self, name: str) -> "View":
         # Called only when normal attribute lookup has already failed, so this
         # never shadows real attributes.  Maps entity names to their scoped Views.
         if name in _REGISTRY:
             if name not in self._scoped:
-                entity = self._entity_instances[name]
-                view = entity.spatial_filter(geometry=self.geometry)
+                entity = self._get_entity(name)
+                if name == self._boundary_entity_name:
+                    # This entity *defined* the AoI boundary — we already
+                    # have its exact matching keys from
+                    # _resolve_named_boundary.  Skip the bbox-index build
+                    # and geometric predicate entirely.
+                    from core_lens.base.view import View
+
+                    assert (
+                        self._boundary_keys is not None
+                    )  # set by _resolve_named_boundary
+                    view = View(
+                        keys=self._boundary_keys,
+                        entity=entity,
+                        entity_name=name,
+                    )
+                else:
+                    view = entity.spatial_filter(geometry=self.geometry)
                 view._season_config = self.seasons
                 self._scoped[name] = view
             return self._scoped[name]
@@ -366,9 +446,11 @@ class AoI:
         logger.debug("Resolving named boundary using kwargs: {}", entity_kwargs)
 
         # Find the registered entity whose key_col or known attribute column
-        # matches one of the filter keys.
+        # matches one of the filter keys.  Entities are lazily instantiated
+        # via _get_entity() — only those inspected during the search are built.
         candidate: BaseEntity | None = None
-        for name, entity in self._entity_instances.items():
+        for name in _REGISTRY:
+            entity = self._get_entity(name)
             schema = entity.schema_profile
             if any(
                 k in schema.key_cols or k in schema.extra_static_cols
@@ -383,9 +465,9 @@ class AoI:
             logger.debug(
                 "No direct column match found for kwargs, attempting entity name fallback"
             )
-            for name, entity in self._entity_instances.items():
+            for name in _REGISTRY:
                 if name in entity_kwargs:
-                    candidate = entity
+                    candidate = self._get_entity(name)
                     break
 
         if candidate is None:
@@ -417,6 +499,13 @@ class AoI:
                     filter_expr = filter_expr & (pl.col(col) == val)
 
         df = lf.filter(filter_expr).select(candidate.key_cols + [geom_col]).collect()
+
+        # Cache the boundary-defining entity's name and its exact key rows so
+        # that __getattr__ can short-circuit the spatial_filter for this one
+        # entity — the keys are already known, no need to rebuild the bbox
+        # index or re-run a geometric predicate.
+        self._boundary_entity_name = _entity_name(type(candidate))
+        self._boundary_keys = df.select(candidate.key_cols)
 
         if df.is_empty():
             logger.error(
@@ -506,6 +595,22 @@ def _bbox_to_polygon(
 
 
 def _validate_entity(entity: BaseEntity, name: str) -> None:
+    """Validate an entity's paths and schema.
+
+    File-existence checks are performed eagerly for local paths.  Schema
+    validation (key columns, geometry column) is delegated to
+    :attr:`BaseEntity.schema_profile`, which routes through the process-level
+    :func:`_cached_detect` cache — so the second ``AoI()`` pointed at the
+    same ``data_root`` pays zero Parquet footer reads for validation.
+
+    Args:
+        entity (BaseEntity): The entity instance to validate.
+        name (str): Human-readable entity name for error messages.
+
+    Raises:
+        EntityValidationError: If any validation check fails.
+    """
+    # --- Static path existence check ----------------------------------------
     try:
         static = entity._resolve(entity.static_path)
     except FileNotFoundError:
@@ -531,13 +636,14 @@ def _validate_entity(entity: BaseEntity, name: str) -> None:
             f"Entity {name!r}: static_path {static!r} does not exist."
         )
 
-    storage_opts = entity._storage_options or {}
+    # --- Schema validation (key_cols, geometry_col, geometry_type) -----------
+    # Delegate to schema_profile which routes through _cached_detect.
+    # detect() internally calls _require_cols for key_cols and geometry_col,
+    # and infers geometry_type — so this covers the same checks that the old
+    # _validate_entity did with a raw pl.scan_parquet().collect_schema(), but
+    # without a redundant footer read.
     try:
-        schema = pl.scan_parquet(
-            static,
-            hive_partitioning=True,
-            storage_options=storage_opts or None,
-        ).collect_schema()
+        _ = entity.schema_profile
     except Exception as exc:
         logger.error(
             "Validation failed for entity {}: could not read schema from '{}': {}",
@@ -549,29 +655,7 @@ def _validate_entity(entity: BaseEntity, name: str) -> None:
             f"Entity {name!r}: could not read schema from {static!r}: {exc}"
         ) from exc
 
-    missing_keys = [c for c in entity.key_cols if c not in schema]
-    if missing_keys:
-        logger.error(
-            "Validation failed for entity {}: key columns {} not found in schema.",
-            name,
-            missing_keys,
-        )
-        raise EntityValidationError(
-            f"Entity {name!r}: key_cols {missing_keys} not found in {static!r}. "
-            f"Available columns: {list(schema.keys())}."
-        )
-
-    if entity.geometry_col not in schema:
-        logger.error(
-            "Validation failed for entity {}: geometry column '{}' not found in schema.",
-            name,
-            entity.geometry_col,
-        )
-        raise EntityValidationError(
-            f"Entity {name!r}: geometry_col {entity.geometry_col!r} "
-            f"not found in {static!r}. Available columns: {list(schema.keys())}."
-        )
-
+    # --- Temporal path existence checks -------------------------------------
     for attr, label in [("annual_path", "annual"), ("fortnightly_path", "fortnightly")]:
         path = getattr(entity, attr)
         if path is not None:

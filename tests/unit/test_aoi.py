@@ -12,7 +12,6 @@ import shapely.wkb as swkb
 
 from core_lens.aoi import AoI, SeasonConfig, _REGISTRY, _entity_name
 from core_lens.base.entity import BaseEntity, EntityValidationError
-from core_lens.schema.profile import SchemaProfile
 
 
 def _write_parquet_no_key_col(path: pathlib.Path) -> None:
@@ -42,6 +41,10 @@ def _make_bad_entity(
 ) -> type[BaseEntity]:
     """Return a concrete entity class that deliberately mismatches the Parquet schema.
 
+    This helper does **not** override ``schema_profile``, so the detection
+    layer (``detect()``) runs against the actual file and raises on column
+    mismatches.
+
     Args:
         static: Path to an already-written Parquet file.
         key_cols: key_cols value to declare on the entity (may not exist in file).
@@ -50,16 +53,7 @@ def _make_bad_entity(
     Returns:
         A ``BaseEntity`` subclass whose declared columns differ from the file.
     """
-    profile = SchemaProfile(
-        key_cols=key_cols,
-        geometry_col=geometry_col,
-        geometry_type="wkb",
-        annual_time_col=None,
-        fortnightly_time_col=None,
-        bbox_cols=None,
-    )
     _static = str(static)
-    _profile = profile
     _key_cols = key_cols
     _geometry_col = geometry_col
 
@@ -75,10 +69,6 @@ def _make_bad_entity(
         @property
         def static_path(self) -> str:
             return _static
-
-        @property
-        def schema_profile(self) -> SchemaProfile:
-            return _profile
 
     return _BadEntity
 
@@ -182,7 +172,7 @@ class TestAoIRegister:
         _write_parquet_no_key_col(p)
         cls = _make_bad_entity(p, key_cols=["mws_id"], geometry_col="geometry")
 
-        with pytest.raises(EntityValidationError, match="key_cols"):
+        with pytest.raises(EntityValidationError, match="could not read schema"):
             AoI.register(cls)
 
     def test_register_missing_geometry_col_raises(self, tmp_path: Any) -> None:
@@ -190,7 +180,7 @@ class TestAoIRegister:
         _write_parquet_no_geom_col(p)
         cls = _make_bad_entity(p, key_cols=["mws_id"], geometry_col="geometry")
 
-        with pytest.raises(EntityValidationError, match="geometry_col"):
+        with pytest.raises(EntityValidationError, match="could not read schema"):
             AoI.register(cls)
 
     def test_register_missing_annual_path_raises(
