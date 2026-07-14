@@ -99,16 +99,31 @@ class View:
         """
         static = self.entity._resolve(self.entity.static_path)
 
-        filter_expr = pl.lit(True)
-        for col, val in kwargs.items():
-            filter_expr = filter_expr & (pl.col(col) == val)
-
         lf = scan_with_key_filter(
             path=static,
             key_cols=self.entity.key_cols,
             key_values=self.keys,
             storage_options=self._storage_options or None,
         )
+        schema_types = lf.collect_schema()
+
+        filter_expr = pl.lit(True)
+        for col, val in kwargs.items():
+            is_list_col = isinstance(schema_types.get(col), pl.List)
+            if isinstance(val, list):
+                if is_list_col:
+                    filter_expr = (
+                        filter_expr
+                        & pl.col(col).list.eval(pl.element().is_in(val)).list.any()
+                    )
+                else:
+                    filter_expr = filter_expr & pl.col(col).is_in(val)
+            else:
+                if is_list_col:
+                    filter_expr = filter_expr & pl.col(col).list.contains(val)
+                else:
+                    filter_expr = filter_expr & (pl.col(col) == val)
+
         keys = lf.filter(filter_expr).select(self.entity.key_cols).collect()
 
         return View(

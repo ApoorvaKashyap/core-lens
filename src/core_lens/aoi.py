@@ -219,12 +219,23 @@ def _cached_resolve_boundary(
 
     lf = pl.scan_parquet(static_path, storage_options=storage_options or None)
     filter_expr = pl.lit(True)
+    schema_types = lf.collect_schema()
     for col, val in entity_kwargs.items():
         if col in schema.key_cols or col in schema.extra_static_cols:
+            is_list_col = isinstance(schema_types.get(col), pl.List)
             if isinstance(val, list):
-                lf = lf.filter(pl.col(col).is_in(val))
+                if is_list_col:
+                    filter_expr = (
+                        filter_expr
+                        & pl.col(col).list.eval(pl.element().is_in(val)).list.any()
+                    )
+                else:
+                    filter_expr = filter_expr & pl.col(col).is_in(val)
             else:
-                filter_expr = filter_expr & (pl.col(col) == val)
+                if is_list_col:
+                    filter_expr = filter_expr & pl.col(col).list.contains(val)
+                else:
+                    filter_expr = filter_expr & (pl.col(col) == val)
 
     df = lf.filter(filter_expr).select(candidate.key_cols + [geom_col]).collect()
 
