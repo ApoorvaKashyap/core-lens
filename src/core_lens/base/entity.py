@@ -245,16 +245,19 @@ class BaseEntity(ABC):
 
         # For local resolved paths only: eager existence check.
         if not is_cloud_uri(resolved) and not path_exists(resolved):
-            logger.error(
-                "Path resolution failed: '{}' (resolved to {}) does not exist.",
-                path,
-                resolved,
-            )
-            raise FileNotFoundError(
-                f"Entity path {path!r} (resolved to {resolved!r}) does not exist. "
-                "Provide an absolute path or ensure the file exists relative to "
-                "the AoI data_root directory."
-            )
+            if path_exists(resolved + ".parquet"):
+                resolved += ".parquet"
+            else:
+                logger.error(
+                    "Path resolution failed: '{}' (resolved to {}) does not exist.",
+                    path,
+                    resolved,
+                )
+                raise FileNotFoundError(
+                    f"Entity path {path!r} (resolved to {resolved!r}) does not exist. "
+                    "Provide an absolute path or ensure the file exists relative to "
+                    "the AoI data_root directory."
+                )
         return resolved
 
     @property
