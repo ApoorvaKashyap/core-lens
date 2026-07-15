@@ -155,10 +155,13 @@ class Result:
             return self
 
         key_cols = self.key_cols
-        geo_lf = self.entity.geometry_lazy.join(
-            self.data.select(key_cols), on=key_cols, how="semi"
-        )
-        joined = self.data.join(geo_lf, on=key_cols, how="left")
+
+        # We use a direct left join here instead of a semi-join intermediate step.
+        # A semi-join creates a "diamond" query graph where `self.data` must be evaluated
+        # twice by Polars. Because `self.data` can be an expensive aggregation pipeline,
+        # this caused execution times to double.
+        joined = self.data.join(self.entity.geometry_lazy, on=key_cols, how="left")
+
         return self._replace(data=joined, has_geometry=True)
 
     def derive(self, name: str, expr: pl.Expr) -> "Result":
