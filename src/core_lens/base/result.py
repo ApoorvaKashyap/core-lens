@@ -24,7 +24,7 @@ class Result:
     """Concrete, immutable result of a materialised :class:`~core_lens.base.view.View`.
 
     ``Result`` is the shared output type for every entity and every
-    materialisation path.  It wraps a ``pl.DataFrame``, carries enough
+    materialisation path.  It wraps a ``pl.LazyFrame``, carries enough
     context to know how to re-attach geometry, and exposes compute methods
     that always return a fresh ``Result``, keeping the chain composable::
 
@@ -33,8 +33,9 @@ class Result:
         mean_ndvi.plot.timeseries(x="year", y="ndvi")
 
     Attributes:
-        data: The materialised ``pl.DataFrame``.  All compute methods
-            produce a new ``Result`` whose ``data`` is the transformed frame.
+        data: The underlying ``pl.LazyFrame``. Use :meth:`df` to materialise it
+            into a ``pl.DataFrame``. All compute methods produce a new
+            ``Result`` whose ``data`` is the transformed frame.
         metadata: Free-form dict populated by stats methods to carry
             method parameters (e.g. ``{"method": "pearson", "p_value": 0.003}``).
             Empty on freshly materialised results.

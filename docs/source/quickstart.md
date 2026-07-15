@@ -43,8 +43,9 @@ aoi_specific = AoI(
 # You can now access entities scoped to this AoI:
 mws_view = aoi.mws
 
-# Materialise the static data (GeoDataFrame)
+# Resolve the static data query
 static_result = mws_view.static
+# Materialise as a GeoDataFrame (or use .df() for a Polars DataFrame)
 gdf = static_result.gdf()
 
 # Plot the AoI and its microwatersheds on an interactive map

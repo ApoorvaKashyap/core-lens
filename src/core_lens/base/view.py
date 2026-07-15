@@ -36,8 +36,9 @@ class View:
     A ``View`` is produced by the filter methods on :class:`~core_lens.base.entity.BaseEntity`
     (:meth:`~BaseEntity.where`, :meth:`~BaseEntity.spatial_filter`,
     :meth:`~BaseEntity.spatial_join`).  It records *what* to load without
-    touching any Parquet file.  Data is only read when one of the three
-    materialisation properties is accessed.
+    touching any Parquet file.  Data is only scanned when one of the three
+    materialisation properties is accessed, and is materialised when ``.df()``
+    is called on the returned ``Result``.
 
     ``View`` is immutable.  Every method that would mutate state instead
     returns a new ``View`` with the updated field, leaving the original
@@ -49,9 +50,9 @@ class View:
         static = view.static
 
     Attributes:
-        keys: A ``pl.DataFrame`` containing the resolved key column(s) for
+        keys: A ``pl.LazyFrame`` containing the resolved key column(s) for
             all entity instances that passed the spatial/attribute filters.
-            This is the in-memory index slice — no data columns, only IDs.
+            This is the index slice — no data columns, only IDs.
         entity: Reference to the parent :class:`~core_lens.base.entity.BaseEntity`
             that produced this view.  Used during materialisation to resolve
             file paths and schema.
@@ -347,7 +348,7 @@ class View:
 
     @property
     def static(self) -> "Result":
-        """Materialise the static GeoParquet file and return a :class:`~core_lens.base.result.Result`.
+        """Resolve the static GeoParquet file scan and return a :class:`~core_lens.base.result.Result`.
 
         The result always has ``has_geometry=True`` because the static file is
         a GeoParquet carrying geometry for every entity instance.
@@ -365,7 +366,7 @@ class View:
 
     @property
     def annual(self) -> "Result":
-        """Materialise the annual Parquet file and return a :class:`~core_lens.base.result.Result`.
+        """Resolve the annual Parquet file scan and return a :class:`~core_lens.base.result.Result`.
 
         Returns:
             Result: A :class:`~core_lens.base.result.Result` with
@@ -379,7 +380,7 @@ class View:
 
     @property
     def fortnightly(self) -> "Result":
-        """Materialise the fortnightly Parquet file and return a :class:`~core_lens.base.result.Result`.
+        """Resolve the fortnightly Parquet file scan and return a :class:`~core_lens.base.result.Result`.
 
         Returns:
             Result: A :class:`~core_lens.base.result.Result` with

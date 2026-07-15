@@ -1,6 +1,6 @@
 # Statistical Analysis
 
-The `result.stats` namespace provides powerful analytical tools for geospatial and timeseries data. All statistical methods return a new `Result` object with computed `data` and populated `metadata`.
+The `result.stats` namespace provides powerful analytical tools for geospatial and timeseries data. All statistical methods return a new `Result` object with the computed lazy `data` and populated `metadata`.
 
 ## Descriptive Statistics
 
