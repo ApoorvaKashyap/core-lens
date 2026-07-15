@@ -488,11 +488,11 @@ class View:
             # For non-static resolutions, load geometry from static file.
             geom_col = profile.geometry_col
             if geom_col not in data.columns:
-                geom_df = pl.read_parquet(
-                    self.entity._resolve(self.entity.static_path),
-                    columns=self.entity.key_cols + [geom_col],
-                    storage_options=self._storage_options or None,
-                )
+                geom_df = self.entity.geometry_lazy.join(
+                    data.select(self.entity.key_cols).lazy(),
+                    on=self.entity.key_cols,
+                    how="semi",
+                ).collect()
                 data = data.join(geom_df, on=self.entity.key_cols, how="left")
 
             from core_lens.utils.spatial import execute_spatial_join

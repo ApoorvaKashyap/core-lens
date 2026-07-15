@@ -549,15 +549,7 @@ class AoI:
                 entity = self._get_entity(name)
 
                 if self._boundary_kwargs is not None:
-                    schema = entity.schema_profile
-                    # If this entity has all the filter columns natively, filter directly
-                    if all(
-                        k in schema.key_cols or k in schema.extra_static_cols
-                        for k in self._boundary_kwargs
-                    ):
-                        view = entity.where(**self._boundary_kwargs)
-                    else:
-                        view = entity.spatial_filter(geometry=self.geometry)
+                    view = entity.where(**self._boundary_kwargs)
                 else:
                     view = entity.spatial_filter(geometry=self.geometry)
 

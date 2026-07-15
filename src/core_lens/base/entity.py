@@ -373,6 +373,20 @@ class BaseEntity(ABC):
         return self._schema_profile
 
     @property
+    def geometry_lazy(self) -> pl.LazyFrame:
+        """A cached LazyFrame representing the geometry of this entity.
+
+        Contains only the key columns and the geometry column. Used to avoid
+        repeatedly scanning and selecting geometries in downstream operations.
+        """
+        if not hasattr(self, "_geometry_lazy"):
+            self._geometry_lazy = pl.scan_parquet(
+                self._resolve(self.static_path),
+                storage_options=self._storage_options or None,
+            ).select(self.key_cols + [self.schema_profile.geometry_col])
+        return self._geometry_lazy
+
+    @property
     def _index(self) -> pl.DataFrame:
         """In-memory bounding-box index for spatial pre-filtering.
 

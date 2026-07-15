@@ -148,15 +148,11 @@ class Result:
         if self.has_geometry:
             return self
 
-        geom_col = self.entity.geometry_col
         key_cols = self.key_cols
-        static_path = self.entity._resolve(self.entity.static_path)
-        _so = self.entity._storage_options or {}
-
         geo_df = collect_lf(
-            pl.scan_parquet(static_path, storage_options=_so or None)
-            .select(key_cols + [geom_col])
-            .join(self.data.select(key_cols).lazy(), on=key_cols, how="semi")
+            self.entity.geometry_lazy.join(
+                self.data.select(key_cols).lazy(), on=key_cols, how="semi"
+            )
         )
 
         joined = self.data.join(geo_df, on=key_cols, how="left")
