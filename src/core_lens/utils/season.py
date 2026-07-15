@@ -245,7 +245,9 @@ def add_temporal_columns(
         pl.DataFrame | pl.LazyFrame: A new DataFrame with the temporal grouping columns appended.
 
     """
-    existing = set(df.columns)
+    existing = set(
+        df.columns if isinstance(df, pl.DataFrame) else df.collect_schema().names()
+    )
 
     # --- year / month / year_month -----------------------------------------
     date_col = pl.col(time_col)

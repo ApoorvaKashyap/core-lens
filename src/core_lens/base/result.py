@@ -70,7 +70,11 @@ class Result:
         self.data = data.lazy() if isinstance(data, pl.DataFrame) else data
         self.resolution = resolution
         self.has_geometry = has_geometry
-        self.columns: list[str] = data.columns
+        self.columns: list[str] = (
+            data.columns
+            if isinstance(data, pl.DataFrame)
+            else data.collect_schema().names()
+        )
         self.key_cols = key_cols
         self.entity_name = entity_name
         self.entity = entity

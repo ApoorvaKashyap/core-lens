@@ -140,6 +140,7 @@ def _wkb_to_arrow_table(
     del (
         df_poly
     )  # free Polars WKB buffer before PyArrow combine_chunks() allocates its copy
+    arrow_table = arrow_table.combine_chunks()
     wkb_col = arrow_table.column(geom_col).combine_chunks()
     geo_col = ga.from_wkb(wkb_col)
 
