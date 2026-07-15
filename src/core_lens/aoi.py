@@ -383,19 +383,16 @@ class AoI:
         # Entity instances are created lazily on first access via _get_entity().
         self._entity_instances: dict[str, BaseEntity] = {}
 
-        # Initialise boundary-entity cache.  Only populated by the
-        # named-boundary path (_resolve_named_boundary); bbox= / geometry=
-        # construction leaves these as None so __getattr__ falls through
-        # to the normal spatial_filter path for every entity.
-        self._boundary_entity_name: str | None = None
-        self._boundary_keys: pl.DataFrame | None = None
+        # Initialise boundary kwargs and lazily computed geometry.
+        self._boundary_kwargs: dict[str, str | list[str]] | None = None
+        self._geometry: shapely.Geometry | None = None
 
         if geometry is not None:
-            self.geometry: "shapely.Geometry" = geometry
+            self._geometry = geometry
         elif bbox is not None:
-            self.geometry = _bbox_to_polygon(bbox)
+            self._geometry = _bbox_to_polygon(bbox)
         else:
-            self.geometry = self._resolve_named_boundary(entity_kwargs)
+            self._boundary_kwargs = entity_kwargs
 
         # Entity views are created lazily on demand in __getattr__.
         self._scoped: dict[str, "View"] = {}
@@ -405,6 +402,17 @@ class AoI:
         # first access.  Useful for startup health-checks.
         if validate_all:
             self.validate()
+
+    @property
+    def geometry(self) -> "shapely.Geometry":
+        """The resolved boundary of this AoI as a Shapely geometry."""
+        if self._geometry is None:
+            if self._boundary_kwargs is not None:
+                self._geometry = self._resolve_named_boundary(self._boundary_kwargs)
+            else:
+                # Should not happen if initialization was correct
+                raise ValueError("No boundary defined.")
+        return self._geometry
 
     @property
     def current_season(self) -> str:
@@ -538,23 +546,20 @@ class AoI:
         if name in _REGISTRY:
             if name not in self._scoped:
                 entity = self._get_entity(name)
-                if name == self._boundary_entity_name:
-                    # This entity *defined* the AoI boundary — we already
-                    # have its exact matching keys from
-                    # _resolve_named_boundary.  Skip the bbox-index build
-                    # and geometric predicate entirely.
-                    from core_lens.base.view import View
 
-                    assert (
-                        self._boundary_keys is not None
-                    )  # set by _resolve_named_boundary
-                    view = View(
-                        keys=self._boundary_keys,
-                        entity=entity,
-                        entity_name=name,
-                    )
+                if self._boundary_kwargs is not None:
+                    schema = entity.schema_profile
+                    # If this entity has all the filter columns natively, filter directly
+                    if all(
+                        k in schema.key_cols or k in schema.extra_static_cols
+                        for k in self._boundary_kwargs
+                    ):
+                        view = entity.where(**self._boundary_kwargs)
+                    else:
+                        view = entity.spatial_filter(geometry=self.geometry)
                 else:
                     view = entity.spatial_filter(geometry=self.geometry)
+
                 view._season_config = self.seasons
                 self._scoped[name] = view
             return self._scoped[name]
@@ -607,24 +612,6 @@ class AoI:
 
         # Reconstruct the boundary geometry from cached WKB bytes (fast).
         geometry: shapely.Geometry = shapely.from_wkb(geom_wkb)
-
-        # Reconstruct _boundary_keys DataFrame from cached key_rows.
-        # We need the key column names — get them from the boundary entity.
-        boundary_entity_cls = _REGISTRY.get(boundary_entity_name)
-        if boundary_entity_cls is not None:
-            key_cols = boundary_entity_cls().key_cols
-            self._boundary_entity_name = boundary_entity_name
-            self._boundary_keys = pl.DataFrame(
-                {col: [row[i] for row in key_rows] for i, col in enumerate(key_cols)}
-            )
-        else:
-            # Registry changed since cache was populated — defensive fallback.
-            logger.warning(
-                "Boundary cache returned entity name '{}' not found in current registry.",
-                boundary_entity_name,
-            )
-            self._boundary_entity_name = None
-            self._boundary_keys = None
 
         return geometry
 

@@ -389,13 +389,15 @@ class TestAoIResolveGeometry:
             assert getattr(aoi.geometry, "equals", lambda x: False)(union)
 
             with pytest.raises(ValueError, match="No rows matched the filters"):
-                AoI(data_root=str(tmp_path), mws_id="999")
+                bad_aoi = AoI(data_root=str(tmp_path), mws_id="999")
+                _ = bad_aoi.geometry
 
             with pytest.raises(
                 EntityValidationError,
                 match="No registered entity can satisfy the filters",
             ):
-                AoI(data_root=str(tmp_path), unknown_key="1")
+                invalid_aoi = AoI(data_root=str(tmp_path), unknown_key="1")
+                _ = invalid_aoi.geometry
 
             # Test fallback match by entity name
             aoi_fallback = AoI(data_root=str(tmp_path), mws="1")
