@@ -140,7 +140,15 @@ def scan_with_key_filter(
     if time_expr is not None:
         lf = lf.filter(time_expr)
 
-    kv_lazy = key_values.lazy() if isinstance(key_values, pl.DataFrame) else key_values
-    lf = lf.join(kv_lazy, on=key_cols, how="semi")
+    kv_df = key_values.collect() if isinstance(key_values, pl.LazyFrame) else key_values
+    if len(key_cols) == 1 and kv_df.height < 50000:
+        # Fast path: For reasonably sized AoIs, `is_in` enables perfect row-group
+        # predicate pushdown in the Parquet reader, avoiding a full table scan.
+        # The literal tree RAM issue only occurs with hundreds of thousands of keys.
+        key = key_cols[0]
+        lf = lf.filter(pl.col(key).is_in(kv_df[key]))
+    else:
+        # Fallback to semi-join for massive key arrays (e.g. state-wide scopes)
+        lf = lf.join(kv_df.lazy(), on=key_cols, how="semi")
 
     return lf
