@@ -3,10 +3,30 @@
 from __future__ import annotations
 
 from typing import Any
+import functools
 
 import polars as pl
 
 _GPU_AVAILABLE: bool | None = None  # None = not yet probed
+
+
+def _so_key(storage_options: dict[str, Any] | None) -> tuple[tuple[str, Any], ...]:
+    if not storage_options:
+        return ()
+    return tuple(sorted(storage_options.items()))
+
+
+@functools.cache
+def _cached_schema_internal(path: str, so_key: tuple[tuple[str, Any], ...]) -> Any:
+    return pl.scan_parquet(path, storage_options=dict(so_key) or None).collect_schema()
+
+
+def cached_read_schema(path: str, storage_options: dict[str, Any] | None = None) -> Any:
+    """Cached wrapper around pl.read_parquet_schema.
+
+    Avoids repeated Parquet footer reads for schema resolution in hot paths.
+    """
+    return _cached_schema_internal(path, _so_key(storage_options))
 
 
 def _gpu_available() -> bool:

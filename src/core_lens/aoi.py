@@ -20,6 +20,7 @@ from loguru import logger
 
 from core_lens.base.entity import BaseEntity, EntityValidationError
 from core_lens.utils.paths import is_cloud_uri
+from core_lens.utils.polars_utils import cached_read_schema
 
 if TYPE_CHECKING:
     from core_lens.base.view import View
@@ -219,7 +220,7 @@ def _cached_resolve_boundary(
 
     lf = pl.scan_parquet(static_path, storage_options=storage_options or None)
     filter_expr = pl.lit(True)
-    schema_types = lf.collect_schema()
+    schema_types = cached_read_schema(static_path, storage_options)
     for col, val in entity_kwargs.items():
         if col in schema.key_cols or col in schema.extra_static_cols:
             is_list_col = isinstance(schema_types.get(col), pl.List)

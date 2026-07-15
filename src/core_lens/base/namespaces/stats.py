@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING, Any, cast
 import numpy as np
 import polars as pl
 
-from core_lens.utils.polars_utils import collect_lf
+from core_lens.utils.polars_utils import collect_lf, cached_read_schema
 
 if TYPE_CHECKING:
     from core_lens.base.result import Result
@@ -903,11 +903,13 @@ class StatsNamespace:
             except FileNotFoundError:
                 continue
 
-            schema = pl.read_parquet_schema(abs_path)
+            schema = cached_read_schema(abs_path, entity._storage_options)
             if col_name not in schema:
                 continue  # column doesn't exist in this file
 
-            col_lf = pl.scan_parquet(abs_path)
+            col_lf = pl.scan_parquet(
+                abs_path, storage_options=entity._storage_options or None
+            )
 
             # Apply year filter.
             if "year" in filter_dict:

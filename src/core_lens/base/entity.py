@@ -29,6 +29,7 @@ from core_lens.utils.spatial import (
     build_bbox_index,
     exact_spatial_filter,
 )
+from core_lens.utils.polars_utils import cached_read_schema
 
 if TYPE_CHECKING:
     import shapely
@@ -434,7 +435,7 @@ class BaseEntity(ABC):
         )
 
         static = self._resolve(self.static_path)
-        schema = pl.read_parquet_schema(static)
+        schema = cached_read_schema(static, self._storage_options)
 
         attr_kwargs = {k: v for k, v in kwargs.items() if k in schema}
         entity_kwargs = {k: v for k, v in kwargs.items() if k not in schema}
@@ -453,77 +454,96 @@ class BaseEntity(ABC):
                     f"Available columns: {sorted(schema)}."
                 )
 
-        # --- Attribute filter -----------------------------------------------
+        # --- Combine attribute and spatial filters into a single lazy pipeline ---
+        lf = pl.scan_parquet(static)
+
         if attr_kwargs:
             filter_expr = pl.lit(True)
             for col, val in attr_kwargs.items():
                 filter_expr = filter_expr & (pl.col(col) == val)
-            keys = (
-                pl.scan_parquet(static)
-                .filter(filter_expr)
-                .select(self.key_cols)
-                .collect()
-            )
+            lf = lf.filter(filter_expr)
+
+        if not entity_kwargs:
+            keys = lf.select(self.key_cols).collect()
         else:
-            # No attribute filter: start with all entities.
-            keys = pl.scan_parquet(static).select(self.key_cols).collect()
-
-        # --- Spatial entity lookups -----------------------------------------
-        for entity_kwarg_name, entity_kwarg_val in entity_kwargs.items():
-            other_entity = _REGISTRY[entity_kwarg_name](data_root=self._data_root)
-            other_profile = other_entity.schema_profile
-            other_static = other_entity._resolve(other_entity.static_path)
+            import shapely
             import shapely.wkb as swkb
+            import shapely.wkt as swkt
             import shapely.ops as sops
+            import numpy as np
+            from core_lens.utils.spatial import bbox_intersects_geometry
 
-            # Find the geometry of the named entity.
-            lf = pl.scan_parquet(other_static)
-            match_expr = pl.lit(False)
-            for col in other_entity.key_cols + list(other_profile.extra_static_cols):
-                if col in pl.read_parquet_schema(other_static):
-                    match_expr = match_expr | (pl.col(col) == entity_kwarg_val)
-            matched = (
-                lf.filter(match_expr).select([other_profile.geometry_col]).collect()
-            )
+            lookup_geoms = []
+            for entity_kwarg_name, entity_kwarg_val in entity_kwargs.items():
+                other_entity = _REGISTRY[entity_kwarg_name](data_root=self._data_root)
+                other_profile = other_entity.schema_profile
+                other_static = other_entity._resolve(other_entity.static_path)
 
-            if matched.is_empty():
-                logger.error(
-                    "BaseEntity.where failed: No rows matched {}={!r} in {}",
-                    entity_kwarg_name,
-                    entity_kwarg_val,
-                    other_entity.static_path,
+                other_lf = pl.scan_parquet(other_static)
+                match_expr = pl.lit(False)
+                other_schema = cached_read_schema(
+                    other_static, other_entity._storage_options
                 )
-                raise ValueError(
-                    f"BaseEntity.where: No rows matched {entity_kwarg_name}={entity_kwarg_val!r} "
-                    f"in {other_entity.static_path!r}."
+                for col in other_entity.key_cols + list(
+                    other_profile.extra_static_cols
+                ):
+                    if col in other_schema:
+                        match_expr = match_expr | (pl.col(col) == entity_kwarg_val)
+                matched = (
+                    other_lf.filter(match_expr)
+                    .select([other_profile.geometry_col])
+                    .collect()
                 )
 
-            raw_geoms = matched[other_profile.geometry_col].to_list()
-            if other_profile.geometry_type == "wkb":
-                geoms = [swkb.loads(v) for v in raw_geoms]
+                if matched.is_empty():
+                    logger.error(
+                        "BaseEntity.where failed: No rows matched {}={!r} in {}",
+                        entity_kwarg_name,
+                        entity_kwarg_val,
+                        other_entity.static_path,
+                    )
+                    raise ValueError(
+                        f"BaseEntity.where: No rows matched {entity_kwarg_name}={entity_kwarg_val!r} "
+                        f"in {other_entity.static_path!r}."
+                    )
+
+                raw_geoms = matched[other_profile.geometry_col].to_list()
+                if other_profile.geometry_type == "wkb":
+                    geoms = [swkb.loads(v) for v in raw_geoms]
+                else:
+                    geoms = [swkt.loads(v) for v in raw_geoms]
+                lookup_geom = sops.unary_union(geoms) if len(geoms) > 1 else geoms[0]
+                lookup_geoms.append(lookup_geom)
+
+            candidates = self._index
+            for geom in lookup_geoms:
+                candidates = bbox_intersects_geometry(candidates, geom)
+
+            if candidates.is_empty():
+                keys = candidates.select(self.key_cols)
             else:
-                import shapely.wkt as swkt
+                lf = lf.select(self.key_cols + [self.schema_profile.geometry_col]).join(
+                    candidates.select(self.key_cols).lazy(),
+                    on=self.key_cols,
+                    how="semi",
+                )
+                df = lf.collect()
 
-                geoms = [swkt.loads(v) for v in raw_geoms]
-            lookup_geom = sops.unary_union(geoms) if len(geoms) > 1 else geoms[0]
+                if df.is_empty():
+                    keys = df.select(self.key_cols)
+                else:
+                    geom_array = df[self.schema_profile.geometry_col].to_numpy()
+                    if self.schema_profile.geometry_type == "wkb":
+                        decoded_geoms = shapely.from_wkb(geom_array)
+                    else:
+                        decoded_geoms = shapely.from_wkt(geom_array)
 
-            # Spatial filter: narrow keys to those whose centroid is within the geometry.
-            from core_lens.utils.spatial import (
-                bbox_intersects_geometry,
-                exact_spatial_filter,
-            )
+                    centroids = shapely.centroid(decoded_geoms)
+                    mask = np.ones(len(centroids), dtype=bool)
+                    for geom in lookup_geoms:
+                        mask = mask & shapely.contains(geom, centroids)
 
-            current_keys = self._index.join(keys, on=self.key_cols, how="inner")
-            candidates = bbox_intersects_geometry(current_keys, lookup_geom)
-            keys = exact_spatial_filter(
-                candidates=candidates,
-                static_path=static,
-                key_cols=self.key_cols,
-                geometry_col=self.schema_profile.geometry_col,
-                geometry_type=self.schema_profile.geometry_type,
-                aoi_geometry=lookup_geom,
-                relationship="centroid",
-            )
+                    keys = df.filter(mask).select(self.key_cols)
 
         entity_name = _entity_name(type(self))
         return View(keys=keys, entity=self, entity_name=entity_name)

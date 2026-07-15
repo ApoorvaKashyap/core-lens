@@ -10,7 +10,11 @@ from loguru import logger
 from enum import Enum
 
 from core_lens.schema.profile import Resolution
-from core_lens.utils.polars_utils import scan_with_key_filter, collect_lf
+from core_lens.utils.polars_utils import (
+    scan_with_key_filter,
+    collect_lf,
+    cached_read_schema,
+)
 
 if TYPE_CHECKING:
     import shapely
@@ -105,7 +109,7 @@ class View:
             key_values=self.keys,
             storage_options=self._storage_options or None,
         )
-        schema_types = lf.collect_schema()
+        schema_types = cached_read_schema(static, self._storage_options)
 
         filter_expr = pl.lit(True)
         for col, val in kwargs.items():
