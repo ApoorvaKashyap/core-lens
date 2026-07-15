@@ -45,8 +45,8 @@ aoi_small = AoI(DATA_ROOT, bbox=SMALL_BBOX)
 result_all = aoi_all.mws.static  # full dataset — geometry present
 result_small = aoi_small.mws.static  # small subset
 
-print(f"All   result : {result_all.data.shape}")
-print(f"Small result : {result_small.data.shape}")
+print(f"All   result : {result_all.df().shape}")
+print(f"Small result : {result_small.df().shape}")
 
 
 def _section(title: str) -> None:
@@ -81,9 +81,9 @@ with tempfile.TemporaryDirectory() as tmpdir:
     # Strip geometry (and nested bbox) to pass has_geometry=False and allow CSV export.
     geom_col = result_small.entity.geometry_col
     drop_cols = [geom_col]
-    if "bbox" in result_small.data.columns:
+    if "bbox" in result_small.df().columns:
         drop_cols.append("bbox")
-    df_no_geom = result_small.data.drop(drop_cols)
+    df_no_geom = result_small.df().drop(drop_cols)
     result_no_geom = result_small._replace(data=df_no_geom, has_geometry=False)
 
     REPS_IO = 5
@@ -99,7 +99,7 @@ with tempfile.TemporaryDirectory() as tmpdir:
     )
 
     # All dataset.
-    df_all_no_geom = result_all.data.drop(geom_col)
+    df_all_no_geom = result_all.df().drop(geom_col)
     result_all_no_geom = result_all._replace(data=df_all_no_geom, has_geometry=False)
     out_all = tmp / "bench_all.parquet"
     t0 = time.perf_counter()

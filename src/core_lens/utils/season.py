@@ -213,10 +213,10 @@ def _year_bounds(year: int | tuple[int, int] | None) -> tuple[int, int]:
 
 
 def add_temporal_columns(
-    df: pl.DataFrame,
+    df: pl.DataFrame | pl.LazyFrame,
     time_col: str,
     season_config: "SeasonConfig",
-) -> pl.DataFrame:
+) -> pl.DataFrame | pl.LazyFrame:
     """Return *df* with temporal grouping columns appended.
 
     Adds the five columns that :meth:`~core_lens.base.result.Result.aggregate`
@@ -236,13 +236,13 @@ def add_temporal_columns(
     untouched — this prevents overwriting data the entity itself may supply.
 
     Args:
-        df (pl.DataFrame): The collected fortnightly DataFrame.
+        df (pl.DataFrame | pl.LazyFrame): The collected fortnightly DataFrame.
         time_col (str): Name of the date/datetime column to derive from.
         season_config (SeasonConfig): The :class:`~core_lens.aoi.SeasonConfig` in effect,
             used to map each date to its season name.
 
     Returns:
-        pl.DataFrame: A new DataFrame with the temporal grouping columns appended.
+        pl.DataFrame | pl.LazyFrame: A new DataFrame with the temporal grouping columns appended.
 
     """
     existing = set(df.columns)

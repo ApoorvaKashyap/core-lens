@@ -100,7 +100,7 @@ def collect_lf(lf: pl.LazyFrame) -> pl.DataFrame:
 def scan_with_key_filter(
     path: str,
     key_cols: list[str],
-    key_values: pl.DataFrame,
+    key_values: pl.DataFrame | pl.LazyFrame,
     time_expr: pl.Expr | None = None,
     storage_options: dict[str, Any] | None = None,
 ) -> pl.LazyFrame:
@@ -120,7 +120,7 @@ def scan_with_key_filter(
     Args:
         path (str): Absolute path or cloud URI to a Parquet file.
         key_cols (list[str]): Column name(s) that form the entity's unique key.
-        key_values (pl.DataFrame): A narrow ``pl.DataFrame`` containing only the key
+        key_values (pl.DataFrame | pl.LazyFrame): A narrow frame containing only the key
             column(s) with the exact values to retain.
         time_expr (pl.Expr | None, optional): An optional Polars filter expression for the time column,
             as produced by :func:`~core_lens.utils.season.resolve_time_filter`.
@@ -140,6 +140,7 @@ def scan_with_key_filter(
     if time_expr is not None:
         lf = lf.filter(time_expr)
 
-    lf = lf.join(key_values.lazy(), on=key_cols, how="semi")
+    kv_lazy = key_values.lazy() if isinstance(key_values, pl.DataFrame) else key_values
+    lf = lf.join(kv_lazy, on=key_cols, how="semi")
 
     return lf

@@ -70,14 +70,14 @@ class View:
 
     def __init__(
         self,
-        keys: pl.DataFrame,
+        keys: pl.DataFrame | pl.LazyFrame,
         entity: BaseEntity,
         entity_name: str,
         time_filter: dict[str, Any] | None = None,
         join_spec: dict[str, Any] | None = None,
         season_config: SeasonConfig | None = None,
     ) -> None:
-        self.keys = keys
+        self.keys = keys.lazy() if isinstance(keys, pl.DataFrame) else keys
         self.entity = entity
         self.entity_name = entity_name
         self.time_filter = time_filter
@@ -128,7 +128,7 @@ class View:
                 else:
                     filter_expr = filter_expr & (pl.col(col) == val)
 
-        keys = lf.filter(filter_expr).select(self.entity.key_cols).collect()
+        keys = lf.filter(filter_expr).select(self.entity.key_cols)
 
         return View(
             keys=keys,
@@ -184,9 +184,13 @@ class View:
 
         profile = self.entity.schema_profile
         candidates = bbox_intersects_geometry(self.entity._index, geometry)
-        candidates = candidates.join(self.keys, on=self.entity.key_cols, how="inner")
+        candidates = (
+            candidates.lazy()
+            .join(self.keys, on=self.entity.key_cols, how="inner")
+            .collect()
+        )
 
-        keys = exact_spatial_filter(
+        keys_df = exact_spatial_filter(
             candidates=candidates,
             static_path=self.entity._resolve(self.entity.static_path),
             key_cols=self.entity.key_cols,
@@ -197,8 +201,10 @@ class View:
             threshold=threshold,
         )
 
+        keys_lf = keys_df.lazy()
+
         return View(
-            keys=keys,
+            keys=keys_lf,
             entity=self.entity,
             entity_name=self.entity_name,
             time_filter=self.time_filter,
@@ -461,7 +467,7 @@ class View:
             time_expr=time_expr,
             storage_options=self._storage_options or None,
         )
-        data = collect_lf(lf)
+        data = lf
 
         # For fortnightly results, inject temporal grouping columns so that
         # aggregate(by="year"), aggregate(by="season"), etc. work out of the
@@ -474,7 +480,12 @@ class View:
             from core_lens.aoi import _default_season_config
 
             season_cfg = self._season_config or _default_season_config()
-            data = add_temporal_columns(data, profile.fortnightly_time_col, season_cfg)
+            from typing import cast
+
+            data = cast(
+                pl.LazyFrame,
+                add_temporal_columns(data, profile.fortnightly_time_col, season_cfg),
+            )
 
         if self.join_spec is not None:
             other = self.join_spec["other"]
@@ -486,27 +497,28 @@ class View:
 
             # Ensure geometry is present in data for the join.
             # For non-static resolutions, load geometry from static file.
+            data_df = collect_lf(data) if isinstance(data, pl.LazyFrame) else data
             geom_col = profile.geometry_col
-            if geom_col not in data.columns:
+            if geom_col not in data_df.columns:
                 geom_df = self.entity.geometry_lazy.join(
-                    data.select(self.entity.key_cols).lazy(),
+                    data_df.select(self.entity.key_cols).lazy(),
                     on=self.entity.key_cols,
                     how="semi",
                 ).collect()
-                data = data.join(geom_df, on=self.entity.key_cols, how="left")
+                data_df = data_df.join(geom_df, on=self.entity.key_cols, how="left")
 
             from core_lens.utils.spatial import execute_spatial_join
 
             logger.debug("Executing spatial join with {}", other_entity_name)
             data = execute_spatial_join(
-                primary_df=data,
+                primary_df=data_df,
                 primary_key_cols=self.entity.key_cols,
                 primary_geom_col=geom_col,
                 primary_geom_type=profile.geometry_type,
                 other_entity=other,
                 agg=agg,
                 other_entity_name=other_entity_name,
-            )
+            ).lazy()
 
         return Result(
             data=data,

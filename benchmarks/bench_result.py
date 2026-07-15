@@ -41,7 +41,7 @@ aoi_small = AoI(DATA_ROOT, bbox=SMALL_BBOX)
 # Materialise once — all benchmarks below operate on this result.
 result = aoi.mws.static
 result_small = aoi_small.mws.static
-print(f"Dataset: {result.data.shape[0]} MWS, {result.data.shape[1]} columns")
+print(f"Dataset: {result.df().shape[0]} MWS, {result.df().shape[1]} columns")
 
 
 def _section(title: str) -> None:
@@ -151,7 +151,7 @@ agg_result = result_annual.aggregate(
 )
 t1 = time.perf_counter()
 print(f"aggregate(no by) : {(t1 - t0) * 1000:.2f} ms")
-print(f"Shape            : {agg_result.data.shape}")
+print(f"Shape            : {agg_result.df().shape}")
 
 
 # ── 8. Result.aggregate(by='year') ──────────────────────────────────────────────
@@ -165,7 +165,7 @@ agg_year = result_annual.aggregate(
 )
 t1 = time.perf_counter()
 print(f"aggregate(year)  : {(t1 - t0) * 1000:.2f} ms")
-print(f"Shape            : {agg_year.data.shape}")
+print(f"Shape            : {agg_year.df().shape}")
 
 
 # ── Cleanup ───────────────────────────────────────────────────────────────

@@ -58,7 +58,7 @@ class Result:
 
     def __init__(
         self,
-        data: pl.DataFrame,
+        data: pl.DataFrame | pl.LazyFrame,
         resolution: Resolution,
         has_geometry: bool,
         key_cols: list[str],
@@ -66,7 +66,7 @@ class Result:
         entity: "BaseEntity",
         metadata: dict[str, Any] | None = None,
     ) -> None:
-        self.data = data
+        self.data = data.lazy() if isinstance(data, pl.DataFrame) else data
         self.resolution = resolution
         self.has_geometry = has_geometry
         self.columns: list[str] = data.columns
@@ -82,7 +82,7 @@ class Result:
             pl.DataFrame: The materialised data frame.
 
         """
-        return self.data
+        return collect_lf(self.data)
 
     def gdf(self) -> "gpd.GeoDataFrame":
         """Return the data as a ``GeoDataFrame``.
@@ -108,10 +108,11 @@ class Result:
         geometry_col = self.entity.geometry_col
         # Vectorised C-level decode — shapely.from_wkb operates on the whole
         # numpy array at once, avoiding a Python-loop per row.
-        geometries = shapely.from_wkb(self.data[geometry_col].to_numpy())
+        df = self.df()
+        geometries = shapely.from_wkb(df[geometry_col].to_numpy())
         geo_series = gpd.GeoSeries(geometries, crs="EPSG:4326")
         return gpd.GeoDataFrame(
-            self.data.drop(geometry_col).to_pandas(),
+            df.drop(geometry_col).to_pandas(),
             geometry=geo_series,
         )
 
@@ -126,7 +127,7 @@ class Result:
             pl.LazyFrame: A lazy frame backed by :attr:`data`.
 
         """
-        return self.data.lazy()
+        return self.data
 
     def with_geometry(self) -> "Result":
         """Return a new ``Result`` with the static geometry column joined in.
@@ -149,13 +150,10 @@ class Result:
             return self
 
         key_cols = self.key_cols
-        geo_df = collect_lf(
-            self.entity.geometry_lazy.join(
-                self.data.select(key_cols).lazy(), on=key_cols, how="semi"
-            )
+        geo_lf = self.entity.geometry_lazy.join(
+            self.data.select(key_cols), on=key_cols, how="semi"
         )
-
-        joined = self.data.join(geo_df, on=key_cols, how="left")
+        joined = self.data.join(geo_lf, on=key_cols, how="left")
         return self._replace(data=joined, has_geometry=True)
 
     def derive(self, name: str, expr: pl.Expr) -> "Result":

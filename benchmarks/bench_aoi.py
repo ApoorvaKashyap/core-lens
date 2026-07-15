@@ -116,7 +116,7 @@ view = aoi_bbox.mws
 
 t1 = time.perf_counter()
 print(f"First access     : {(t1 - t0) * 1000:.2f} ms")
-print(f"Keys shape       : {view.keys.shape}")
+print(f"Keys shape       : {view.keys.collect().shape}")
 
 # Second access — should hit _scoped cache (near-zero cost).
 t0 = time.perf_counter()

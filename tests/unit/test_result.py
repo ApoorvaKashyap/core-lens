@@ -81,7 +81,9 @@ class TestResultDf:
         df = pl.DataFrame({"mws_id": ["1"], "val": [42]})
         result = _make_result(entity, data=df)
 
-        assert result.df() is df
+        from polars.testing import assert_frame_equal
+
+        assert_frame_equal(result.df(), df)
 
 
 class TestResultLazy:

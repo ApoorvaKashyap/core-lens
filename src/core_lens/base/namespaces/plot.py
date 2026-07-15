@@ -291,7 +291,7 @@ class PlotNamespace:
         if subplot_col is not None:
             extra.append(subplot_col)
 
-        df = res.data
+        df = res.df()
 
         if subplot_col is not None:
             # Render most-recent unique value of subplot_on only.

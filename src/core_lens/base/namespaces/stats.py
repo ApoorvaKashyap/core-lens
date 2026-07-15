@@ -164,7 +164,7 @@ class StatsNamespace:
         return [c for c in df.columns if df[c].dtype.is_numeric()]
 
     def _year_col(self) -> str | None:
-        if "year" in self._r.data.columns:
+        if "year" in self._r.df().columns:
             return "year"
         profile = self._r.entity.schema_profile
         return profile.annual_time_col
@@ -190,7 +190,7 @@ class StatsNamespace:
             ValueError: If ``by`` is not ``\"column\"`` or ``\"entity\"``.
 
         """
-        df = self._r.data
+        df = self._r.df()
         cols = columns if columns is not None else self._numeric_cols(df)
 
         if by == "column":
@@ -261,7 +261,7 @@ class StatsNamespace:
 
         import scipy.stats as sp
 
-        df = self._r.data
+        df = self._r.df()
         n_obs = len(df)
         rows: list[dict[str, Any]] = []
 
@@ -327,7 +327,7 @@ class StatsNamespace:
         """
         import scipy.stats as sp
 
-        df = self._r.data
+        df = self._r.df()
         all_vals = df[column].drop_nulls().to_numpy().astype(float)
 
         # auto-select
@@ -480,7 +480,7 @@ class StatsNamespace:
 
         import scipy.stats as sp
 
-        df = self._r.data
+        df = self._r.df()
         key = self._r.key_cols[0]
         year_col = self._year_col()
         if year_col is None:
@@ -580,7 +580,7 @@ class StatsNamespace:
             ValueError: If ``mode``, ``method``, or observation count invalid.
 
         """
-        df = self._r.data
+        df = self._r.df()
         key = self._r.key_cols[0]
 
         if mode == "cross_sectional":
@@ -856,7 +856,7 @@ class StatsNamespace:
                 f"Valid options: {[e.name for e in SimilarityMethod]}."
             )
 
-        df = self._r.data
+        df = self._r.df()
         key = self._r.key_cols[0]
 
         # --- Build feature DataFrame ------------------------------------------

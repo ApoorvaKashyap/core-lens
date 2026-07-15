@@ -94,7 +94,7 @@ def test_choropleth_missing_column(dummy_result: Result) -> None:
 def test_timeseries_basic(dummy_result: Result) -> None:
     """Test timeseries creates a plotly figure."""
     # Add a time column to dummy result for testing
-    df = dummy_result.data.with_columns(pl.Series("year", [2020, 2021]))
+    df = dummy_result.df().with_columns(pl.Series("year", [2020, 2021]))
     res = dummy_result._replace(data=df)
 
     fig = res.plot.timeseries(x="year", y="value")
@@ -109,7 +109,7 @@ def test_timeseries_basic(dummy_result: Result) -> None:
 
 def test_timeseries_aggregate(dummy_result: Result) -> None:
     """Test timeseries aggregate creates a plotly figure."""
-    df = dummy_result.data.with_columns(pl.Series("year", [2020, 2021]))
+    df = dummy_result.df().with_columns(pl.Series("year", [2020, 2021]))
     res = dummy_result._replace(data=df)
 
     fig = res.plot.timeseries(x="year", y="value", aggregate=True)
@@ -125,7 +125,7 @@ def test_timeseries_missing_xy(dummy_result: Result) -> None:
 
 def test_timeseries_multiple_y(dummy_result: Result) -> None:
     """Test timeseries with multiple y columns creates a dropdown menu."""
-    df = dummy_result.data.with_columns(
+    df = dummy_result.df().with_columns(
         [pl.Series("year", [2020, 2021]), pl.Series("value2", [5.0, 10.0])]
     )
     res = dummy_result._replace(data=df)
@@ -138,7 +138,7 @@ def test_timeseries_multiple_y(dummy_result: Result) -> None:
 
 def test_scatter_basic(dummy_result: Result) -> None:
     """Test scatter creates a plotly figure."""
-    df = dummy_result.data.with_columns(pl.Series("other_val", [1.1, 2.2]))
+    df = dummy_result.df().with_columns(pl.Series("other_val", [1.1, 2.2]))
     res = dummy_result._replace(data=df)
 
     fig = res.plot.scatter(x="value", y="other_val")
@@ -155,7 +155,7 @@ def test_scatter_missing_xy(dummy_result: Result) -> None:
 
 def test_scatter_multiple_y(dummy_result: Result) -> None:
     """Test scatter with multiple y columns creates a dropdown menu."""
-    df = dummy_result.data.with_columns(
+    df = dummy_result.df().with_columns(
         [pl.Series("other_val", [1.1, 2.2]), pl.Series("third_val", [3.3, 4.4])]
     )
     res = dummy_result._replace(data=df)
@@ -180,7 +180,7 @@ def test_distribution_missing_x(dummy_result: Result) -> None:
 
 def test_distribution_multiple_x(dummy_result: Result) -> None:
     """Test distribution with multiple x columns creates a dropdown menu."""
-    df = dummy_result.data.with_columns(pl.Series("other_val", [1.1, 2.2]))
+    df = dummy_result.df().with_columns(pl.Series("other_val", [1.1, 2.2]))
     res = dummy_result._replace(data=df)
     fig = res.plot.distribution(x=["value", "other_val"])
     assert fig is not None
@@ -190,7 +190,7 @@ def test_distribution_multiple_x(dummy_result: Result) -> None:
 
 def test_correlation_basic(dummy_result: Result) -> None:
     """Test correlation creates a plotly figure."""
-    df = dummy_result.data.with_columns(pl.Series("other_val", [1.1, 2.2]))
+    df = dummy_result.df().with_columns(pl.Series("other_val", [1.1, 2.2]))
     res = dummy_result._replace(data=df)
 
     fig = res.plot.correlation()
@@ -199,7 +199,7 @@ def test_correlation_basic(dummy_result: Result) -> None:
 
 def test_correlation_multiple_columns(dummy_result: Result) -> None:
     """Test correlation creates a figure with multiple specified columns."""
-    df = dummy_result.data.with_columns(
+    df = dummy_result.df().with_columns(
         [pl.Series("other_val", [1.1, 2.2]), pl.Series("third_val", [3.3, 4.4])]
     )
     res = dummy_result._replace(data=df)
@@ -215,7 +215,7 @@ def test_correlation_missing_columns(dummy_result: Result) -> None:
 
 def test_heatmap_basic(dummy_result: Result) -> None:
     """Test heatmap creates a plotly figure."""
-    df = dummy_result.data.with_columns(pl.Series("other_val", [1.1, 2.2]))
+    df = dummy_result.df().with_columns(pl.Series("other_val", [1.1, 2.2]))
     df = df.with_columns(pl.Series("cat", ["A", "B"]))
     res = dummy_result._replace(data=df)
 
@@ -231,7 +231,7 @@ def test_heatmap_missing_args(dummy_result: Result) -> None:
 
 def test_matrix_basic(dummy_result: Result) -> None:
     """Test matrix creates a plotly figure."""
-    df = dummy_result.data.with_columns(pl.Series("other_val", [1.1, 2.2]))
+    df = dummy_result.df().with_columns(pl.Series("other_val", [1.1, 2.2]))
     res = dummy_result._replace(data=df)
 
     fig = res.plot.matrix()
@@ -244,7 +244,7 @@ def test_choropleth_geometry_collection(dummy_result: Result) -> None:
 
     poly = sgeom.Polygon([(0, 0), (1, 0), (1, 1), (0, 1), (0, 0)])
     gc = sgeom.GeometryCollection([poly, sgeom.Point(0.5, 0.5)])
-    df = dummy_result.data.with_columns(pl.Series("geometry", [gc.wkb, gc.wkb]))
+    df = dummy_result.df().with_columns(pl.Series("geometry", [gc.wkb, gc.wkb]))
     res = dummy_result._replace(data=df, has_geometry=True)
     m = res.plot.choropleth("value")
     assert m is not None
@@ -252,7 +252,7 @@ def test_choropleth_geometry_collection(dummy_result: Result) -> None:
 
 def test_choropleth_subplot_on(dummy_result: Result) -> None:
     """Test choropleth handles subplot_on argument."""
-    df = dummy_result.data.with_columns(pl.Series("year", [2020, 2021]))
+    df = dummy_result.df().with_columns(pl.Series("year", [2020, 2021]))
     res = dummy_result._replace(data=df)
     m = res.plot.choropleth("value", subplot_on=SubplotOn.YEAR)
     assert m is not None
@@ -269,7 +269,7 @@ def test_choropleth_subplot_invalid(dummy_result: Result) -> None:
 
 
 def test_timeseries_subplot_on(dummy_result: Result) -> None:
-    df = dummy_result.data.with_columns(
+    df = dummy_result.df().with_columns(
         [pl.Series("year", [2020, 2021]), pl.Series("month", [1, 2])]
     )
     res = dummy_result._replace(data=df)
@@ -278,7 +278,7 @@ def test_timeseries_subplot_on(dummy_result: Result) -> None:
 
 
 def test_timeseries_subplot_on_str(dummy_result: Result) -> None:
-    df = dummy_result.data.with_columns(
+    df = dummy_result.df().with_columns(
         [pl.Series("year", [2020, 2021]), pl.Series("month", [1, 2])]
     )
     res = dummy_result._replace(data=df)
@@ -287,7 +287,7 @@ def test_timeseries_subplot_on_str(dummy_result: Result) -> None:
 
 
 def test_timeseries_subplot_on_missing(dummy_result: Result) -> None:
-    df = dummy_result.data.with_columns([pl.Series("year", [2020, 2021])])
+    df = dummy_result.df().with_columns([pl.Series("year", [2020, 2021])])
     res = dummy_result._replace(data=df)
     with pytest.raises(ValueError, match="not found in Result"):
         res.plot.timeseries(x="year", y="value", subplot_on="missing")

@@ -27,9 +27,9 @@ def _make_view(entity: Any, entity_name: str = "minimalmws") -> View:
 class TestViewWhere:
     def test_view_where(self, entity_cls_full: Any) -> None:
         view = _make_view(entity_cls_full())
-        view.keys = pl.DataFrame({"mws_id": ["13_001"]})
+        view.keys = pl.LazyFrame({"mws_id": ["13_001"]})
         result = view.where(district="TestDistrict")
-        assert result.keys.height > 0
+        assert result.keys.collect().height > 0
         assert result.entity is view.entity
 
 
@@ -155,7 +155,7 @@ class TestViewMaterialisation:
         view = View(keys=keys, entity=entity_cls(), entity_name="minimalmws")
 
         result = view.static
-        assert result.data.shape == (1, 3)
+        assert result.df().shape == (1, 3)
 
     def test_materialise_with_time_filter(
         self, entity_cls: Any, static_parquet: Any, monkeypatch: Any
@@ -207,7 +207,7 @@ class TestViewMaterialisation:
         from core_lens.schema.profile import Resolution
 
         result = view._materialise(Resolution.ANNUAL)
-        assert result.data.shape == (1, 3)
+        assert result.df().shape == (1, 3)
 
     def test_annual_returns_result_without_geometry(self, entity_cls_full: Any) -> None:
         keys = pl.DataFrame({"mws_id": ["13_001"]})
@@ -270,8 +270,8 @@ class TestViewMaterialisation:
             )
             result = view.static
         # Should have a column named "minimalmws_district" (self-join).
-        joined_cols = [c for c in result.data.columns if c.startswith("minimalmws_")]
-        assert joined_cols, f"No prefixed join columns found: {result.data.columns}"
+        joined_cols = [c for c in result.df().columns if c.startswith("minimalmws_")]
+        assert joined_cols, f"No prefixed join columns found: {result.df().columns}"
 
     def test_join_spec_preserved_across_between(self, entity_cls: Any) -> None:
         join_spec = {"other": entity_cls(), "agg": {"district": "count"}}
@@ -333,7 +333,7 @@ class TestViewMaterialisation:
             result = view.annual
 
             joined_cols = [
-                c for c in result.data.columns if c.startswith("minimalmws_")
+                c for c in result.df().columns if c.startswith("minimalmws_")
             ]
             assert joined_cols
 
@@ -623,16 +623,16 @@ class TestViewSpatialFilter:
     def test_spatial_filter_with_bbox(self, entity_cls_full: Any) -> None:
         view = _make_view(entity_cls_full())
         # mock keys
-        view.keys = pl.DataFrame({"mws_id": ["13_001"]})
+        view.keys = pl.LazyFrame({"mws_id": ["13_001"]})
         # index is already built in entity mock if accessed
         result = view.spatial_filter(bbox=(0.0, 0.0, 1.0, 1.0))
         assert isinstance(result, View)
-        assert result.keys.height >= 0
+        assert result.keys.collect().height >= 0
 
     def test_spatial_filter_with_geometry(self, entity_cls_full: Any) -> None:
         import shapely.geometry as sgeom
 
         view = _make_view(entity_cls_full())
-        view.keys = pl.DataFrame({"mws_id": ["13_001"]})
+        view.keys = pl.LazyFrame({"mws_id": ["13_001"]})
         result = view.spatial_filter(geometry=sgeom.Point(0, 0))
         assert isinstance(result, View)

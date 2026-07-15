@@ -19,12 +19,12 @@ class TestEntityWhere:
         assert isinstance(view, View)
         assert view.entity is entity
         assert view.entity_name == "minimalmws"
-        assert len(view.keys) == 2
+        assert view.keys.collect().height == 2
 
     def test_where_no_args(self, entity_cls: Any) -> None:
         entity = entity_cls()
         view = entity.where()
-        assert len(view.keys) == 2
+        assert view.keys.collect().height == 2
 
     def test_where_invalid_kwarg(self, entity_cls: Any) -> None:
         entity = entity_cls()
@@ -77,7 +77,7 @@ class TestEntityWhere:
 
         entity = entity_cls()
         view = entity.where(customdistrict="D1")
-        assert len(view.keys) >= 0
+        assert view.keys.collect().height >= 0
 
         import pytest
 
@@ -102,7 +102,7 @@ class TestEntitySpatialFilter:
         entity = entity_cls()
         view = entity.spatial_filter(bbox=(72.0, 14.0, 75.0, 17.0))
         assert isinstance(view, View)
-        assert len(view.keys) == 2
+        assert view.keys.collect().height == 2
 
     def test_spatial_filter_geometry(
         self, entity_cls: Any, static_parquet: pathlib.Path
@@ -110,7 +110,7 @@ class TestEntitySpatialFilter:
         entity = entity_cls()
         view = entity.spatial_filter(geometry=sgeom.box(72.0, 14.0, 75.0, 17.0))
         assert isinstance(view, View)
-        assert len(view.keys) == 2
+        assert view.keys.collect().height == 2
 
 
 class TestEntitySpatialJoin:
@@ -119,7 +119,7 @@ class TestEntitySpatialJoin:
         view = entity.spatial_join(entity_cls(), agg={"district": "first"})
         assert isinstance(view, View)
         # Assuming spatial_join creates an empty view for testing until fully implemented
-        assert "mws_id" in view.keys.columns
+        assert "mws_id" in view.keys.collect().columns
 
 
 class TestEntitySchemaProfile:

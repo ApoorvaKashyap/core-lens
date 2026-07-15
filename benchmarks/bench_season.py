@@ -25,6 +25,7 @@ import time
 from datetime import date, timedelta
 
 import polars as pl
+from typing import cast
 
 from core_lens.aoi import SeasonConfig
 from core_lens.utils.season import add_temporal_columns, resolve_time_filter
@@ -167,9 +168,9 @@ t0 = time.perf_counter()
 result_df = add_temporal_columns(FORTNIGHTLY_DF, "date", cfg)
 t1 = time.perf_counter()
 print(f"add_temporal_columns: {(t1 - t0) * 1000:.2f} ms")
-print(f"Output shape        : {result_df.shape}")
+print(f"Output shape        : {cast(pl.DataFrame, result_df).shape}")
 print(
-    f"New columns added   : {[c for c in result_df.columns if c not in FORTNIGHTLY_DF.columns]}"
+    f"New columns added   : {[c for c in cast(pl.DataFrame, result_df).columns if c not in FORTNIGHTLY_DF.columns]}"
 )
 
 # Second call — all columns already present, should be near-zero.
@@ -186,6 +187,8 @@ t0 = time.perf_counter()
 filtered = result_df.filter(expr)
 t1 = time.perf_counter()
 print(f"filter(kharif 2022) : {(t1 - t0) * 1000:.2f} ms")
-print(f"Rows matched        : {len(filtered):,} / {len(result_df):,}")
+print(
+    f"Rows matched        : {len(cast(pl.DataFrame, filtered)):,} / {len(cast(pl.DataFrame, result_df)):,}"
+)
 
 print("\n✓ bench_season.py complete")

@@ -50,7 +50,7 @@ t0 = time.perf_counter()
 view_all = aoi.mws
 t1 = time.perf_counter()
 print(f"aoi.mws          : {(t1 - t0) * 1000:.2f} ms")
-print(f"Keys             : {view_all.keys.shape}")
+print(f"Keys             : {view_all.keys.collect().shape}")
 
 
 # ── 2. View.where() — single filter ──────────────────────────────────────────
@@ -59,7 +59,7 @@ t0 = time.perf_counter()
 view_bihar = view_all.where(state="Bihar")
 t1 = time.perf_counter()
 print(f"where(state)     : {(t1 - t0) * 1000:.2f} ms")
-print(f"Bihar keys       : {view_bihar.keys.shape}")
+print(f"Bihar keys       : {view_bihar.keys.collect().shape}")
 
 
 # ── 3. View.where() — composite AND filter ────────────────────────────────────
@@ -68,7 +68,7 @@ t0 = time.perf_counter()
 view_banka = view_all.where(state="Bihar", district="Banka", tehsil="Banka")
 t1 = time.perf_counter()
 print(f"where(3 cols)    : {(t1 - t0) * 1000:.2f} ms")
-print(f"Banka keys       : {view_banka.keys.shape}")
+print(f"Banka keys       : {view_banka.keys.collect().shape}")
 
 
 # ── 4. View.spatial_filter() — further narrow ─────────────────────────────────
@@ -78,7 +78,7 @@ t0 = time.perf_counter()
 view_spatial = view_all.spatial_filter(bbox=SMALL_BBOX)
 t1 = time.perf_counter()
 print(f"spatial_filter   : {(t1 - t0) * 1000:.2f} ms")
-print(f"Spatial keys     : {view_spatial.keys.shape}")
+print(f"Spatial keys     : {view_spatial.keys.collect().shape}")
 
 
 # ── 5. View.between() — date range (no I/O) ───────────────────────────────────
@@ -112,14 +112,14 @@ t0 = time.perf_counter()
 result_static = aoi.mws.static
 t1 = time.perf_counter()
 print(f"static (all)     : {(t1 - t0) * 1000:.2f} ms")
-print(f"Shape            : {result_static.data.shape}")
+print(f"Shape            : {result_static.df().shape}")
 
 _section("8. aoi_small.mws.static  [small-bbox materialisation]")
 t0 = time.perf_counter()
 result_small = aoi_small.mws.static
 t1 = time.perf_counter()
 print(f"static (small)   : {(t1 - t0) * 1000:.2f} ms")
-print(f"Shape            : {result_small.data.shape}")
+print(f"Shape            : {result_small.df().shape}")
 
 
 # ── 9. Chained pipeline: where → spatial_filter → static ─────────────────────
@@ -128,7 +128,7 @@ t0 = time.perf_counter()
 result_chain = aoi.mws.spatial_filter(bbox=SMALL_BBOX).static
 t1 = time.perf_counter()
 print(f"Chain            : {(t1 - t0) * 1000:.2f} ms")
-print(f"Shape            : {result_chain.data.shape}")
+print(f"Shape            : {result_chain.df().shape}")
 
 
 # ── 10. annual materialisation ──────────────────────────────────────────────────
@@ -137,7 +137,7 @@ t0 = time.perf_counter()
 result_annual = aoi_small.mws.between("2018-01-01", "2023-12-31").annual
 t1 = time.perf_counter()
 print(f"annual           : {(t1 - t0) * 1000:.2f} ms")
-print(f"Shape            : {result_annual.data.shape}")
+print(f"Shape            : {result_annual.df().shape}")
 
 
 # ── 11. fortnightly materialisation ───────────────────────────────────────────
@@ -146,7 +146,7 @@ t0 = time.perf_counter()
 result_fn = aoi_small.mws.between(season=Season.KHARIF, year=2022).fortnightly
 t1 = time.perf_counter()
 print(f"fortnightly      : {(t1 - t0) * 1000:.2f} ms")
-print(f"Shape            : {result_fn.data.shape}")
+print(f"Shape            : {result_fn.df().shape}")
 
 
 # ── Cleanup ───────────────────────────────────────────────────────────────────

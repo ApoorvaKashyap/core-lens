@@ -475,7 +475,7 @@ class AoI:
                     list(overlay.key_cols) if hasattr(overlay, "key_cols") else []
                 )
                 arrow_table = _wkb_to_arrow_table(
-                    overlay.data, geom_col, extra_cols=key_cols
+                    overlay.df(), geom_col, extra_cols=key_cols
                 )
                 overlay_layer = lonboard.PolygonLayer(
                     arrow_table,

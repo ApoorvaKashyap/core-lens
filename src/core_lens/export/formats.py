@@ -193,7 +193,7 @@ def geojson(result: "Result", path: str | pathlib.Path, **kwargs: Any) -> None:
         )
 
     geom_col = result.entity.geometry_col
-    data = result.data
+    data = result.df()
 
     driver = kwargs.pop("driver", "GeoJSON")
     is_seq = driver == "GeoJSONSeq"
