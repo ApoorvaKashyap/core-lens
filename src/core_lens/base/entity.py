@@ -474,7 +474,22 @@ class BaseEntity(ABC):
         if attr_kwargs:
             filter_expr = pl.lit(True)
             for col, val in attr_kwargs.items():
-                filter_expr = filter_expr & (pl.col(col) == val)
+                dtype = schema[col]
+                is_list_col = isinstance(dtype, pl.List) or dtype == pl.List
+                is_val_list = isinstance(val, (list, tuple, set))
+
+                if is_list_col:
+                    if is_val_list:
+                        filter_expr = filter_expr & (
+                            pl.col(col).list.set_intersection(list(val)).list.len() > 0
+                        )
+                    else:
+                        filter_expr = filter_expr & pl.col(col).list.contains(val)
+                else:
+                    if is_val_list:
+                        filter_expr = filter_expr & pl.col(col).is_in(list(val))
+                    else:
+                        filter_expr = filter_expr & (pl.col(col) == val)
             lf = lf.filter(filter_expr)
 
         if not entity_kwargs:
