@@ -89,6 +89,14 @@ class Result:
         """
         return collect_lf(self.data)
 
+    def materialise(self) -> "Result":
+        """Evaluate the lazy computation graph and cache it in memory.
+
+        Returns:
+            Result: A new Result with the data cached as an in-memory LazyFrame.
+        """
+        return self._replace(data=self.df().lazy())
+
     def gdf(self) -> "gpd.GeoDataFrame":
         """Return the data as a ``GeoDataFrame``.
 
@@ -156,13 +164,24 @@ class Result:
 
         key_cols = self.key_cols
 
-        # We use a direct left join here instead of a semi-join intermediate step.
-        # A semi-join creates a "diamond" query graph where `self.data` must be evaluated
-        # twice by Polars. Because `self.data` can be an expensive aggregation pipeline,
-        # this caused execution times to double.
-        joined = self.data.join(self.entity.geometry_lazy, on=key_cols, how="left")
+        # 1. Evaluate the heavy aggregation graph ONCE to prevent Polars from
+        # evaluating it twice during the geometry extraction and join.
+        res = self.materialise()
+        keys_df = res.df().select(key_cols)
 
-        return self._replace(data=joined, has_geometry=True)
+        # 2. Push down the geometry filter into the Parquet reader using is_in
+        # so we don't scan the entire static geometry file (which takes ~0.4s).
+        geo_lf = self.entity.geometry_lazy
+        if len(key_cols) == 1 and keys_df.height < 50000:
+            key = key_cols[0]
+            geo_lf = geo_lf.filter(pl.col(key).is_in(keys_df[key]))
+        else:
+            geo_lf = geo_lf.join(keys_df.lazy(), on=key_cols, how="semi")
+
+        joined = res.data.join(geo_lf, on=key_cols, how="left")
+
+        # 3. Cache the joined geometry so multiple plots are instant.
+        return res._replace(data=joined, has_geometry=True).materialise()
 
     def derive(self, name: str, expr: pl.Expr) -> "Result":
         """Return a new ``Result`` with a computed column appended.
