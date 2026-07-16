@@ -27,7 +27,6 @@ class SubplotOn(Enum):
 
 
 if TYPE_CHECKING:
-    import lonboard
     from bokeh.plotting import figure as BokehFigure
     from core_lens.base.result import Result
 
@@ -224,6 +223,102 @@ def _apply_theme(fig: Any, result: "Result", title: str) -> None:
     fig.add_layout(subtitle)
 
 
+class MapWithLegend:
+    """Wrapper around lonboard.Map that adds a legend for Jupyter and HTML exports."""
+
+    def __init__(
+        self,
+        map_widget: Any,
+        cmap: Any,
+        v_min: float,
+        v_max: float,
+        column_name: str,
+    ) -> None:
+        self._map = map_widget
+        self._cmap = cmap
+        self._v_min = v_min
+        self._v_max = v_max
+        self._column_name = column_name
+
+    def __getattr__(self, name: str) -> Any:
+        return getattr(self._map, name)
+
+    def _generate_legend_div(self, absolute: bool = True) -> str:
+        import matplotlib.colors as mcolors
+        import numpy as np
+
+        stops = 5
+        style = (
+            "position:absolute; bottom:20px; left:20px; z-index:999; "
+            if absolute
+            else ""
+        )
+        style += (
+            "background:white; padding:8px 12px; border-radius:4px; "
+            "box-shadow:0 1px 4px rgba(0,0,0,.3); font-family:sans-serif; font-size:12px;"
+        )
+
+        html = [
+            f'<div style="{style}">',
+            f'<b style="margin-bottom:4px;display:inline-block;">{self._column_name}</b><br>',
+        ]
+
+        if np.isnan(self._v_min) or np.isnan(self._v_max) or self._v_min >= self._v_max:
+            html.append('<span style="color:gray;">No Data</span>')
+        else:
+            for i in range(stops):
+                frac = (stops - 1 - i) / (
+                    stops - 1
+                )  # Reverse order so highest is on top
+                val = self._v_min + frac * (self._v_max - self._v_min)
+                rgba = self._cmap(frac)
+                hex_color = mcolors.to_hex(rgba)
+                html.append(
+                    f'<div style="margin-top:2px;">'
+                    f'<span style="background:{hex_color};width:12px;height:12px;'
+                    f"display:inline-block;margin-right:8px;vertical-align:middle;"
+                    f'border:1px solid #ccc;"></span>'
+                    f'<span style="vertical-align:middle;">{val:.2f}</span></div>'
+                )
+        html.append("</div>")
+        return "".join(html)
+
+    def _ipython_display_(self) -> None:
+        import ipywidgets  # type: ignore[import-untyped]
+        from IPython.display import display
+
+        legend_div = self._generate_legend_div(absolute=False)
+        legend_html = ipywidgets.HTML(legend_div)
+
+        display(ipywidgets.VBox([legend_html, self._map]))  # type: ignore[no-untyped-call]
+
+    def to_html(
+        self, filename: str | None = None, title: str | None = None
+    ) -> str | None:
+        """Export the map to a static HTML string or file, injecting the legend."""
+        # lonboard.Map to_html doesn't accept title in all versions,
+        # so we conditionally pass it if it's not None or we can just omit title if we aren't sure.
+        # But wait, we can just use `self._map.to_html()`
+        if title is not None:
+            try:
+                html_str = self._map.to_html(title=title)
+            except TypeError:
+                html_str = self._map.to_html()
+        else:
+            html_str = self._map.to_html()
+
+        legend_div = self._generate_legend_div(absolute=True)
+
+        # Inject right before closing </body> tag
+        html_str = html_str.replace("</body>", legend_div + "</body>")
+
+        if filename is not None:
+            with open(filename, "w", encoding="utf-8") as f:
+                f.write(html_str)
+            return None
+        return str(html_str)
+
+
 class PlotNamespace:
     """Visualisation namespace for :class:`~core_lens.base.result.Result`.
 
@@ -239,7 +334,7 @@ class PlotNamespace:
 
     def choropleth(
         self, column: str, subplot_on: SubplotOn | None = None
-    ) -> "lonboard.Map":
+    ) -> "MapWithLegend":
         """Render an interactive choropleth map using Lonboard.
 
         If the Result does not already have geometry, it will be attached
@@ -325,7 +420,8 @@ class PlotNamespace:
             arrow_table,
             get_fill_color=apply_continuous_cmap(norm_values, cmap),
         )
-        return lonboard.Map(layers=[layer])
+        map_widget = lonboard.Map(layers=[layer])
+        return MapWithLegend(map_widget, cmap, v_min, v_max, column)
 
     def timeseries(
         self,

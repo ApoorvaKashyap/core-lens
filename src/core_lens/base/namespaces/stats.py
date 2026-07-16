@@ -515,7 +515,16 @@ class StatsNamespace:
                     ).alias("pct_change"),
                 ]
             )
-            data = joined
+
+            final_cols = join_keys + [
+                "year_from",
+                "year_to",
+                "value_from",
+                "value_to",
+                "change",
+                "pct_change",
+            ]
+            data = joined.select(final_cols)
 
         else:  # trend
             period_df = df.filter(

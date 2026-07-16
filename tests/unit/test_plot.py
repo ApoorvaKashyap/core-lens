@@ -9,7 +9,7 @@ from typing import Any
 from core_lens.base.entity import BaseEntity
 from core_lens.base.result import Result
 from core_lens.schema.profile import Resolution, SchemaProfile
-from core_lens.base.namespaces.plot import SubplotOn
+from core_lens.base.namespaces.plot import SubplotOn, MapWithLegend
 
 
 class DummyEntity(BaseEntity):
@@ -79,7 +79,7 @@ def test_choropleth_basic(dummy_result: Result) -> None:
     """Test choropleth creates a lonboard Map correctly."""
     plot_map = dummy_result.plot.choropleth("value")
 
-    assert isinstance(plot_map, lonboard.Map)
+    assert isinstance(plot_map, MapWithLegend)
     assert len(plot_map.layers) == 1
     layer = plot_map.layers[0]
     assert isinstance(layer, lonboard.PolygonLayer)
