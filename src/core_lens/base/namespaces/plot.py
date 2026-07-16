@@ -249,7 +249,7 @@ class MapWithLegend:
 
         stops = 5
         style = (
-            "position:absolute; bottom:20px; left:20px; z-index:999; "
+            "position:absolute; bottom:35px; left:20px; z-index:999; "
             if absolute
             else ""
         )
@@ -414,11 +414,13 @@ class PlotNamespace:
         else:
             norm_values = (values - v_min) / (v_max - v_min)
 
-        cmap = mpl.colormaps["plasma"]
+        cmap = mpl.colormaps["plasma_r"]
 
         layer = lonboard.PolygonLayer(
             arrow_table,
             get_fill_color=apply_continuous_cmap(norm_values, cmap),
+            get_line_color=[211, 211, 211, 255],
+            line_width_min_pixels=2,
         )
         map_widget = lonboard.Map(layers=[layer])
         return MapWithLegend(map_widget, cmap, v_min, v_max, column)
