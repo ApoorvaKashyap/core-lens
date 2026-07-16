@@ -174,7 +174,7 @@ class Result:
         geo_lf = self.entity.geometry_lazy
         if len(key_cols) == 1 and keys_df.height < 50000:
             key = key_cols[0]
-            geo_lf = geo_lf.filter(pl.col(key).is_in(keys_df[key]))
+            geo_lf = geo_lf.filter(pl.col(key).is_in(keys_df[key].to_list()))
         else:
             geo_lf = geo_lf.join(keys_df.lazy(), on=key_cols, how="semi")
 

@@ -146,7 +146,7 @@ def scan_with_key_filter(
         # predicate pushdown in the Parquet reader, avoiding a full table scan.
         # The literal tree RAM issue only occurs with hundreds of thousands of keys.
         key = key_cols[0]
-        lf = lf.filter(pl.col(key).is_in(kv_df[key]))
+        lf = lf.filter(pl.col(key).is_in(kv_df[key].to_list()))
     else:
         # Fallback to semi-join for massive key arrays (e.g. state-wide scopes)
         lf = lf.join(kv_df.lazy(), on=key_cols, how="semi")
