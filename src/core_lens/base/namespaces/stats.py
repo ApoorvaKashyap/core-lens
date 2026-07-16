@@ -538,6 +538,8 @@ class StatsNamespace:
                 rows.append(
                     {
                         key: eid,
+                        "year_from": int(from_period),
+                        "year_to": int(to_period),
                         "slope": float(cast(float, slope)),
                         "r_squared": float(cast(float, r_val) ** 2),
                         "direction": (
