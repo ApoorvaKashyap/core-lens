@@ -489,18 +489,24 @@ class StatsNamespace:
             )
 
         if method in (ChangeMethod.ABSOLUTE, ChangeMethod.PERCENTAGE):
+            join_keys = [key]
+            if "season" in df.columns:
+                join_keys.append("season")
+
             from_df = (
                 df.filter(pl.col(year_col) == from_period)
-                .select([key, column])
+                .select(join_keys + [column])
                 .rename({column: "value_from"})
             )
             to_df = (
                 df.filter(pl.col(year_col) == to_period)
-                .select([key, column])
+                .select(join_keys + [column])
                 .rename({column: "value_to"})
             )
-            joined = from_df.join(to_df, on=key, how="inner").with_columns(
+            joined = from_df.join(to_df, on=join_keys, how="inner").with_columns(
                 [
+                    pl.lit(from_period).alias("year_from").cast(pl.Int32),
+                    pl.lit(to_period).alias("year_to").cast(pl.Int32),
                     (pl.col("value_to") - pl.col("value_from")).alias("change"),
                     (
                         (pl.col("value_to") - pl.col("value_from"))
