@@ -233,12 +233,16 @@ class MapWithLegend:
         v_min: float,
         v_max: float,
         column_name: str,
+        clamped_min: bool = False,
+        clamped_max: bool = False,
     ) -> None:
         self._map = map_widget
         self._cmap = cmap
         self._v_min = v_min
         self._v_max = v_max
         self._column_name = column_name
+        self._clamped_min = clamped_min
+        self._clamped_max = clamped_max
 
     def __getattr__(self, name: str) -> Any:
         return getattr(self._map, name)
@@ -273,12 +277,19 @@ class MapWithLegend:
                 val = self._v_min + frac * (self._v_max - self._v_min)
                 rgba = self._cmap(frac)
                 hex_color = mcolors.to_hex(rgba)
+
+                prefix = ""
+                if i == stops - 1 and self._clamped_min:
+                    prefix = "&lt; "
+                elif i == 0 and self._clamped_max:
+                    prefix = "&gt; "
+
                 html.append(
                     f'<div style="margin-top:2px;">'
                     f'<span style="background:{hex_color};width:12px;height:12px;'
                     f"display:inline-block;margin-right:8px;vertical-align:middle;"
                     f'border:1px solid #ccc;"></span>'
-                    f'<span style="vertical-align:middle;">{val:.2f}</span></div>'
+                    f'<span style="vertical-align:middle;">{prefix}{val:.2f}</span></div>'
                 )
         html.append("</div>")
         return "".join(html)
@@ -333,7 +344,11 @@ class PlotNamespace:
         self.result = result
 
     def choropleth(
-        self, column: str, subplot_on: SubplotOn | None = None
+        self,
+        column: str,
+        subplot_on: SubplotOn | None = None,
+        v_min: float | None = None,
+        v_max: float | None = None,
     ) -> "MapWithLegend":
         """Render an interactive choropleth map using Lonboard.
 
@@ -407,23 +422,33 @@ class PlotNamespace:
 
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", category=RuntimeWarning)
-            v_min, v_max = np.nanmin(values), np.nanmax(values)
+            actual_min, actual_max = np.nanmin(values), np.nanmax(values)
 
-        if np.isnan(v_min) or np.isnan(v_max) or v_min >= v_max:
+        calc_v_min = float(v_min) if v_min is not None else float(actual_min)
+        calc_v_max = float(v_max) if v_max is not None else float(actual_max)
+
+        clamped_min = v_min is not None and actual_min < v_min
+        clamped_max = v_max is not None and actual_max > v_max
+
+        if np.isnan(calc_v_min) or np.isnan(calc_v_max) or calc_v_min >= calc_v_max:
             norm_values = np.where(np.isnan(values), np.nan, 0.0)
         else:
-            norm_values = (values - v_min) / (v_max - v_min)
+            norm_values = np.clip(
+                (values - calc_v_min) / (calc_v_max - calc_v_min), 0.0, 1.0
+            )
 
         cmap = mpl.colormaps["plasma_r"]
 
         layer = lonboard.PolygonLayer(
             arrow_table,
             get_fill_color=apply_continuous_cmap(norm_values, cmap),
-            get_line_color=[211, 211, 211, 255],
-            line_width_min_pixels=0.5,
+            get_line_color=[255, 255, 255, 180],
+            line_width_min_pixels=0.25,
         )
         map_widget = lonboard.Map(layers=[layer])
-        return MapWithLegend(map_widget, cmap, v_min, v_max, column)
+        return MapWithLegend(
+            map_widget, cmap, calc_v_min, calc_v_max, column, clamped_min, clamped_max
+        )
 
     def timeseries(
         self,
