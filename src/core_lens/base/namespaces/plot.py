@@ -420,7 +420,7 @@ class PlotNamespace:
             arrow_table,
             get_fill_color=apply_continuous_cmap(norm_values, cmap),
             get_line_color=[211, 211, 211, 255],
-            line_width_min_pixels=2,
+            line_width_min_pixels=0.5,
         )
         map_widget = lonboard.Map(layers=[layer])
         return MapWithLegend(map_widget, cmap, v_min, v_max, column)
