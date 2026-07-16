@@ -8,7 +8,11 @@ def test_version() -> None:
 def test_hello() -> None:
     from core_lens.__main__ import hello
 
-    assert hello() == "Hello from core-lens!"
+    msg = hello()
+    assert msg.startswith("Hello from core-lens!")
+    assert "AoI: Construct Area of Interest queries" in msg
+    assert "Analytics (via `result.stats`):" in msg
+    assert "Visualisation (via `result.plot`):" in msg
 
 
 def test_version_type() -> None:
