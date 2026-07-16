@@ -561,11 +561,19 @@ class PlotNamespace:
                             color=color,
                             size=5,
                         )
-            elif key_col in pdf.columns:
-                for i, entity in enumerate(pdf[key_col].unique()):
-                    row = pdf[pdf[key_col] == entity]
+            elif key_col in df.columns:
+                entities = df.get_column(key_col).unique().to_list()
+                for i, entity in enumerate(entities):
+                    entity_df = df.filter(pl.col(key_col) == entity)
+                    source_data = {}
+                    for c in hover_cols:
+                        if c in entity_df.columns:
+                            lst = entity_df.get_column(c).to_list()
+                            if entity_df.schema[c].is_numeric():
+                                lst = [float("nan") if v is None else v for v in lst]
+                            source_data[c] = lst
+                    source = ColumnDataSource(source_data)  # type: ignore[arg-type]
                     color = _color_for(i)
-                    source = _src(row)
                     fig.line(
                         x=x,
                         y=y_col,
@@ -676,8 +684,6 @@ class PlotNamespace:
             entities = unique_entities.limit(top_n).to_list()
             df = df.join(pl.DataFrame({key_col: entities}), on=key_col, how="inner")
 
-        df_pd = df.to_pandas()
-
         def _make_scatter(y_col: str) -> "BokehFigure":
             from bokeh.models import ColumnDataSource
 
@@ -689,11 +695,21 @@ class PlotNamespace:
                 tools="pan,wheel_zoom,box_zoom,reset,save,hover",
                 tooltips=[(c, f"@{{{c}}}") for c in hover_cols],
             )
-            for i, entity in enumerate(df_pd[key_col].unique()):
-                row = df_pd[df_pd[key_col] == entity]
-                source = ColumnDataSource(
-                    {c: row[c].tolist() for c in hover_cols if c in row.columns}
-                )
+
+            entities = df.get_column(key_col).unique().to_list()
+            for i, entity in enumerate(entities):
+                row = df.filter(pl.col(key_col) == entity)
+
+                # Replace None with NaN for numeric columns to prevent Bokeh JS rendering crashes
+                source_data = {}
+                for c in hover_cols:
+                    if c in row.columns:
+                        lst = row.get_column(c).to_list()
+                        if row.schema[c].is_numeric():
+                            lst = [float("nan") if v is None else v for v in lst]
+                        source_data[c] = lst
+
+                source = ColumnDataSource(source_data)  # type: ignore[arg-type]
                 fig.scatter(
                     x=x,
                     y=y_col,
