@@ -206,21 +206,16 @@ def _apply_theme(fig: Any, result: "Result", title: str) -> None:
     fig.title.text_font = "Inter, sans-serif"
     fig.title.text_font_size = "14pt"
 
-    from bokeh.models.annotations import Label
+    from bokeh.models.annotations import Title
 
-    subtitle = Label(
-        x=fig.plot_width if hasattr(fig, "plot_width") else 800,
-        y=0,
-        x_units="screen",
-        y_units="screen",
+    subtitle = Title(
         text=f"Entity: {entity_name} | Visualised with Bokeh",
         text_font_size="9pt",
         text_color="gray",
-        x_offset=-8,
-        y_offset=4,
-        text_align="right",
+        align="right",
+        text_font="Inter, sans-serif",
     )
-    fig.add_layout(subtitle)
+    fig.add_layout(subtitle, "below")
 
 
 class MapWithLegend:
@@ -607,8 +602,8 @@ class PlotNamespace:
                 )
 
             if fig.legend:
-                fig.legend.location = "top_left"
                 fig.legend.click_policy = "hide"
+                fig.add_layout(fig.legend[0], "right")
             _apply_theme(fig, self.result, title)
             return fig
 
@@ -720,8 +715,8 @@ class PlotNamespace:
                     alpha=0.7,
                 )
             if fig.legend:
-                fig.legend.location = "top_left"
                 fig.legend.click_policy = "hide"
+                fig.add_layout(fig.legend[0], "right")
             _apply_theme(fig, self.result, "Scatter Distribution")
             return fig
 
@@ -791,8 +786,8 @@ class PlotNamespace:
                     legend_label=str(entity),
                 )
             if fig.legend:
-                fig.legend.location = "top_right"
                 fig.legend.click_policy = "hide"
+                fig.add_layout(fig.legend[0], "right")
             _apply_theme(fig, self.result, "Distribution")
             return fig
 
