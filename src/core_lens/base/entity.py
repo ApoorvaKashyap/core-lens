@@ -226,13 +226,15 @@ class BaseEntity(ABC):
             FileNotFoundError: For *local* paths that do not exist after resolution.
 
         """
+        import pathlib as _pathlib
+
         # Fully-qualified cloud URI — return as-is.
         if is_cloud_uri(path):
+            if not path.endswith("/") and not _pathlib.Path(path).suffix:
+                return path + "/"
             return path
 
         # Relative path — join against data_root (which may itself be a cloud URI).
-        import pathlib as _pathlib
-
         p = _pathlib.Path(path)
         if not p.is_absolute():
             root = (
@@ -243,6 +245,10 @@ class BaseEntity(ABC):
             resolved = join_uri(root, path)
         else:
             resolved = str(p)
+
+        # Polars cloud directory scanning requires a trailing slash.
+        if is_cloud_uri(resolved) and not resolved.endswith("/") and not p.suffix:
+            resolved += "/"
 
         # For local resolved paths only: eager existence check.
         if not is_cloud_uri(resolved) and not path_exists(resolved):
