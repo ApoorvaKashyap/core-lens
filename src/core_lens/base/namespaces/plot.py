@@ -157,7 +157,7 @@ def _wkb_to_arrow_table(
     if b"ARROW:extension:metadata" in ext_meta:
         try:
             geo_meta = json.loads(ext_meta[b"ARROW:extension:metadata"].decode("utf-8"))
-        except Exception:
+        except Exception:  # noqa: S110
             pass
     geo_meta["crs"] = "EPSG:4326"
     ext_meta[b"ARROW:extension:metadata"] = json.dumps(geo_meta).encode("utf-8")

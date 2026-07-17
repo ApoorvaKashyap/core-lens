@@ -159,7 +159,7 @@ def geoparquet(result: "Result", path: str | pathlib.Path, **kwargs: Any) -> Non
         SELECT {select_clause}
         FROM df
     ) TO '{path_str}' ({options_str});
-    """
+    """  # noqa: S608
     conn.execute(query)
 
 

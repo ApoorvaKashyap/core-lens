@@ -59,7 +59,7 @@ def _bbox_sidecar_path(static_path: str) -> pathlib.Path | None:
         # Fallback to user cache dir.
         import hashlib
 
-        fingerprint = hashlib.sha1(static_path.encode()).hexdigest()[:16]
+        fingerprint = hashlib.sha256(static_path.encode()).hexdigest()[:16]
         _CACHE_DIR.mkdir(parents=True, exist_ok=True)
         sidecar = _CACHE_DIR / (fingerprint + _SIDECAR_SUFFIX)
     return sidecar
