@@ -7,7 +7,7 @@ class MWSEntity(BaseEntity):
     Backed by:
     - Static: mws/static (partitioned by year)
     - Annual: mws/annual (partitioned by year)
-    - Fortnightly: mws/fortnightly (partitioned by basin then year)
+    - SubAnnual: mws/sub_annual (partitioned by basin then year)
 
     All paths are relative to the AoI ``data_root``.
     """
@@ -53,11 +53,11 @@ class MWSEntity(BaseEntity):
         return "mws/annual"
 
     @property
-    def fortnightly_path(self) -> str | None:
+    def sub_annual_path(self) -> str | None:
         """Get the property value.
 
         Returns:
-            str | None: The relative path to the fortnightly data.
+            str | None: The relative path to the sub_annual data.
 
         """
-        return "mws/fortnightly"
+        return "mws/sub_annual"

@@ -203,7 +203,7 @@ class TestResultAggregate:
         assert len(agg.df()) == 2
         assert "mws_id" in agg.df().columns
 
-    def test_aggregate_with_temporal_by_on_fortnightly(self, entity_cls: Any) -> None:
+    def test_aggregate_with_temporal_by_on_sub_annual(self, entity_cls: Any) -> None:
         df = pl.DataFrame(
             {
                 "mws_id": ["1", "1", "2"],
@@ -211,7 +211,7 @@ class TestResultAggregate:
                 "ndvi": [0.4, 0.5, 0.3],
             }
         )
-        result = _make_result(entity_cls(), resolution=Resolution.FORTNIGHTLY, data=df)
+        result = _make_result(entity_cls(), resolution=Resolution.SUB_ANNUAL, data=df)
         agg = result.aggregate(pl.mean("ndvi"), by="year")
 
         assert "year" in agg.df().columns
@@ -237,12 +237,12 @@ class TestResultAggregate:
         assert "year" in agg.df().columns
         assert "mws_id" in agg.df().columns
 
-    def test_aggregate_fortnightly_only_by_on_annual_raises(
+    def test_aggregate_sub_annual_only_by_on_annual_raises(
         self, entity_cls: Any
     ) -> None:
         result = _make_result(entity_cls(), resolution=Resolution.ANNUAL)
 
-        with pytest.raises(ValueError, match="requires data at fortnightly resolution"):
+        with pytest.raises(ValueError, match="requires data at sub_annual resolution"):
             result.aggregate(pl.mean("ndvi_mean"), by="month")
 
     def test_aggregate_unknown_by_raises(self, entity_cls: Any) -> None:
@@ -252,7 +252,7 @@ class TestResultAggregate:
             result.aggregate(pl.mean("ndvi_mean"), by="quarter")
 
     @pytest.mark.parametrize("by", ["month", "year_month", "season", "season_year"])
-    def test_fortnightly_only_by_keys_accepted(self, entity_cls: Any, by: Any) -> None:
+    def test_sub_annual_only_by_keys_accepted(self, entity_cls: Any, by: Any) -> None:
         df = pl.DataFrame(
             {
                 "mws_id": ["1"],
@@ -264,7 +264,7 @@ class TestResultAggregate:
                 "ndvi": [0.4],
             }
         )
-        result = _make_result(entity_cls(), resolution=Resolution.FORTNIGHTLY, data=df)
+        result = _make_result(entity_cls(), resolution=Resolution.SUB_ANNUAL, data=df)
         agg = result.aggregate(pl.mean("ndvi"), by=by)
 
         assert by in agg.df().columns
@@ -274,9 +274,9 @@ class TestResultReplace:
     def test_replace_carries_forward_unchanged_fields(self, entity_cls: Any) -> None:
         entity = entity_cls()
         result = _make_result(entity, resolution=Resolution.ANNUAL)
-        replaced = result._replace(resolution=Resolution.FORTNIGHTLY)
+        replaced = result._replace(resolution=Resolution.SUB_ANNUAL)
 
-        assert replaced.resolution == Resolution.FORTNIGHTLY
+        assert replaced.resolution == Resolution.SUB_ANNUAL
         assert replaced.entity is entity
         assert replaced.key_cols == result.key_cols
         assert replaced.entity_name == result.entity_name

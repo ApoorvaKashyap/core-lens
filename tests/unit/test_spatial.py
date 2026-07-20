@@ -100,7 +100,7 @@ def test_execute_spatial_join(tmp_path: Any) -> None:
             geometry_col="geom",
             geometry_type="wkt",
             annual_time_col=None,
-            fortnightly_time_col=None,
+            sub_annual_time_col=None,
             bbox_cols=None,
         )
 
@@ -173,7 +173,7 @@ def test_execute_spatial_join_errors(tmp_path: Any) -> None:
             geometry_col="geom",
             geometry_type="wkt",
             annual_time_col=None,
-            fortnightly_time_col=None,
+            sub_annual_time_col=None,
             bbox_cols=None,
         )
 
@@ -208,7 +208,7 @@ def test_execute_spatial_join_no_match_and_agg(tmp_path: Any) -> None:
             geometry_col="geom",
             geometry_type="wkt",
             annual_time_col=None,
-            fortnightly_time_col=None,
+            sub_annual_time_col=None,
             bbox_cols=None,
         )
 

@@ -10,7 +10,7 @@ benchmarks/
 ├── run_all.sh                  # Run all benchmarks in sequence
 ├── bench_aoi.py                # AoI init, register, named-boundary resolution
 ├── bench_spatial.py            # build_bbox_index, bbox_intersects_geometry, exact_spatial_filter
-├── bench_view.py               # View.where, spatial_filter, between, materialise (static/annual/fortnightly)
+├── bench_view.py               # View.where, spatial_filter, between, materialise (static/annual/sub-annual)
 ├── bench_result.py             # Result.derive, aggregate, with_geometry, df/gdf
 ├── bench_season.py             # resolve_time_filter, add_temporal_columns, SeasonConfig.season_for
 ├── bench_schema.py             # schema detection (detect, _infer_* helpers)

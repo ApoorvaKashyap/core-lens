@@ -713,7 +713,7 @@ class StatsNamespace:
             year_col = self._year_col()
             if year_col is None:
                 raise ValueError(
-                    "StatsNamespace.anomaly: mode 'timeseries' requires a year/time column. Ensure data is at annual or fortnightly resolution."
+                    "StatsNamespace.anomaly: mode 'timeseries' requires a year/time column. Ensure data is at annual or sub_annual resolution."
                 )
 
             min_obs = _MIN_OBS[method.value]
@@ -849,7 +849,7 @@ class StatsNamespace:
                 * ``None`` — use the column directly from ``result.data``.
                 * ``(resolution, filter_dict)`` — fetch from the entity's file at
                   the given resolution (``"static"``, ``"annual"``,
-                  ``"fortnightly"``).  Supported ``filter_dict`` keys:
+                  ``"sub_annual"``).  Supported ``filter_dict`` keys:
 
                   - ``"year": int | (int, int)`` — year equality or range.
                   - ``"season": str`` — season label (``"kharif"`` etc.).
@@ -904,12 +904,12 @@ class StatsNamespace:
                 path = entity.static_path
             elif resolution_str == "annual":
                 path = entity.annual_path
-            elif resolution_str == "fortnightly":
-                path = entity.fortnightly_path
+            elif resolution_str == "sub_annual":
+                path = entity.sub_annual_path
             else:
                 raise ValueError(
                     f"StatsNamespace.similarity: Unknown resolution {resolution_str!r} "
-                    "in column spec. Valid: 'static', 'annual', 'fortnightly'."
+                    "in column spec. Valid: 'static', 'annual', 'sub_annual'."
                 )
 
             if path is None:
@@ -935,8 +935,8 @@ class StatsNamespace:
                 yr_col: str | None = None
                 if resolution_str == "annual":
                     yr_col = profile.annual_time_col
-                elif resolution_str == "fortnightly":
-                    yr_col = profile.fortnightly_time_col
+                elif resolution_str == "sub_annual":
+                    yr_col = profile.sub_annual_time_col
                 # Fallback: look for a literal "year" integer column.
                 if yr_col is None and "year" in schema:
                     yr_col = "year"

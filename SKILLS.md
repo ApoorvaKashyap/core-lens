@@ -47,7 +47,7 @@ view.between(season="kharif", year=2020)
 # Materialise into a Result object
 static_result = view.static         # has geometry
 annual_result = view.annual         # no geometry
-fortnightly_result = view.fortnightly # no geometry
+sub_annual_result = view.sub_annual # no geometry
 ```
 
 ## 3. Operations on Results (Compute & Aggregation)
@@ -129,7 +129,7 @@ result.stats.similarity(
     target="13_551",
     columns={
         "rainfall": ("annual", {"year": 2018}),
-        "ndvi": ("fortnightly", {"season": "kharif", "year": 2020})
+        "ndvi": ("sub_annual", {"season": "kharif", "year": 2020})
     },
     method="euclidean",
     top_n=10
@@ -189,8 +189,8 @@ AoI.register(ForestEntity)
 
 ## 9. Execution Environment Context
 
-- **Loading Data**: There is no explicit `AoI.load_data()` method. The `AoI(data_root="...")` constructor acts as the main entry point and defines the directory scope. Data reading happens lazily using Polars `scan_parquet()` when you explicitly call materialization methods like `.static`, `.annual`, or `.fortnightly` on a `View`.
-- **Spatial and Temporal Relationship**: To conserve memory, temporal views (`.annual` and `.fortnightly`) drop geometry columns by default. To establish the spatial relationship between the static boundaries (`mws.parquet`) and the temporal time-series (`annual.parquet`), you use the `Result.with_geometry()` method. This triggers an internal join on the entity's primary key (e.g., `mws_id`) bringing the geometry back into the DataFrame for spatial operations and plotting.
+- **Loading Data**: There is no explicit `AoI.load_data()` method. The `AoI(data_root="...")` constructor acts as the main entry point and defines the directory scope. Data reading happens lazily using Polars `scan_parquet()` when you explicitly call materialization methods like `.static`, `.annual`, or `.sub_annual` on a `View`.
+- **Spatial and Temporal Relationship**: To conserve memory, temporal views (`.annual` and `.sub_annual`) drop geometry columns by default. To establish the spatial relationship between the static boundaries (`mws.parquet`) and the temporal time-series (`annual.parquet`), you use the `Result.with_geometry()` method. This triggers an internal join on the entity's primary key (e.g., `mws_id`) bringing the geometry back into the DataFrame for spatial operations and plotting.
 
 - **Expected Directory Structure**: When initializing `AoI(data_root="data/")`, the library expects a specific folder structure inside the `data_root` for each registered entity. For example, the `MWSEntity` expects:
   ```text
@@ -199,7 +199,7 @@ AoI.register(ForestEntity)
       ├── static/
       │   └── mws.parquet        ← GeoParquet with boundaries
       ├── annual/                ← Directory of Parquets (often partitioned by basin)
-      └── fortnightly/           ← Directory of Parquets (partitioned by year/basin)
+      └── sub-annual/           ← Directory of Parquets (partitioned by year/basin)
   ```
   *(Note: The exact paths for these files/directories are defined within the `BaseEntity` subclasses, e.g., `MWSEntity.static_path`)*
 
@@ -229,9 +229,9 @@ view = aoi.mws.where(ba_name="Barmer")
 temporal_view = view.between(season="kharif", year=2021)
 ```
 
-**5. Materialization:** Trigger the actual Parquet I/O to pull the data into memory by accessing `.static`, `.annual`, or `.fortnightly`.
+**5. Materialization:** Trigger the actual Parquet I/O to pull the data into memory by accessing `.static`, `.annual`, or `.sub_annual`.
 ```python
-result = temporal_view.fortnightly
+result = temporal_view.sub_annual
 ```
 
 **6. Compute & Analysis:** Chain computations, derive metrics, or run statistical tests on the returned `Result`.

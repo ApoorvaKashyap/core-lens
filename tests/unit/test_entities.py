@@ -11,7 +11,7 @@ def test_tehsil_entity() -> None:
     assert entity.geometry_col == "geom"
     assert entity.static_path == "tehsil/static/tehsil.parquet"
     assert entity.annual_path is None
-    assert entity.fortnightly_path is None
+    assert entity.sub_annual_path is None
 
     # Check schema profile override
     profile = entity.schema_profile
@@ -27,4 +27,4 @@ def test_mws_entity() -> None:
     assert entity.geometry_col == "geometry"
     assert entity.static_path == "mws/static"
     assert entity.annual_path == "mws/annual"
-    assert entity.fortnightly_path == "mws/fortnightly"
+    assert entity.sub_annual_path == "mws/sub_annual"

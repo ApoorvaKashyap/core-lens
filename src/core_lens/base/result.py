@@ -15,9 +15,9 @@ if TYPE_CHECKING:
     from core_lens.base.namespaces.stats import StatsNamespace
     from core_lens.base.namespaces.plot import PlotNamespace
 
-_FORTNIGHTLY_ONLY_BY = {"month", "year_month", "season", "season_year"}
-_ANNUAL_OR_FORTNIGHTLY_BY = {"year"}
-_VALID_BY = {None} | _FORTNIGHTLY_ONLY_BY | _ANNUAL_OR_FORTNIGHTLY_BY
+_SUB_ANNUAL_ONLY_BY = {"month", "year_month", "season", "season_year"}
+_ANNUAL_OR_SUB_ANNUAL_BY = {"year"}
+_VALID_BY = {None} | _SUB_ANNUAL_ONLY_BY | _ANNUAL_OR_SUB_ANNUAL_BY
 
 
 class Result:
@@ -40,7 +40,7 @@ class Result:
             method parameters (e.g. ``{"method": "pearson", "p_value": 0.003}``).
             Empty on freshly materialised results.
         resolution: A :class:`~core_lens.schema.profile.Resolution` member
-            (``STATIC``, ``ANNUAL``, or ``FORTNIGHTLY``).  Used to validate
+            (``STATIC``, ``ANNUAL``, or ``SUB_ANNUAL``).  Used to validate
             which ``aggregate`` groupings are legal.
         has_geometry: ``True`` only for ``resolution="static"`` results and
             results on which :meth:`with_geometry` has been called.  When
@@ -150,7 +150,7 @@ class Result:
         ``Result`` with ``has_geometry=True``.
 
         This is the intended path for attaching coordinates to annual or
-        fortnightly results before calling :meth:`gdf` or
+        sub_annual results before calling :meth:`gdf` or
         ``result.plot.choropleth()``.
 
         Returns:
@@ -216,7 +216,7 @@ class Result:
            * - ``by``
              - static
              - annual
-             - fortnightly
+             - sub_annual
            * - ``None``
              - ❌
              - ✅
@@ -235,10 +235,10 @@ class Result:
                 (e.g. ``pl.mean("ndvi")``, ``pl.max("rainfall")``).
             by (str | None, optional): Grouping dimension.  ``None`` collapses all rows to one.
                 ``"year"`` groups by entity + year and is valid for both
-                annual and fortnightly resolution.
+                annual and sub_annual resolution.
                 Other temporal groupings (``"month"``, ``"year_month"``,
                 ``"season"``, ``"season_year"``) require
-                ``resolution="fortnightly"``.
+                ``resolution="sub_annual"``.
 
         Returns:
             Result: A new :class:`Result` whose ``data`` is the aggregated frame.
@@ -260,9 +260,9 @@ class Result:
                 "Static data has one row per entity with no time dimension to collapse."
             )
 
-        if by in _FORTNIGHTLY_ONLY_BY and self.resolution != Resolution.FORTNIGHTLY:
+        if by in _SUB_ANNUAL_ONLY_BY and self.resolution != Resolution.SUB_ANNUAL:
             raise ValueError(
-                f"Result.aggregate: Grouping by={by!r} requires data at fortnightly resolution, "
+                f"Result.aggregate: Grouping by={by!r} requires data at sub_annual resolution, "
                 f"but this result has resolution={self.resolution!r}."
             )
 

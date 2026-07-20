@@ -48,11 +48,11 @@ def _write_annual(path: pathlib.Path, time_col: str = "year") -> None:
     pl.DataFrame({"mws_id": ["1"], time_col: [2021]}).write_parquet(path)
 
 
-def _write_fortnightly(path: pathlib.Path) -> None:
+def _write_sub_annual(path: pathlib.Path) -> None:
     pl.DataFrame(
         {
             "mws_id": ["1"],
-            "fortnightly_date": [datetime.date(2022, 1, 1)],
+            "sub_annual_date": [datetime.date(2022, 1, 1)],
         }
     ).write_parquet(path)
 
@@ -67,7 +67,7 @@ class TestDetectFunction:
         assert profile.geometry_type == "wkb"
         assert profile.key_cols == ["mws_id"]
         assert profile.annual_time_col is None
-        assert profile.fortnightly_time_col is None
+        assert profile.sub_annual_time_col is None
 
     def test_static_only_wkt(self, tmp_path: Any) -> None:
         static = tmp_path / "s.parquet"
@@ -92,20 +92,20 @@ class TestDetectFunction:
 
         assert profile.annual_time_col == "year"
 
-    def test_static_with_fortnightly(self, tmp_path: Any) -> None:
+    def test_static_with_sub_annual(self, tmp_path: Any) -> None:
         static = tmp_path / "s.parquet"
         fn = tmp_path / "fn.parquet"
         _write_static(static, "wkb")
-        _write_fortnightly(fn)
+        _write_sub_annual(fn)
 
         profile = detect(
             str(static),
             key_cols=["mws_id"],
             geometry_col="geometry",
-            fortnightly_path=str(fn),
+            sub_annual_path=str(fn),
         )
 
-        assert profile.fortnightly_time_col == "fortnightly_date"
+        assert profile.sub_annual_time_col == "sub_annual_date"
 
     def test_missing_static_raises(self, tmp_path: Any) -> None:
         with pytest.raises(SchemaDetectionError, match="static"):

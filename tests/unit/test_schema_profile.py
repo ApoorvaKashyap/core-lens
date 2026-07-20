@@ -24,7 +24,7 @@ def _valid_kwargs(**overrides: Any) -> dict[str, Any]:
         "geometry_col": "geometry",
         "geometry_type": "wkb",
         "annual_time_col": None,
-        "fortnightly_time_col": None,
+        "sub_annual_time_col": None,
         "bbox_cols": None,
     }
     base.update(overrides)
@@ -39,7 +39,7 @@ class TestSchemaProfileConstruction:
         assert profile.geometry_col == "geometry"
         assert profile.geometry_type == "wkb"
         assert profile.annual_time_col is None
-        assert profile.fortnightly_time_col is None
+        assert profile.sub_annual_time_col is None
         assert profile.bbox_cols is None
 
     def test_defaults_for_extra_col_lists(self) -> None:
@@ -47,7 +47,7 @@ class TestSchemaProfileConstruction:
 
         assert profile.extra_static_cols == []
         assert profile.extra_annual_cols == []
-        assert profile.extra_fortnightly_cols == []
+        assert profile.extra_sub_annual_cols == []
 
     def test_composite_key_cols(self) -> None:
         profile = SchemaProfile(
@@ -73,24 +73,24 @@ class TestSchemaProfileConstruction:
             **_valid_kwargs(
                 extra_static_cols=["area_ha", "state"],
                 extra_annual_cols=["ndvi_mean"],
-                extra_fortnightly_cols=["ndvi"],
+                extra_sub_annual_cols=["ndvi"],
             )
         )
 
         assert "area_ha" in profile.extra_static_cols
         assert "ndvi_mean" in profile.extra_annual_cols
-        assert "ndvi" in profile.extra_fortnightly_cols
+        assert "ndvi" in profile.extra_sub_annual_cols
 
     def test_temporal_cols_stored(self) -> None:
         profile = SchemaProfile(
             **_valid_kwargs(
                 annual_time_col="year",
-                fortnightly_time_col="fortnightly_date",
+                sub_annual_time_col="sub_annual_date",
             )
         )
 
         assert profile.annual_time_col == "year"
-        assert profile.fortnightly_time_col == "fortnightly_date"
+        assert profile.sub_annual_time_col == "sub_annual_date"
 
 
 class TestSchemaProfileValidators:

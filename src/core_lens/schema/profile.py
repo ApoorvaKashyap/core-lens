@@ -14,7 +14,7 @@ class Resolution(str, Enum):
 
     STATIC = "static"
     ANNUAL = "annual"
-    FORTNIGHTLY = "fortnightly"
+    SUB_ANNUAL = "sub_annual"
 
 
 class SchemaProfile(BaseModel):
@@ -43,8 +43,8 @@ class SchemaProfile(BaseModel):
             set or a specific lat/lon pair to be documented separately).
         annual_time_col: Name of the date/year column in the annual Parquet file,
             or ``None`` if the entity has no annual data.
-        fortnightly_time_col: Name of the date column in the fortnightly Parquet
-            file, or ``None`` if the entity has no fortnightly data.
+        sub_annual_time_col: Name of the date column in the sub_annual Parquet
+            file, or ``None`` if the entity has no sub_annual data.
         bbox_cols: Four-tuple ``(minx, miny, maxx, maxy)`` of column names
             holding the pre-computed bounding box for each entity instance in the
             static file.  Used to build the in-memory index without a geometry
@@ -55,7 +55,7 @@ class SchemaProfile(BaseModel):
             readable via :meth:`~core_lens.base.result.Result.df`; this field
             is used for validation and documentation only.
         extra_annual_cols: Additional attribute columns in the annual file.
-        extra_fortnightly_cols: Additional attribute columns in the fortnightly file.
+        extra_sub_annual_cols: Additional attribute columns in the sub_annual file.
 
     """
 
@@ -65,17 +65,17 @@ class SchemaProfile(BaseModel):
     geometry_col: str
     geometry_type: Literal["wkb", "wkt", "latlon"]
     annual_time_col: str | None
-    fortnightly_time_col: str | None
+    sub_annual_time_col: str | None
     bbox_cols: tuple[str, str, str, str] | None
     extra_static_cols: list[str] = []
     extra_annual_cols: list[str] = []
-    extra_fortnightly_cols: list[str] = []
+    extra_sub_annual_cols: list[str] = []
     # Whether the time column is an integer-year column (True), a Date/Datetime
     # column (False), or absent/unknown (None).  Determined at detect() time from
     # the Parquet schema — eliminates a redundant collect_schema() call in
-    # View._materialise for every .annual / .fortnightly access.
+    # View._materialise for every .annual / .sub_annual access.
     annual_is_year_col: bool | None = None
-    fortnightly_is_year_col: bool | None = None
+    sub_annual_is_year_col: bool | None = None
 
     @classmethod
     def from_file(cls, path: str | pathlib.Path) -> "SchemaProfile":

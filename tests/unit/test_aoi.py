@@ -199,17 +199,17 @@ class TestAoIRegister:
         with pytest.raises(EntityValidationError, match="annual"):
             AoI.register(cls)
 
-    def test_register_missing_fortnightly_path_raises(
+    def test_register_missing_sub_annual_path_raises(
         self, tmp_path: Any, static_parquet: Any
     ) -> None:
         from conftest import _make_entity_cls
 
         cls = _make_entity_cls(
             static_parquet,
-            fortnightly=tmp_path / "nonexistent_fn.parquet",
+            sub_annual=tmp_path / "nonexistent_fn.parquet",
         )
 
-        with pytest.raises(EntityValidationError, match="fortnightly"):
+        with pytest.raises(EntityValidationError, match="sub_annual"):
             AoI.register(cls)
 
 

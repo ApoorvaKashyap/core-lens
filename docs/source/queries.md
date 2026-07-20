@@ -11,10 +11,10 @@ annual_data = aoi.mws.between("2010-01-01", "2023-12-31").annual
 # Season-based filtering (defaults to Kharif, Rabi, Zaid)
 from core_lens.base.view import Season
 
-kharif_2020 = aoi.mws.between(season=Season.KHARIF, year=2020).fortnightly
+kharif_2020 = aoi.mws.between(season=Season.KHARIF, year=2020).sub_annual
 
 # Current season based on today's date
-current = aoi.mws.between(season=Season.CURRENT).fortnightly
+current = aoi.mws.between(season=Season.CURRENT).sub_annual
 ```
 
 ## Aggregations & Derived Columns
@@ -31,10 +31,10 @@ derived_res = res_annual.derive(
     pl.when(pl.col("rainfall") < 500).then(1).otherwise(0)
 )
 
-# 2. Aggregate (temporal grouping like "month" requires fortnightly, but "year" works on annual too)
-res_fortnightly = aoi.mws.fortnightly
-monthly_avg = res_fortnightly.aggregate(pl.mean("ndvi"), by="month")
-seasonal_avg = res_fortnightly.aggregate(pl.mean("ndvi"), by="season_year")
+# 2. Aggregate (temporal grouping like "month" requires sub-annual, but "year" works on annual too)
+res_sub_annual = aoi.mws.sub_annual
+monthly_avg = res_sub_annual.aggregate(pl.mean("ndvi"), by="month")
+seasonal_avg = res_sub_annual.aggregate(pl.mean("ndvi"), by="season_year")
 ```
 
 ## Cross-Entity Spatial Joins
@@ -59,5 +59,5 @@ joined_view = aoi.mws.spatial_join(
 ```
 
 ```{note}
-Cross-entity spatial join execution (materialisation) is currently under development and will be added in a subsequent release. Calling materialisation methods (like `.annual`, `.static`, or `.fortnightly`) on a joined view will raise a `NotImplementedError` in the current version.
+Cross-entity spatial join execution (materialisation) is currently under development and will be added in a subsequent release. Calling materialisation methods (like `.annual`, `.static`, or `.sub_annual`) on a joined view will raise a `NotImplementedError` in the current version.
 ```

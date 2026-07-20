@@ -12,7 +12,7 @@ def test_schema_profile_from_file(tmp_path: pathlib.Path) -> None:
         "geometry_col": "geometry",
         "geometry_type": "wkb",
         "annual_time_col": "year",
-        "fortnightly_time_col": "date",
+        "sub_annual_time_col": "date",
         "bbox_cols": None,
     }
 

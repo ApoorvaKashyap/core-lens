@@ -650,7 +650,7 @@ class TestSimilarity:
         with pytest.raises(ValueError, match="None of the specified columns"):
             r.stats.similarity(target="13_001", columns={"ghost_col": ("static", None)})
 
-    def test_option3_fortnightly_and_filters(self, entity_cls_full: Any) -> None:
+    def test_option3_sub_annual_and_filters(self, entity_cls_full: Any) -> None:
         import sys
         import os
 
@@ -660,7 +660,7 @@ class TestSimilarity:
         from conftest import (
             _make_static_parquet,
             _make_annual_parquet,
-            _make_fortnightly_parquet,
+            _make_sub_annual_parquet,
             _make_entity_cls,
         )
         import tempfile
@@ -669,11 +669,11 @@ class TestSimilarity:
         with tempfile.TemporaryDirectory() as td:
             sp = pathlib.Path(td) / "static.parquet"
             ap = pathlib.Path(td) / "annual.parquet"
-            fp = pathlib.Path(td) / "fortnightly.parquet"
+            fp = pathlib.Path(td) / "sub_annual.parquet"
             _make_static_parquet(sp)
             _make_annual_parquet(ap)
-            _make_fortnightly_parquet(fp)
-            full_cls = _make_entity_cls(sp, annual=ap, fortnightly=fp)
+            _make_sub_annual_parquet(fp)
+            full_cls = _make_entity_cls(sp, annual=ap, sub_annual=fp)
 
             df = pl.DataFrame({"mws_id": ["13_001", "13_002"], "ndvi": [0.5, 0.6]})
             r = _make(full_cls(), df)
@@ -682,7 +682,7 @@ class TestSimilarity:
                 target="13_001",
                 columns={
                     "ndvi_mean": ("annual", {"year": 2021, "agg": "max"}),
-                    "ndvi": ("fortnightly", {"agg": "mean"}),
+                    "ndvi": ("sub_annual", {"agg": "mean"}),
                 },
             )
             assert "similarity_score" in out.df().columns

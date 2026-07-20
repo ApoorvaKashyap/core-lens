@@ -27,6 +27,6 @@ aoi = AoI("data/", tehsil="Pangi", district="Chamba")
 
 `core_lens` emits logs at different levels depending on the operational context:
 
-- **INFO**: Materialisation events (reading static, annual, or fortnightly Parquet files), entity registrations, AoI initialisation, and cross-entity spatial joins.
+- **INFO**: Materialisation events (reading static, annual, or sub-annual Parquet files), entity registrations, AoI initialisation, and cross-entity spatial joins.
 - **DEBUG**: Sub-operations such as spatial bounding box index generation, exact geometry relationships, lazy attribute filters, and query generation.
 - **ERROR**: Incorrect initialisation arguments, failed path validations, missing geometries, unknown schema structures, or conflicting date configurations.

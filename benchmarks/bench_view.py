@@ -4,14 +4,14 @@ Targets:
   - View.where()                attribute filter (Polars semi-join on static file)
   - View.spatial_filter()       STRtree filter narrowing existing keys
   - View.between()              time-filter dict construction (no I/O)
-  - View._materialise()         static / annual / fortnightly Parquet reads
+  - View._materialise()         static / annual / sub_annual Parquet reads
   - View chaining               where → spatial_filter → between → static
 
 Scalene focuses on:
   - scan_with_key_filter()      predicate-pushdown LazyFrame
   - collect_lf()                streaming collect (CPU or GPU)
   - resolve_time_filter()       expression build for time predicates
-  - add_temporal_columns()      fortnightly temporal column derivation
+  - add_temporal_columns()      sub_annual temporal column derivation
 
 Usage:
     uv run scalene run --html --outfile benchmarks/profiles/bench_view.html benchmarks/bench_view.py
@@ -140,12 +140,12 @@ print(f"annual           : {(t1 - t0) * 1000:.2f} ms")
 print(f"Shape            : {result_annual.df().shape}")
 
 
-# ── 11. fortnightly materialisation ───────────────────────────────────────────
-_section("11. aoi_small.mws.fortnightly  [fortnightly materialisation]")
+# ── 11. sub_annual materialisation ───────────────────────────────────────────
+_section("11. aoi_small.mws.sub_annual  [sub_annual materialisation]")
 t0 = time.perf_counter()
-result_fn = aoi_small.mws.between(season=Season.KHARIF, year=2022).fortnightly
+result_fn = aoi_small.mws.between(season=Season.KHARIF, year=2022).sub_annual
 t1 = time.perf_counter()
-print(f"fortnightly      : {(t1 - t0) * 1000:.2f} ms")
+print(f"sub_annual      : {(t1 - t0) * 1000:.2f} ms")
 print(f"Shape            : {result_fn.df().shape}")
 
 

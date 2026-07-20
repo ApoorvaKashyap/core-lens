@@ -188,7 +188,7 @@ class TestViewMaterialisation:
                     geometry_col="geometry",
                     geometry_type="wkb",
                     annual_time_col="time",
-                    fortnightly_time_col=None,
+                    sub_annual_time_col=None,
                     bbox_cols=None,
                     extra_static_cols=[],
                 )
@@ -217,13 +217,13 @@ class TestViewMaterialisation:
 
         assert result.has_geometry is False
 
-    def test_fortnightly_returns_result_without_geometry(
+    def test_sub_annual_returns_result_without_geometry(
         self, entity_cls_full: Any
     ) -> None:
         keys = pl.DataFrame({"mws_id": ["13_001"]})
         view = View(keys=keys, entity=entity_cls_full(), entity_name="minimalmws")
 
-        result = view.fortnightly
+        result = view.sub_annual
 
         assert result.has_geometry is False
 
@@ -234,12 +234,12 @@ class TestViewMaterialisation:
         with pytest.raises(AttributeError, match="no annual_path"):
             _ = view.annual
 
-    def test_fortnightly_raises_when_no_fortnightly_path(self, entity_cls: Any) -> None:
+    def test_sub_annual_raises_when_no_sub_annual_path(self, entity_cls: Any) -> None:
         keys = pl.DataFrame({"mws_id": ["13_001"]})
         view = View(keys=keys, entity=entity_cls(), entity_name="minimalmws")
 
-        with pytest.raises(AttributeError, match="no fortnightly_path"):
-            _ = view.fortnightly
+        with pytest.raises(AttributeError, match="no sub_annual_path"):
+            _ = view.sub_annual
 
     def test_spatial_join_materialises_prefixed_columns(self, entity_cls: Any) -> None:
         """Materialising a View with join_spec executes the join and
@@ -354,73 +354,55 @@ class TestViewMaterialisation:
         assert res is not None
 
 
-class TestFortnightlyTemporalColumns:
-    """Materialising a fortnightly View must inject all temporal grouping columns."""
+class TestSubAnnualTemporalColumns:
+    """Materialising a sub_annual View must inject all temporal grouping columns."""
 
     def test_year_column_added(self, entity_cls_full: Any) -> None:
         keys = pl.DataFrame({"mws_id": ["13_001"]})
-        result = View(
-            keys=keys, entity=entity_cls_full(), entity_name="mws"
-        ).fortnightly
+        result = View(keys=keys, entity=entity_cls_full(), entity_name="mws").sub_annual
         assert "year" in result.columns
 
     def test_month_column_added(self, entity_cls_full: Any) -> None:
         keys = pl.DataFrame({"mws_id": ["13_001"]})
-        result = View(
-            keys=keys, entity=entity_cls_full(), entity_name="mws"
-        ).fortnightly
+        result = View(keys=keys, entity=entity_cls_full(), entity_name="mws").sub_annual
         assert "month" in result.columns
 
     def test_year_month_column_added(self, entity_cls_full: Any) -> None:
         keys = pl.DataFrame({"mws_id": ["13_001"]})
-        result = View(
-            keys=keys, entity=entity_cls_full(), entity_name="mws"
-        ).fortnightly
+        result = View(keys=keys, entity=entity_cls_full(), entity_name="mws").sub_annual
         assert "year_month" in result.columns
 
     def test_season_column_added(self, entity_cls_full: Any) -> None:
         keys = pl.DataFrame({"mws_id": ["13_001"]})
-        result = View(
-            keys=keys, entity=entity_cls_full(), entity_name="mws"
-        ).fortnightly
+        result = View(keys=keys, entity=entity_cls_full(), entity_name="mws").sub_annual
         assert "season" in result.columns
 
     def test_season_year_column_added(self, entity_cls_full: Any) -> None:
         keys = pl.DataFrame({"mws_id": ["13_001"]})
-        result = View(
-            keys=keys, entity=entity_cls_full(), entity_name="mws"
-        ).fortnightly
+        result = View(keys=keys, entity=entity_cls_full(), entity_name="mws").sub_annual
         assert "season_year" in result.columns
 
     def test_year_values_correct(self, entity_cls_full: Any) -> None:
         keys = pl.DataFrame({"mws_id": ["13_001"]})
-        result = View(
-            keys=keys, entity=entity_cls_full(), entity_name="mws"
-        ).fortnightly
-        # conftest writes fortnightly_date = [2022-01-01, 2022-01-15] for mws_id 13_001
+        result = View(keys=keys, entity=entity_cls_full(), entity_name="mws").sub_annual
+        # conftest writes sub_annual_date = [2022-01-01, 2022-01-15] for mws_id 13_001
         assert result.df()["year"].to_list() == [2022, 2022]
 
     def test_year_month_format(self, entity_cls_full: Any) -> None:
         keys = pl.DataFrame({"mws_id": ["13_001"]})
-        result = View(
-            keys=keys, entity=entity_cls_full(), entity_name="mws"
-        ).fortnightly
+        result = View(keys=keys, entity=entity_cls_full(), entity_name="mws").sub_annual
         assert result.df()["year_month"].to_list() == ["2022-01", "2022-01"]
 
     def test_season_label_is_string(self, entity_cls_full: Any) -> None:
         keys = pl.DataFrame({"mws_id": ["13_001"]})
-        result = View(
-            keys=keys, entity=entity_cls_full(), entity_name="mws"
-        ).fortnightly
+        result = View(keys=keys, entity=entity_cls_full(), entity_name="mws").sub_annual
         for label in result.df()["season"].to_list():
             assert isinstance(label, str)
             assert label in {"kharif", "rabi", "zaid"}
 
     def test_season_year_format(self, entity_cls_full: Any) -> None:
         keys = pl.DataFrame({"mws_id": ["13_001"]})
-        result = View(
-            keys=keys, entity=entity_cls_full(), entity_name="mws"
-        ).fortnightly
+        result = View(keys=keys, entity=entity_cls_full(), entity_name="mws").sub_annual
         for label in result.df()["season_year"].to_list():
             # e.g. "rabi_2022"
             parts = label.rsplit("_", 1)
@@ -442,11 +424,11 @@ class TestFortnightlyTemporalColumns:
             static_path
         )
 
-        fn_path = tmp_path / "fortnightly.parquet"
+        fn_path = tmp_path / "sub_annual.parquet"
         pl.DataFrame(
             {
                 "mws_id": ["x"],
-                "fortnightly_date": [datetime.date(2022, 1, 1)],
+                "sub_annual_date": [datetime.date(2022, 1, 1)],
                 "year": [9999],  # pre-existing — must survive unchanged
                 "ndvi": [0.5],
             }
@@ -459,7 +441,7 @@ class TestFortnightlyTemporalColumns:
             geometry_col="geometry",
             geometry_type="wkb",
             annual_time_col=None,
-            fortnightly_time_col="fortnightly_date",
+            sub_annual_time_col="sub_annual_date",
             bbox_cols=None,
         )
 
@@ -477,7 +459,7 @@ class TestFortnightlyTemporalColumns:
                 return _static
 
             @property
-            def fortnightly_path(self) -> str | None:
+            def sub_annual_path(self) -> str | None:
                 return _fn
 
             @property
@@ -485,18 +467,16 @@ class TestFortnightlyTemporalColumns:
                 return _profile
 
         keys = pl.DataFrame({"mws_id": ["x"]})
-        result = View(keys=keys, entity=_TestEntity(), entity_name="test").fortnightly
+        result = View(keys=keys, entity=_TestEntity(), entity_name="test").sub_annual
         assert result.df()["year"].to_list() == [9999]
 
 
 class TestAggregateBySeasonIntegration:
-    """aggregate(by=...) must group correctly on fortnightly temporal columns."""
+    """aggregate(by=...) must group correctly on sub_annual temporal columns."""
 
     def test_aggregate_by_year_groups_correctly(self, entity_cls_full: Any) -> None:
         keys = pl.DataFrame({"mws_id": ["13_001"]})
-        result = View(
-            keys=keys, entity=entity_cls_full(), entity_name="mws"
-        ).fortnightly
+        result = View(keys=keys, entity=entity_cls_full(), entity_name="mws").sub_annual
         # both rows are 2022-01-xx → mean of [0.42, 0.47]
         agg = result.aggregate(pl.mean("ndvi"), by="year")
         df = agg.df()
@@ -506,9 +486,7 @@ class TestAggregateBySeasonIntegration:
 
     def test_aggregate_by_month_groups_correctly(self, entity_cls_full: Any) -> None:
         keys = pl.DataFrame({"mws_id": ["13_001"]})
-        result = View(
-            keys=keys, entity=entity_cls_full(), entity_name="mws"
-        ).fortnightly
+        result = View(keys=keys, entity=entity_cls_full(), entity_name="mws").sub_annual
         agg = result.aggregate(pl.mean("ndvi"), by="month")
         assert "month" in agg.df().columns
         assert len(agg.df()) == 1
@@ -517,9 +495,7 @@ class TestAggregateBySeasonIntegration:
         self, entity_cls_full: Any
     ) -> None:
         keys = pl.DataFrame({"mws_id": ["13_001"]})
-        result = View(
-            keys=keys, entity=entity_cls_full(), entity_name="mws"
-        ).fortnightly
+        result = View(keys=keys, entity=entity_cls_full(), entity_name="mws").sub_annual
         agg = result.aggregate(pl.mean("ndvi"), by="season")
         df = agg.df()
         assert "season" in df.columns
@@ -530,9 +506,7 @@ class TestAggregateBySeasonIntegration:
         self, entity_cls_full: Any
     ) -> None:
         keys = pl.DataFrame({"mws_id": ["13_001"]})
-        result = View(
-            keys=keys, entity=entity_cls_full(), entity_name="mws"
-        ).fortnightly
+        result = View(keys=keys, entity=entity_cls_full(), entity_name="mws").sub_annual
         agg = result.aggregate(pl.mean("ndvi"), by="season_year")
         df = agg.df()
         assert "season_year" in df.columns
@@ -544,9 +518,7 @@ class TestAggregateBySeasonIntegration:
         self, entity_cls_full: Any
     ) -> None:
         keys = pl.DataFrame({"mws_id": ["13_001"]})
-        result = View(
-            keys=keys, entity=entity_cls_full(), entity_name="mws"
-        ).fortnightly
+        result = View(keys=keys, entity=entity_cls_full(), entity_name="mws").sub_annual
         agg = result.aggregate(pl.mean("ndvi"), by="year_month")
         assert "year_month" in agg.df().columns
         assert agg.df()["year_month"].to_list() == ["2022-01"]
@@ -554,9 +526,7 @@ class TestAggregateBySeasonIntegration:
     def test_aggregate_ndvi_mean_value(self, entity_cls_full: Any) -> None:
         """Mean of 0.42 and 0.47 → 0.445."""
         keys = pl.DataFrame({"mws_id": ["13_001"]})
-        result = View(
-            keys=keys, entity=entity_cls_full(), entity_name="mws"
-        ).fortnightly
+        result = View(keys=keys, entity=entity_cls_full(), entity_name="mws").sub_annual
         agg = result.aggregate(pl.mean("ndvi"), by="year")
         import math
 
@@ -567,7 +537,7 @@ class TestAggregateBySeasonIntegration:
         keys = pl.DataFrame({"mws_id": ["13_001"]})
         result = (
             View(keys=keys, entity=entity_cls_full(), entity_name="mws")
-            .fortnightly.derive("ndvi_pct", pl.col("ndvi") * 100)
+            .sub_annual.derive("ndvi_pct", pl.col("ndvi") * 100)
             .aggregate(pl.mean("ndvi_pct"), by="year")
         )
         assert "ndvi_pct" in result.df().columns

@@ -272,7 +272,7 @@ class AoI:
 
     ``AoI`` holds no data itself.  Entity attributes are lazy
     :class:`~core_lens.base.view.View` objects; no Parquet I/O occurs until a
-    materialisation property (``.static``, ``.annual``, ``.fortnightly``) is
+    materialisation property (``.static``, ``.annual``, ``.sub_annual``) is
     accessed on a View.
 
     **Registration** must happen before any ``AoI`` is constructed::
@@ -685,7 +685,7 @@ def _bbox_to_polygon(
 def _validate_entity_paths(entity: BaseEntity, name: str) -> None:
     """Validate an entity's path existence only — no Parquet I/O.
 
-    Checks that ``static_path``, ``annual_path``, and ``fortnightly_path``
+    Checks that ``static_path``, ``annual_path``, and ``sub_annual_path``
     resolve to existing local files.  Schema validation (key columns,
     geometry column, geometry type) is intentionally deferred to first data
     access via :attr:`BaseEntity.schema_profile`, which routes through the
@@ -727,7 +727,7 @@ def _validate_entity_paths(entity: BaseEntity, name: str) -> None:
         )
 
     # --- Temporal path existence checks (no schema read) --------------------
-    for attr, label in [("annual_path", "annual"), ("fortnightly_path", "fortnightly")]:
+    for attr, label in [("annual_path", "annual"), ("sub_annual_path", "sub_annual")]:
         path = getattr(entity, attr)
         if path is not None:
             try:

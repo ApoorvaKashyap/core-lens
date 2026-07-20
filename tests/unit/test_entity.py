@@ -69,7 +69,7 @@ class TestEntityWhere:
                     geometry_col="geometry",
                     geometry_type="wkb",
                     annual_time_col=None,
-                    fortnightly_time_col=None,
+                    sub_annual_time_col=None,
                     bbox_cols=None,
                 )
 
@@ -142,7 +142,7 @@ class TestEntitySchemaProfile:
                 return None
 
             @property
-            def fortnightly_path(self) -> str | None:
+            def sub_annual_path(self) -> str | None:
                 return None
 
         entity = RealEntity()

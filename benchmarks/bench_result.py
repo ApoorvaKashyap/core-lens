@@ -7,7 +7,7 @@ Targets:
   - Result.with_geometry()      static-join to attach geometry to non-static result
   - Result.derive()             with_columns expression append
   - Result.aggregate()          group_by + agg (no temporal grouping)
-  - Result.aggregate(by=...)    temporal grouping (annual / fortnightly)
+  - Result.aggregate(by=...)    temporal grouping (annual / sub_annual)
 
 Scalene focuses on:
   - shapely.wkb.loads() in gdf() — Python loop over WKB bytes
@@ -130,7 +130,7 @@ print(
 )
 
 
-# ── Note: meaningful with_geometry() test requires annual/fortnightly result ──
+# ── Note: meaningful with_geometry() test requires annual/sub_annual result ──
 # Uncomment with an MWS entity that has annual_path set:
 
 result_annual = aoi.mws.annual  # no geometry

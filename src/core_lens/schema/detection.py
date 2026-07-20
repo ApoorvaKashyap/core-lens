@@ -25,7 +25,7 @@ _TIME_COL_NAMES: set[str] = {
     "time",
     "period",
     "annual_date",
-    "fortnightly_date",
+    "sub_annual_date",
     "obs_date",
 }
 
@@ -43,7 +43,7 @@ def detect(
     key_cols: list[str],
     geometry_col: str,
     annual_path: str | None = None,
-    fortnightly_path: str | None = None,
+    sub_annual_path: str | None = None,
     storage_options: dict[str, Any] | None = None,
 ) -> SchemaProfile:
     """Introspect Parquet file schemas and return a validated SchemaProfile.
@@ -59,7 +59,7 @@ def detect(
       with a detected lon companion column → ``"latlon"``.
     * **bbox_cols** — checked against a fixed set of four-column name
       patterns.  ``None`` if no known pattern is present in the static schema.
-    * **annual_time_col** / **fortnightly_time_col** — the first column with
+    * **annual_time_col** / **sub_annual_time_col** — the first column with
       a ``Date``, ``Datetime``, or ``Int`` dtype whose name matches a known
       set of time-column names.  Falls back to the first ``Date``/``Datetime``
       column regardless of name.
@@ -71,7 +71,7 @@ def detect(
         key_cols (list[str]): Entity key column name(s), as declared on the entity.
         geometry_col (str): Geometry column name, as declared on the entity.
         annual_path (str | None, optional): Path or cloud URI to the annual Parquet file, or ``None``.
-        fortnightly_path (str | None, optional): Path or cloud URI to the fortnightly Parquet file, or ``None``.
+        sub_annual_path (str | None, optional): Path or cloud URI to the sub_annual Parquet file, or ``None``.
         storage_options (dict[str, Any] | None, optional): Cloud credential / configuration
             options forwarded to ``pl.scan_parquet``.  ``None`` uses ambient credentials.
 
@@ -117,20 +117,20 @@ def detect(
         extra_annual_cols = [c for c in annual_schema if c not in reserved_annual]
         annual_is_year_col = _is_year_col_from_schema(annual_schema, annual_time_col)
 
-    fortnightly_time_col: str | None = None
-    extra_fortnightly_cols: list[str] = []
-    fortnightly_is_year_col: bool | None = None
-    if fortnightly_path:
-        fortnightly_schema = _read_schema(
-            fortnightly_path, label="fortnightly", storage_options=_so or None
+    sub_annual_time_col: str | None = None
+    extra_sub_annual_cols: list[str] = []
+    sub_annual_is_year_col: bool | None = None
+    if sub_annual_path:
+        sub_annual_schema = _read_schema(
+            sub_annual_path, label="sub_annual", storage_options=_so or None
         )
-        fortnightly_time_col = _infer_time_col(fortnightly_schema, fortnightly_path)
+        sub_annual_time_col = _infer_time_col(sub_annual_schema, sub_annual_path)
         reserved_fn = set(key_cols) | (
-            {fortnightly_time_col} if fortnightly_time_col else set()
+            {sub_annual_time_col} if sub_annual_time_col else set()
         )
-        extra_fortnightly_cols = [c for c in fortnightly_schema if c not in reserved_fn]
-        fortnightly_is_year_col = _is_year_col_from_schema(
-            fortnightly_schema, fortnightly_time_col
+        extra_sub_annual_cols = [c for c in sub_annual_schema if c not in reserved_fn]
+        sub_annual_is_year_col = _is_year_col_from_schema(
+            sub_annual_schema, sub_annual_time_col
         )
 
     return SchemaProfile(
@@ -138,13 +138,13 @@ def detect(
         geometry_col=geometry_col,
         geometry_type=geometry_type,
         annual_time_col=annual_time_col,
-        fortnightly_time_col=fortnightly_time_col,
+        sub_annual_time_col=sub_annual_time_col,
         bbox_cols=bbox_cols,
         extra_static_cols=extra_static_cols,
         extra_annual_cols=extra_annual_cols,
-        extra_fortnightly_cols=extra_fortnightly_cols,
+        extra_sub_annual_cols=extra_sub_annual_cols,
         annual_is_year_col=annual_is_year_col,
-        fortnightly_is_year_col=fortnightly_is_year_col,
+        sub_annual_is_year_col=sub_annual_is_year_col,
     )
 
 

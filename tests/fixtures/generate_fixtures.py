@@ -85,7 +85,7 @@ def generate_annual(
     print(f"Generated {entity_name}/annual.parquet with {len(data)} columns")
 
 
-def generate_fortnightly(
+def generate_sub_annual(
     output_dir: pathlib.Path,
     entity_name: str,
     ids: list[str],
@@ -104,7 +104,7 @@ def generate_fortnightly(
             id_list.append(entity_id)
             date_list.append(d)
 
-    data = {id_col: id_list, "fortnightly_date": date_list}
+    data = {id_col: id_list, "sub_annual_date": date_list}
 
     for col, dtype in schema.items():
         if dtype == "int":
@@ -115,8 +115,8 @@ def generate_fortnightly(
             data[col] = [fake.word() for _ in range(num_items)]
 
     df = pl.DataFrame(data)
-    df.write_parquet(entity_dir / "fortnightly.parquet")
-    print(f"Generated {entity_name}/fortnightly.parquet with {len(data)} columns")
+    df.write_parquet(entity_dir / "sub_annual.parquet")
+    print(f"Generated {entity_name}/sub_annual.parquet with {len(data)} columns")
 
 
 def generate_fixtures(output_dir: pathlib.Path) -> None:
@@ -148,7 +148,7 @@ def generate_fixtures(output_dir: pathlib.Path) -> None:
         output_dir, "mws", mws_ids, "mws_id", [2021, 2022], mws_annual_schema
     )
 
-    mws_fortnightly_schema = {
+    mws_sub_annual_schema = {
         "ndvi": "float",
         "precip": "float",
         "tmax": "float",
@@ -165,8 +165,8 @@ def generate_fixtures(output_dir: pathlib.Path) -> None:
         datetime.date(2022, 1, 15),
         datetime.date(2022, 2, 1),
     ]
-    generate_fortnightly(
-        output_dir, "mws", mws_ids, "mws_id", dates, mws_fortnightly_schema
+    generate_sub_annual(
+        output_dir, "mws", mws_ids, "mws_id", dates, mws_sub_annual_schema
     )
 
     # Tehsil

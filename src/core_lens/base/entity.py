@@ -77,7 +77,7 @@ def _cached_detect(
     key_cols: tuple[str, ...],
     geometry_col: str,
     annual_path: str | None,
-    fortnightly_path: str | None,
+    sub_annual_path: str | None,
     storage_options_key: tuple[tuple[str, Any], ...],
 ) -> "SchemaProfile":
     """Cached wrapper around :func:`~core_lens.schema.detection.detect`.
@@ -96,7 +96,7 @@ def _cached_detect(
         key_cols=list(key_cols),
         geometry_col=geometry_col,
         annual_path=annual_path,
-        fortnightly_path=fortnightly_path,
+        sub_annual_path=sub_annual_path,
         storage_options=dict(storage_options_key) or None,
     )
 
@@ -150,7 +150,7 @@ class BaseEntity(ABC):
     Subclasses **may** override:
 
     * :attr:`annual_path`       — path to the annual time-series Parquet file
-    * :attr:`fortnightly_path`  — path to the fortnightly time-series Parquet file
+    * :attr:`sub_annual_path`  — path to the sub_annual time-series Parquet file
     * :attr:`schema_profile`    — override auto-detection by returning an
                                   explicit :class:`~core_lens.schema.profile.SchemaProfile`
 
@@ -176,7 +176,7 @@ class BaseEntity(ABC):
     1. ``static_path`` exists and is readable.
     2. ``key_cols`` are present and unique in the static file.
     3. ``geometry_col`` is present and contains valid geometries.
-    4. ``annual_path`` and ``fortnightly_path`` exist if declared.
+    4. ``annual_path`` and ``sub_annual_path`` exist if declared.
 
     Any failure raises :class:`~core_lens.base.entity.EntityValidationError`.
     """
@@ -192,7 +192,7 @@ class BaseEntity(ABC):
             data_root (str | pathlib.Path | None, optional): Root data directory or cloud
                 URI prefix (e.g. ``"s3://bucket/data"``).  Relative
                 :attr:`static_path`, :attr:`annual_path`, and
-                :attr:`fortnightly_path` values are resolved against this
+                :attr:`sub_annual_path` values are resolved against this
                 root.  Defaults to ``None`` (resolved against cwd).
             storage_options (dict[str, Any] | None, optional): Cloud credential /
                 configuration options forwarded to ``pyarrow.fs`` and
@@ -322,15 +322,15 @@ class BaseEntity(ABC):
         return None
 
     @property
-    def fortnightly_path(self) -> str | None:
-        """Path to the fortnightly time-series Parquet file, or ``None``.
+    def sub_annual_path(self) -> str | None:
+        """Path to the sub_annual time-series Parquet file, or ``None``.
 
-        Override in subclasses that carry fortnightly temporal data.  If
+        Override in subclasses that carry sub_annual temporal data.  If
         declared, the file must exist at :meth:`AoI.register` time or
         :class:`EntityValidationError` is raised.
 
         Returns:
-            str | None: A path string, or ``None`` if the entity has no fortnightly data.
+            str | None: A path string, or ``None`` if the entity has no sub_annual data.
 
         """
         return None
@@ -369,9 +369,9 @@ class BaseEntity(ABC):
                     if self.annual_path is not None
                     else None
                 ),
-                fortnightly_path=(
-                    self._resolve(self.fortnightly_path)
-                    if self.fortnightly_path is not None
+                sub_annual_path=(
+                    self._resolve(self.sub_annual_path)
+                    if self.sub_annual_path is not None
                     else None
                 ),
                 storage_options_key=_so_key(_so),
@@ -659,7 +659,7 @@ class BaseEntity(ABC):
         r"""Return a lazy :class:`~core_lens.base.view.View` with a cross-entity join pending.
 
         The join is recorded in the View's ``join_spec`` and computed only at
-        materialisation time (``.static``, ``.annual``, or ``.fortnightly``).
+        materialisation time (``.static``, ``.annual``, or ``.sub_annual``).
         Joined columns are namespaced as ``{entity_name}_{column_name}``.
 
         Args:

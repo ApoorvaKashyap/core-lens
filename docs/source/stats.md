@@ -107,7 +107,7 @@ similar = res.stats.similarity(
     target="13_551",
     columns={
         "rainfall": ("annual", {"year": 2018}),
-        "ndvi": ("fortnightly", {"season": "kharif", "year": 2020})
+        "ndvi": ("sub_annual", {"season": "kharif", "year": 2020})
     },
     method=SimilarityMethod.EUCLIDEAN,
     top_n=10

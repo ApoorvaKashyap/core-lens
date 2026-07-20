@@ -32,7 +32,7 @@ class DummyEntity(BaseEntity):
             geometry_col="geometry",
             geometry_type="wkb",
             annual_time_col=None,
-            fortnightly_time_col=None,
+            sub_annual_time_col=None,
             bbox_cols=None,
         )
 

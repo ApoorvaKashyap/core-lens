@@ -57,7 +57,7 @@ class TehsilEntity(BaseEntity):
                 geometry_col="geom",
                 geometry_type="wkb",
                 annual_time_col=None,
-                fortnightly_time_col=None,
+                sub_annual_time_col=None,
                 bbox_cols=None,
                 extra_static_cols=[
                     "TEHSIL",

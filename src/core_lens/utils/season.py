@@ -222,7 +222,7 @@ def add_temporal_columns(
     Adds the five columns that :meth:`~core_lens.base.result.Result.aggregate`
     accepts as ``by`` values.  Called by the materialisation layer
     (:meth:`~core_lens.base.view.View._materialise`) immediately after collect
-    for every fortnightly :class:`~core_lens.base.result.Result`.
+    for every sub_annual :class:`~core_lens.base.result.Result`.
 
     Columns added (if not already present):
 
@@ -236,7 +236,7 @@ def add_temporal_columns(
     untouched — this prevents overwriting data the entity itself may supply.
 
     Args:
-        df (pl.DataFrame | pl.LazyFrame): The collected fortnightly DataFrame.
+        df (pl.DataFrame | pl.LazyFrame): The collected sub_annual DataFrame.
         time_col (str): Name of the date/datetime column to derive from.
         season_config (SeasonConfig): The :class:`~core_lens.aoi.SeasonConfig` in effect,
             used to map each date to its season name.

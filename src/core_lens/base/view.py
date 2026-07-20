@@ -217,7 +217,7 @@ class View:
         """Return a new View with a cross-entity join pending.
 
         The join is recorded in the View's ``join_spec`` and computed only at
-        materialisation time (``.static``, ``.annual``, or ``.fortnightly``).
+        materialisation time (``.static``, ``.annual``, or ``.sub_annual``).
 
         Args:
             other (BaseEntity): The secondary :class:`BaseEntity` whose columns will be
@@ -379,18 +379,18 @@ class View:
         return self._materialise(Resolution.ANNUAL)
 
     @property
-    def fortnightly(self) -> "Result":
-        """Resolve the fortnightly Parquet file scan and return a :class:`~core_lens.base.result.Result`.
+    def sub_annual(self) -> "Result":
+        """Resolve the sub_annual Parquet file scan and return a :class:`~core_lens.base.result.Result`.
 
         Returns:
             Result: A :class:`~core_lens.base.result.Result` with
-            ``resolution="fortnightly"`` and ``has_geometry=False``.
+            ``resolution="sub_annual"`` and ``has_geometry=False``.
 
         Raises:
-            AttributeError: If the entity has no ``fortnightly_path``.
+            AttributeError: If the entity has no ``sub_annual_path``.
 
         """
-        return self._materialise(Resolution.FORTNIGHTLY)
+        return self._materialise(Resolution.SUB_ANNUAL)
 
     def _materialise(self, resolution: Resolution) -> "Result":
         from core_lens.base.result import Result
@@ -416,14 +416,14 @@ class View:
                 )
             path = annual_path
         else:
-            fn_path = self.entity.fortnightly_path
+            fn_path = self.entity.sub_annual_path
             if fn_path is None:
                 logger.error(
-                    "View._materialise failed: Entity '{}' has no fortnightly_path declared.",
+                    "View._materialise failed: Entity '{}' has no sub_annual_path declared.",
                     self.entity_name,
                 )
                 raise AttributeError(
-                    f"Entity {self.entity_name!r} has no fortnightly_path declared."
+                    f"Entity {self.entity_name!r} has no sub_annual_path declared."
                 )
             path = fn_path
 
@@ -436,7 +436,7 @@ class View:
             time_col = (
                 profile.annual_time_col
                 if resolution == Resolution.ANNUAL
-                else profile.fortnightly_time_col
+                else profile.sub_annual_time_col
             )
             if time_col is not None:
                 from core_lens.utils.season import resolve_time_filter
@@ -451,7 +451,7 @@ class View:
                 _is_year_col: bool | None = (
                     profile.annual_is_year_col
                     if resolution == Resolution.ANNUAL
-                    else profile.fortnightly_is_year_col
+                    else profile.sub_annual_is_year_col
                 )
 
                 # Pass as a private hint inside the filter dict (non-mutating copy).
@@ -470,12 +470,12 @@ class View:
         )
         data = lf
 
-        # For fortnightly results, inject temporal grouping columns so that
+        # For sub_annual results, inject temporal grouping columns so that
         # aggregate(by="year"), aggregate(by="season"), etc. work out of the
         # box without callers having to derive them manually.
         if (
-            resolution == Resolution.FORTNIGHTLY
-            and profile.fortnightly_time_col is not None
+            resolution == Resolution.SUB_ANNUAL
+            and profile.sub_annual_time_col is not None
         ):
             from core_lens.utils.season import add_temporal_columns
             from core_lens.aoi import _default_season_config
@@ -485,7 +485,7 @@ class View:
 
             data = cast(
                 pl.LazyFrame,
-                add_temporal_columns(data, profile.fortnightly_time_col, season_cfg),
+                add_temporal_columns(data, profile.sub_annual_time_col, season_cfg),
             )
 
         if self.join_spec is not None:

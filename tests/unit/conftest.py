@@ -53,8 +53,8 @@ def _make_annual_parquet(path: pathlib.Path) -> None:
     ).write_parquet(path)
 
 
-def _make_fortnightly_parquet(path: pathlib.Path) -> None:
-    """Write a minimal fortnightly Parquet to *path*.
+def _make_sub_annual_parquet(path: pathlib.Path) -> None:
+    """Write a minimal sub_annual Parquet to *path*.
 
     Args:
         path: Destination file path.
@@ -63,7 +63,7 @@ def _make_fortnightly_parquet(path: pathlib.Path) -> None:
     pl.DataFrame(
         {
             "mws_id": ["13_001", "13_001"],
-            "fortnightly_date": [
+            "sub_annual_date": [
                 datetime.date(2022, 1, 1),
                 datetime.date(2022, 1, 15),
             ],
@@ -75,7 +75,7 @@ def _make_fortnightly_parquet(path: pathlib.Path) -> None:
 def _make_entity_cls(
     static: pathlib.Path,
     annual: pathlib.Path | None = None,
-    fortnightly: pathlib.Path | None = None,
+    sub_annual: pathlib.Path | None = None,
 ) -> type[BaseEntity]:
     """Dynamically create a concrete ``BaseEntity`` subclass for testing.
 
@@ -85,7 +85,7 @@ def _make_entity_cls(
     Args:
         static: Path to the static GeoParquet file.
         annual: Path to the annual Parquet file, or ``None``.
-        fortnightly: Path to the fortnightly Parquet file, or ``None``.
+        sub_annual: Path to the sub_annual Parquet file, or ``None``.
 
     Returns:
         A ``BaseEntity`` subclass ready for ``AoI.register``.
@@ -96,7 +96,7 @@ def _make_entity_cls(
         geometry_col="geometry",
         geometry_type="wkb",
         annual_time_col="year" if annual else None,
-        fortnightly_time_col="fortnightly_date" if fortnightly else None,
+        sub_annual_time_col="sub_annual_date" if sub_annual else None,
         bbox_cols=None,
         extra_static_cols=["district"],
     )
@@ -104,7 +104,7 @@ def _make_entity_cls(
     # Capture paths as locals so the inner class closure is self-contained.
     _static = str(static)
     _annual = str(annual) if annual else None
-    _fortnightly = str(fortnightly) if fortnightly else None
+    _sub_annual = str(sub_annual) if sub_annual else None
     _profile = profile
 
     class MinimalMWSEntity(BaseEntity):
@@ -125,8 +125,8 @@ def _make_entity_cls(
             return _annual
 
         @property
-        def fortnightly_path(self) -> str | None:
-            return _fortnightly
+        def sub_annual_path(self) -> str | None:
+            return _sub_annual
 
         @property
         def schema_profile(self) -> SchemaProfile:
@@ -168,10 +168,10 @@ def annual_parquet(tmp_path: pathlib.Path) -> pathlib.Path:
 
 
 @pytest.fixture()
-def fortnightly_parquet(tmp_path: pathlib.Path) -> pathlib.Path:
-    """Return the path to a freshly written fortnightly Parquet file."""
-    p = tmp_path / "fortnightly.parquet"
-    _make_fortnightly_parquet(p)
+def sub_annual_parquet(tmp_path: pathlib.Path) -> pathlib.Path:
+    """Return the path to a freshly written sub_annual Parquet file."""
+    p = tmp_path / "sub_annual.parquet"
+    _make_sub_annual_parquet(p)
     return p
 
 
@@ -185,10 +185,10 @@ def entity_cls(static_parquet: pathlib.Path) -> type[BaseEntity]:
 def entity_cls_full(
     static_parquet: pathlib.Path,
     annual_parquet: pathlib.Path,
-    fortnightly_parquet: pathlib.Path,
+    sub_annual_parquet: pathlib.Path,
 ) -> type[BaseEntity]:
     """Return a concrete entity class backed by all three Parquet files."""
-    return _make_entity_cls(static_parquet, annual_parquet, fortnightly_parquet)
+    return _make_entity_cls(static_parquet, annual_parquet, sub_annual_parquet)
 
 
 @pytest.fixture()
@@ -218,7 +218,7 @@ def minimal_schema() -> SchemaProfile:
         geometry_col="geometry",
         geometry_type="wkb",
         annual_time_col=None,
-        fortnightly_time_col=None,
+        sub_annual_time_col=None,
         bbox_cols=None,
     )
 

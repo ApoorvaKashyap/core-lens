@@ -384,7 +384,7 @@ class PlotNamespace:
         if subplot_col is not None and subplot_col not in res.columns:
             raise ValueError(
                 f"PlotNamespace.choropleth: subplot_on column {subplot_col!r} not found "
-                "in Result. Ensure fortnightly data is materialised and temporal columns "
+                "in Result. Ensure sub_annual data is materialised and temporal columns "
                 "are present (they are added automatically by the materialisation layer)."
             )
 

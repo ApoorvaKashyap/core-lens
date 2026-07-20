@@ -208,7 +208,7 @@ print(test_vs_ref.metadata)
 
 
 # ── 14. Stats — change ────────────────────────────────────────────────────────
-# Note: change() is most meaningful on annual/fortnightly data.
+# Note: change() is most meaningful on annual/sub_annual data.
 # For static entities it still works if the data carries a numeric column
 # that can be compared between two named groups or derived states.
 # Here we illustrate absolute change between two derived values stored
@@ -254,7 +254,7 @@ print("Polygon-filtered count  :", len(result_poly.df()))
 
 
 # ── 17. with_geometry() ───────────────────────────────────────────────────────
-# .static already has geometry.  On annual/fortnightly results (other entities)
+# .static already has geometry.  On annual/sub_annual results (other entities)
 # you'd call this to join geometry back in.  Demonstrated here for completeness.
 
 result_geo = result.with_geometry()  # no-op since already has_geometry=True

@@ -36,7 +36,7 @@ DATA_ROOT = "data/"
 entity = MWSEntity(data_root=DATA_ROOT)
 static_path = entity._resolve(entity.static_path)
 annual_path = entity._resolve(entity.annual_path) if entity.annual_path else None
-fn_path = entity._resolve(entity.fortnightly_path) if entity.fortnightly_path else None
+fn_path = entity._resolve(entity.sub_annual_path) if entity.sub_annual_path else None
 
 
 def _section(title: str) -> None:
@@ -104,7 +104,7 @@ print(
 print(f"Detected time col: {_infer_time_col(schema, static_path)!r}")
 
 
-# ── 5. detect() — cold (no annual/fortnightly) ────────────────────────────────
+# ── 5. detect() — cold (no annual/sub_annual) ────────────────────────────────
 _section("5. detect(static only)  [full detection — cold]")
 REPS = 10
 profile = detect(  # ensure bound before loop
@@ -112,7 +112,7 @@ profile = detect(  # ensure bound before loop
     key_cols=entity.key_cols,
     geometry_col=entity.geometry_col,
     annual_path=None,
-    fortnightly_path=None,
+    sub_annual_path=None,
 )
 t0 = time.perf_counter()
 for _ in range(REPS):
@@ -121,7 +121,7 @@ for _ in range(REPS):
         key_cols=entity.key_cols,
         geometry_col=entity.geometry_col,
         annual_path=None,
-        fortnightly_path=None,
+        sub_annual_path=None,
     )
 t1 = time.perf_counter()
 print(
@@ -133,15 +133,15 @@ print(f"Profile bbox_cols     : {profile.bbox_cols!r}")
 print(f"Profile extra_static  : {profile.extra_static_cols}")
 
 
-# ── 6. detect() — with annual + fortnightly ───────────────────────────────────
+# ── 6. detect() — with annual + sub_annual ───────────────────────────────────
 if annual_path or fn_path:
-    _section("6. detect(static + annual + fortnightly)  [3× schema reads]")
+    _section("6. detect(static + annual + sub_annual)  [3× schema reads]")
     profile_full = detect(  # ensure bound before loop
         static_path=static_path,
         key_cols=entity.key_cols,
         geometry_col=entity.geometry_col,
         annual_path=annual_path,
-        fortnightly_path=fn_path,
+        sub_annual_path=fn_path,
     )
     t0 = time.perf_counter()
     for _ in range(REPS):
@@ -150,7 +150,7 @@ if annual_path or fn_path:
             key_cols=entity.key_cols,
             geometry_col=entity.geometry_col,
             annual_path=annual_path,
-            fortnightly_path=fn_path,
+            sub_annual_path=fn_path,
         )
     t1 = time.perf_counter()
     print(
@@ -158,10 +158,10 @@ if annual_path or fn_path:
         f"({(t1 - t0) / REPS * 1000:.2f} ms/call)"
     )
     print(f"annual_time_col      : {profile_full.annual_time_col!r}")
-    print(f"fortnightly_time_col : {profile_full.fortnightly_time_col!r}")
+    print(f"sub_annual_time_col : {profile_full.sub_annual_time_col!r}")
 else:
     print(
-        "\n[skip] No annual/fortnightly paths on TehsilEntity — add an entity with those paths"
+        "\n[skip] No annual/sub_annual paths on TehsilEntity — add an entity with those paths"
     )
 
 

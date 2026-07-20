@@ -16,13 +16,13 @@ Data layout expected
         │   └── mws.parquet   ← GeoParquet with WKB geometry in "geom"
         ├── annual/
         │   └── ...           ← Parquet partitioned by year
-        └── fortnightly/
+        └── sub_annual/
             └── ...           ← Parquet partitioned by basin and year
 
 Columns available:
 - Static: mws_id, tehsil, district, state, area_in_ha, ba_name, geometry, etc.
 - Annual: mws_id, year, dw_precipitation, dw_et, ci_cropping_intensity, etc.
-- Fortnightly: mws_id, date, df_precipitation, df_et, season, etc.
+- SubAnnual: mws_id, date, df_precipitation, df_et, season, etc.
 """
 
 from __future__ import annotations
@@ -122,9 +122,9 @@ print("\nDataFrame head (static):")
 print(df_static.select(["mws_id", "tehsil", "district", "state", "area_in_ha"]).head(3))
 
 
-# ── 9. Temporal querying & Materialisation — .annual & .fortnightly ──────────
+# ── 9. Temporal querying & Materialisation — .annual & .sub_annual ──────────
 # Use .between() to specify a time filter (year range, or season)
-# Then use .annual or .fortnightly to materialise
+# Then use .annual or .sub_annual to materialise
 
 # Annual data for a range of years
 view_annual = view_barmer.between("2018-01-01", "2023-12-31")
@@ -133,13 +133,13 @@ print("\nAnnual result columns (first 10):", result_annual.columns[:10])
 print("Resolution            :", result_annual.resolution)
 print("Has geometry          :", result_annual.has_geometry)  # False by default
 
-# Fortnightly data for a specific season and year
-result_fn = view_barmer.between(season=Season.KHARIF, year=2021).fortnightly
-print("\nFortnightly columns (first 10):", result_fn.columns[:10])
+# SubAnnual data for a specific season and year
+result_fn = view_barmer.between(season=Season.KHARIF, year=2021).sub_annual
+print("\nSubAnnual columns (first 10):", result_fn.columns[:10])
 
 
 # ── 10. with_geometry() ──────────────────────────────────────────────────────
-# .annual and .fortnightly lack geometry to save memory. Use with_geometry()
+# .annual and .sub_annual lack geometry to save memory. Use with_geometry()
 # to join geometry from the static table.
 
 result_annual_geo = result_annual.with_geometry()
@@ -174,7 +174,7 @@ print(desc_annual_by_entity.df().head(5))
 
 
 # ── 13. Stats — correlate ────────────────────────────────────────────────────
-# Pairwise correlations on fortnightly data
+# Pairwise correlations on sub_annual data
 corr = result_fn.stats.correlate(
     columns=["df_precipitation", "df_et"],
     method=CorrelateMethod.PEARSON,
@@ -197,7 +197,7 @@ print(test_result.df())
 
 
 # ── 15. Stats — change ───────────────────────────────────────────────────────
-# Computes change over time. Perfect for annual/fortnightly results!
+# Computes change over time. Perfect for annual/sub_annual results!
 
 change_result = result_annual.stats.change(
     column="dw_et",
@@ -302,12 +302,12 @@ print("GeoParquet written: output_mws.geoparquet")
 final = (
     aoi.mws.where(ba_name="Barmer")
     .between(season=Season.KHARIF, year=2021)
-    .fortnightly.derive(
+    .sub_annual.derive(
         "et_ratio", (pl.col("df_et") / pl.col("df_precipitation")).round(3)
     )
 )
 
-print("\nFull pipeline (fortnightly) result shape:", final.data.shape)
+print("\nFull pipeline (sub_annual) result shape:", final.data.shape)
 print("Columns:", final.columns[:10])
 
 top_et = final.df().sort("et_ratio", descending=True).head(5)

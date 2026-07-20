@@ -6,7 +6,7 @@ Targets:
   - resolve_time_filter()           dict → Polars Expr build (date-range + season modes)
   - _date_range_expr()              expression build for date ranges
   - _season_expr()                  expression build for seasons (year-crossing vs not)
-  - add_temporal_columns()          fortnightly vectorised temporal derivation
+  - add_temporal_columns()          sub_annual vectorised temporal derivation
 
 Scalene focuses on:
   - Python datetime.strptime calls in __post_init__
@@ -35,22 +35,22 @@ from core_lens.utils.season import add_temporal_columns, resolve_time_filter
 START_DATE = date(2010, 1, 1)
 END_DATE = date(2023, 12, 31)
 
-# Number of fortnightly periods between START_DATE and END_DATE (roughly).
-N_FORTNIGHTLY = (END_DATE - START_DATE).days // 14
+# Number of sub_annual periods between START_DATE and END_DATE (roughly).
+N_SUB_ANNUAL = (END_DATE - START_DATE).days // 14
 
-# Representative synthetic fortnightly dataframe for add_temporal_columns.
+# Representative synthetic sub_annual dataframe for add_temporal_columns.
 N_MWS = 500  # number of entity instances (e.g. MWS)
-DATES = [START_DATE + timedelta(days=14 * i) for i in range(N_FORTNIGHTLY)]
-# Long format: N_MWS × N_FORTNIGHTLY rows
+DATES = [START_DATE + timedelta(days=14 * i) for i in range(N_SUB_ANNUAL)]
+# Long format: N_MWS × N_SUB_ANNUAL rows
 _all_dates = DATES * N_MWS
-FORTNIGHTLY_DF = pl.DataFrame(
+SUB_ANNUAL_DF = pl.DataFrame(
     {
         "mws_id": [str(mid) for mid in range(N_MWS) for _ in DATES],
         "date": _all_dates,
-        "ndvi": [0.5] * (N_MWS * N_FORTNIGHTLY),
+        "ndvi": [0.5] * (N_MWS * N_SUB_ANNUAL),
     }
 )
-print(f"Synthetic fortnightly frame: {FORTNIGHTLY_DF.shape}")
+print(f"Synthetic sub_annual frame: {SUB_ANNUAL_DF.shape}")
 
 
 def _section(title: str) -> None:
@@ -162,15 +162,15 @@ print(
 )
 
 
-# ── 8. add_temporal_columns — large fortnightly DataFrame ─────────────────────
-_section(f"8. add_temporal_columns()  [{FORTNIGHTLY_DF.shape[0]:,} rows]")
+# ── 8. add_temporal_columns — large sub_annual DataFrame ─────────────────────
+_section(f"8. add_temporal_columns()  [{SUB_ANNUAL_DF.shape[0]:,} rows]")
 t0 = time.perf_counter()
-result_df = add_temporal_columns(FORTNIGHTLY_DF, "date", cfg)
+result_df = add_temporal_columns(SUB_ANNUAL_DF, "date", cfg)
 t1 = time.perf_counter()
 print(f"add_temporal_columns: {(t1 - t0) * 1000:.2f} ms")
 print(f"Output shape        : {cast(pl.DataFrame, result_df).shape}")
 print(
-    f"New columns added   : {[c for c in cast(pl.DataFrame, result_df).columns if c not in FORTNIGHTLY_DF.columns]}"
+    f"New columns added   : {[c for c in cast(pl.DataFrame, result_df).columns if c not in SUB_ANNUAL_DF.columns]}"
 )
 
 # Second call — all columns already present, should be near-zero.

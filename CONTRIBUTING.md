@@ -143,7 +143,7 @@ Examples:
 ```text
 feature/stats-similarity
 feature/plugin-validation
-fix/version-clash-fortnightly
+fix/version-clash-sub-annual
 ```
 
 Workflow:
@@ -204,7 +204,7 @@ Examples:
 
 ```text
 feat: add stats.similarity()
-fix: resolve VersionClashError on fortnightly
+fix: resolve VersionClashError on sub-annual
 docs: add plugin guide
 test: add aggregate validation fixtures
 chore: update ruff
