@@ -364,6 +364,11 @@ class PlotNamespace:
             NotImplementedError: Lonboard does not support native subplot grids;
                 only single-value ``subplot_on`` is rendered when specified.
 
+        Under the hood:
+            - Calls ``lonboard.Map`` and ``lonboard.PolygonLayer`` to render high-performance WebGL maps.
+            - Uses ``geoarrow.rust.core.from_wkb`` for zero-copy geometry conversion from Polars WKB.
+            - Colormaps are applied via ``lonboard.colormap.apply_continuous_cmap`` (using matplotlib colormaps).
+
         """
         import lonboard
         from lonboard.colormap import apply_continuous_cmap
@@ -471,6 +476,10 @@ class PlotNamespace:
 
         Returns:
             Any: A Bokeh Tabs object (or a single Figure when ``aggregate=True``).
+
+        Under the hood:
+            Uses ``bokeh.plotting.figure`` to construct interactive line and scatter charts.
+            Data is passed via ``bokeh.models.ColumnDataSource`` and split into tabs using ``bokeh.models.Tabs``.
 
         """
         import polars as pl
@@ -651,6 +660,10 @@ class PlotNamespace:
         Returns:
             Any: A Bokeh Figure or Tabs object.
 
+        Under the hood:
+            Uses ``bokeh.plotting.figure`` for the scatter plot rendering, populating
+            data through a ``ColumnDataSource`` to enable tooltips and interactive panning.
+
         """
         import polars as pl
         import polars.selectors as cs
@@ -736,6 +749,10 @@ class PlotNamespace:
         Returns:
             Any: A Bokeh Figure or Tabs object.
 
+        Under the hood:
+            - Computes histogram bins and counts efficiently using ``numpy.histogram_bin_edges`` and ``numpy.histogram``.
+            - Renders the resulting distribution using the ``quad`` glyph in ``bokeh.plotting.figure``.
+
         """
         import numpy as np
         import pandas as pd
@@ -806,6 +823,10 @@ class PlotNamespace:
 
         Returns:
             Any: A Bokeh Figure object.
+
+        Under the hood:
+            - Computes the Pearson correlation matrix using pandas' native ``corr()`` method.
+            - Renders a heatmap grid using Bokeh's ``rect`` glyph and ``LinearColorMapper``.
 
         """
         import polars.selectors as cs
@@ -886,6 +907,10 @@ class PlotNamespace:
         Returns:
             Any: A Bokeh Figure object.
 
+        Under the hood:
+            - Pivots the Polars DataFrame to a 2D matrix.
+            - Uses ``bokeh.plotting.figure`` with ``rect`` glyphs and ``LinearColorMapper`` for the color scale.
+
         """
         from bokeh.models import (
             BasicTicker,
@@ -960,6 +985,10 @@ class PlotNamespace:
 
         Returns:
             Any: A Bokeh ``gridplot`` object.
+
+        Under the hood:
+            Iterates through all pairs of numeric columns, creating a grid of individual Bokeh
+            scatter plots and assembling them into a single layout using ``bokeh.layouts.gridplot``.
 
         """
         import polars.selectors as cs

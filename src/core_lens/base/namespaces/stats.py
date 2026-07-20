@@ -249,6 +249,10 @@ class StatsNamespace:
             CorrelationError: If fewer than 2 columns supplied.
             ValueError: If ``method`` is not recognised.
 
+        Under the hood:
+            Calls ``scipy.stats.pearsonr``, ``scipy.stats.spearmanr``, or ``scipy.stats.kendalltau``
+            to compute the corresponding correlation coefficients and p-values.
+
         """
         if len(columns) < 2:
             raise CorrelationError(
@@ -323,6 +327,12 @@ class StatsNamespace:
         Raises:
             ValueError: If none of ``groups``, ``periods``, ``against`` supplied,
                 or if ``method`` is not recognised.
+
+        Under the hood:
+            Uses ``scipy.stats`` functions for statistical testing.
+            - ``shapiro`` is used for normality testing to auto-select parametric vs non-parametric methods.
+            - Parametric tests: ``ttest_1samp``, ``ttest_ind``.
+            - Non-parametric tests: ``wilcoxon``, ``mannwhitneyu``, ``ks_2samp``.
 
         """
         import scipy.stats as sp
@@ -472,6 +482,10 @@ class StatsNamespace:
         Raises:
             ValueError: If ``method`` is not recognised or year column absent.
 
+        Under the hood:
+            - Absolute and Percentage methods use native Polars expressions.
+            - Trend method uses ``scipy.stats.linregress`` to perform linear regression over the time period.
+
         """
         if not isinstance(method, ChangeMethod):
             raise ValueError(
@@ -595,6 +609,11 @@ class StatsNamespace:
 
         Raises:
             ValueError: If ``mode``, ``method``, or observation count invalid.
+
+        Under the hood:
+            - Most anomaly methods (ZSCORE, IQR, PERCENTILE, THRESHOLD, MAD, CUSUM) are implemented
+              using native Polars aggregations for high performance.
+            - The STL method calls ``statsmodels.tsa.seasonal.STL`` to decompose timeseries data.
 
         """
         df = self._r.df()
@@ -865,6 +884,10 @@ class StatsNamespace:
         Raises:
             ValueError: If ``method`` is invalid, no columns can be resolved,
                 or ``target`` is not found.
+
+        Under the hood:
+            - Euclidean, Manhattan, and Cosine distances are computed using optimized NumPy operations.
+            - Mahalanobis distance uses ``scipy.spatial.distance.mahalanobis``.
 
         """
         if not isinstance(method, SimilarityMethod):
