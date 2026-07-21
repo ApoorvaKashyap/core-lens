@@ -60,4 +60,4 @@ class MWSEntity(BaseEntity):
             str | None: The relative path to the sub_annual data.
 
         """
-        return "mws/sub_annual"
+        return "mws/sub-annual"

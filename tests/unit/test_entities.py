@@ -27,4 +27,4 @@ def test_mws_entity() -> None:
     assert entity.geometry_col == "geometry"
     assert entity.static_path == "mws/static"
     assert entity.annual_path == "mws/annual"
-    assert entity.sub_annual_path == "mws/sub_annual"
+    assert entity.sub_annual_path == "mws/sub-annual"
