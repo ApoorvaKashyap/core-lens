@@ -391,7 +391,7 @@ class StatsNamespace:
                 .astype(float)
                 for g in group_names
             ]
-            stat, pval = _run_test(method, arrays, sp)
+            stat_res, pval_res = _run_test(method, arrays, sp)
             rows = [
                 {
                     "group": str(g),
@@ -407,9 +407,9 @@ class StatsNamespace:
             data = pl.DataFrame(rows)
             metadata = {
                 "method": method.value if method is not None else None,
-                "statistic": float(stat),
-                "p_value": float(pval),
-                "significant": bool(pval < significance_level),
+                "statistic": float(stat_res),
+                "p_value": float(pval_res),
+                "significant": bool(pval_res < significance_level),
                 "significance_level": significance_level,
                 "groups": groups,
             }
@@ -429,7 +429,7 @@ class StatsNamespace:
                 .astype(float)
                 for p in periods
             ]
-            stat, pval = _run_test(method, arrays, sp)
+            stat_res, pval_res = _run_test(method, arrays, sp)
             rows = [
                 {
                     "group": f"{p[0]}-{p[1]}",
@@ -445,9 +445,9 @@ class StatsNamespace:
             data = pl.DataFrame(rows)
             metadata = {
                 "method": method.value if method is not None else None,
-                "statistic": float(stat),
-                "p_value": float(pval),
-                "significant": bool(pval < significance_level),
+                "statistic": float(stat_res),
+                "p_value": float(pval_res),
+                "significant": bool(pval_res < significance_level),
                 "significance_level": significance_level,
                 "periods": [list(p) for p in periods],
             }
