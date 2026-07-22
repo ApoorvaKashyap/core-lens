@@ -1,3 +1,5 @@
+"""Core Lens package."""
+
 __module__: str = "core_lens.entities"
 
 from core_lens.entities.tehsil import TehsilEntity

@@ -231,6 +231,17 @@ class MapWithLegend:
         clamped_min: bool = False,
         clamped_max: bool = False,
     ) -> None:
+        """Initialize MapWithLegend.
+
+        Args:
+            map_widget: The underlying Lonboard map instance.
+            cmap: The colormap applied to the map.
+            v_min: Minimum value of the color scale.
+            v_max: Maximum value of the color scale.
+            column_name: Name of the visualized column.
+            clamped_min: True if values below v_min were clamped.
+            clamped_max: True if values above v_max were clamped.
+        """
         self._map = map_widget
         self._cmap = cmap
         self._v_min = v_min
@@ -240,6 +251,14 @@ class MapWithLegend:
         self._clamped_max = clamped_max
 
     def __getattr__(self, name: str) -> Any:
+        """Get map attribute.
+
+        Args:
+            name: The attribute name to look up on the underlying map.
+
+        Returns:
+            The requested attribute from the map widget.
+        """
         return getattr(self._map, name)
 
     def _generate_legend_div(self, absolute: bool = True) -> str:
@@ -336,6 +355,11 @@ class PlotNamespace:
     """
 
     def __init__(self, result: "Result") -> None:
+        """Initialize PlotNamespace.
+
+        Args:
+            result: The parent Result object this namespace is bound to.
+        """
         self.result = result
 
     def choropleth(
@@ -355,6 +379,8 @@ class PlotNamespace:
             subplot_on (SubplotOn | None, optional): Optional temporal dimension to split data across.
                 A :class:`~core_lens.base.namespaces.plot.SubplotOn` enum value. When set, one layer is rendered per unique
                 value of ``subplot_on`` in the data.
+            v_min (float | None, optional): Minimum value for color scale.
+            v_max (float | None, optional): Maximum value for color scale.
 
         Returns:
             lonboard.Map: A Lonboard Map object.

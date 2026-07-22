@@ -67,6 +67,17 @@ class Result:
         entity: "BaseEntity",
         metadata: dict[str, Any] | None = None,
     ) -> None:
+        """Initialize Result.
+
+        Args:
+            data: The underlying dataframe or lazyframe.
+            resolution: The spatial and temporal resolution of the data.
+            has_geometry: True if the geometry column is populated.
+            key_cols: Primary key columns linking back to the entity.
+            entity_name: Registered name of the parent entity.
+            entity: The BaseEntity object that produced this result.
+            metadata: Additional metadata dictionary to store.
+        """
         self.data = data.lazy() if isinstance(data, pl.DataFrame) else data
         self.resolution = resolution
         self.has_geometry = has_geometry
@@ -94,6 +105,7 @@ class Result:
 
         Returns:
             Result: A new Result with the data cached as an in-memory LazyFrame.
+
         """
         return self._replace(data=self.df().lazy())
 

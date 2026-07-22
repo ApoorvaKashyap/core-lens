@@ -158,6 +158,11 @@ class StatsNamespace:
     """
 
     def __init__(self, result: "Result") -> None:
+        """Initialize StatsNamespace.
+
+        Args:
+            result: The parent Result object this namespace is bound to.
+        """
         self._r = result
 
     def _numeric_cols(self, df: pl.DataFrame) -> list[str]:

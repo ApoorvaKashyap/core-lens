@@ -1,7 +1,14 @@
+"""Module for Core Lens."""
+
 from . import __version__
 
 
 def hello() -> str:
+    """Return hello message.
+
+    Returns:
+        A welcome string describing core-lens capabilities.
+    """
     hello_str = """Hello from core-lens!
 
 The following primary capabilities are available:
@@ -28,6 +35,11 @@ Visualisation (via `result.plot`):
 
 
 def version() -> str:
+    """Return version string.
+
+    Returns:
+        The current core-lens package version.
+    """
     return str(__version__)
 
 

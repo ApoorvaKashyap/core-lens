@@ -24,6 +24,11 @@ if TYPE_CHECKING:
 
 
 class Season(Enum):
+    """Season enum.
+
+    Enumerates standard agronomic seasons used across Core Lens for temporal filtering.
+    """
+
     KHARIF = "kharif"
     RABI = "rabi"
     ZAID = "zaid"
@@ -78,6 +83,16 @@ class View:
         join_spec: dict[str, Any] | None = None,
         season_config: SeasonConfig | None = None,
     ) -> None:
+        """Initialize View.
+
+        Args:
+            keys: Polars LazyFrame or DataFrame containing the resolved IDs.
+            entity: Parent BaseEntity instance defining the schema and paths.
+            entity_name: Registered string name of the entity.
+            time_filter: Active time filter conditions, if any.
+            join_spec: Active spatial join spec, if any.
+            season_config: Optional season date configuration overrides.
+        """
         self.keys = keys.lazy() if isinstance(keys, pl.DataFrame) else keys
         self.entity = entity
         self.entity_name = entity_name

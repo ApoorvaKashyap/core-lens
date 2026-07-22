@@ -80,7 +80,7 @@ def _cached_detect(
     sub_annual_path: str | None,
     storage_options_key: tuple[tuple[str, Any], ...],
 ) -> "SchemaProfile":
-    """Cached wrapper around :func:`~core_lens.schema.detection.detect`.
+    """Wrap :func:`~core_lens.schema.detection.detect` with caching.
 
     All arguments must be hashable so they can form the cache key.  Pass
     ``storage_options`` through :func:`_so_key` before calling this function.
@@ -110,7 +110,7 @@ def _cached_build_index(
     geometry_type: str,
     storage_options_key: tuple[tuple[str, Any], ...],
 ) -> pl.DataFrame:
-    """Cached wrapper around :func:`~core_lens.utils.spatial.build_bbox_index`.
+    """Wrap :func:`~core_lens.utils.spatial.build_bbox_index` with caching.
 
     All arguments must be hashable so they can form the cache key.  Pass
     ``storage_options`` through :func:`_so_key` before calling this function.

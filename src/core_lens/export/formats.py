@@ -1,3 +1,5 @@
+"""Module for Core Lens."""
+
 import pathlib
 from typing import TYPE_CHECKING, Any
 

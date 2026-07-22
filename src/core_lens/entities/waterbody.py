@@ -1,3 +1,5 @@
+"""Module for Core Lens."""
+
 from core_lens.base.entity import BaseEntity
 
 

@@ -22,7 +22,7 @@ def _cached_schema_internal(path: str, so_key: tuple[tuple[str, Any], ...]) -> A
 
 
 def cached_read_schema(path: str, storage_options: dict[str, Any] | None = None) -> Any:
-    """Cached wrapper around pl.read_parquet_schema.
+    """Wrap pl.read_parquet_schema with caching.
 
     Avoids repeated Parquet footer reads for schema resolution in hot paths.
     """

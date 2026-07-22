@@ -56,6 +56,13 @@ class SeasonConfig:
     zaid: tuple[str, str] = ("04-01", "06-30")
 
     def __post_init__(self) -> None:
+        """Initialize after dataclass creation.
+
+        Validates that all configured seasons have valid MM-DD ranges.
+
+        Raises:
+            ValueError: If a season date format is invalid.
+        """
         from datetime import datetime
 
         for attr in ("kharif", "rabi", "zaid"):
@@ -151,7 +158,7 @@ def _cached_resolve_boundary(
     storage_options_key: tuple[tuple[str, Any], ...],
     entity_kwargs_key: tuple[tuple[str, Any], ...],
 ) -> tuple[bytes, str, tuple[tuple[Any, ...], ...]]:
-    """Cached boundary resolution: return ``(geometry_wkb, entity_name, key_rows)``.
+    """Return cached boundary resolution: ``(geometry_wkb, entity_name, key_rows)``.
 
     All arguments must be hashable.  ``entity_kwargs`` must be converted to a
     sorted tuple of ``(key, value)`` pairs before calling this function.
@@ -542,6 +549,19 @@ class AoI:
             self._get_entity(name)
 
     def __getattr__(self, name: str) -> "View":
+        """Get view by entity name.
+
+        Resolves and caches a scoped view for a registered entity on first access.
+
+        Args:
+            name: The registered entity name (e.g. 'mws').
+
+        Returns:
+            The scoped View for the entity.
+
+        Raises:
+            AttributeError: If the entity is not registered.
+        """
         # Called only when normal attribute lookup has already failed, so this
         # never shadows real attributes.  Maps entity names to their scoped Views.
         if name in _REGISTRY:

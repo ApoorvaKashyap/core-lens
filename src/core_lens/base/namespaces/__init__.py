@@ -1,3 +1,5 @@
+"""Core Lens package."""
+
 __module__: str = "core_lens.base.namespaces"
 
 from core_lens.base.namespaces.plot import PlotNamespace
