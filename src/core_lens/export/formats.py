@@ -166,17 +166,14 @@ def geoparquet(result: "Result", path: str | pathlib.Path, **kwargs: Any) -> Non
 def geojson(result: "Result", path: str | pathlib.Path, **kwargs: Any) -> None:
     """Export the result data to a GeoJSON file.
 
-    This function uses GeoPandas to write the data frame.  It prefers the
-    ``pyogrio`` engine (faster, C-backed) when available and falls back to
-    ``fiona`` automatically.  The ``engine`` kwarg can override this:
-    ``engine="fiona"`` or ``engine="pyogrio"``.
+    This function natively streams the data directly from Polars and Shapely
+    without invoking GDAL or DuckDB, making it fast for large datasets.
 
     Args:
         result (Result): The Result object to export.
         path (str | pathlib.Path): Destination path for the GeoJSON file.
-        **kwargs (Any): Additional options forwarded to
-            ``GeoDataFrame.to_file()`` (e.g. ``driver="GeoJSON"``,
-            ``engine="pyogrio"``).
+        **kwargs (Any): Driver-specific kwargs are currently ignored.
+            The `driver` keyword argument supports `GeoJSONSeq` for newline-delimited GeoJSON.
 
     Example:
         >>> from core_lens.export import geojson
