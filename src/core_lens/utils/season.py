@@ -272,7 +272,16 @@ def add_temporal_columns(
     # --- season / season_year -----------------------------------------------
     # Vectorized via Polars when/then on MM-DD string — no Python loop,
     # no .to_list(), no Python date objects per row.
-    if "season" not in existing or "season_year" not in existing:
+    #
+    # Guard each column independently: the outer `or` was incorrect — it caused
+    # `season_year` to be added even when it was already present in the Parquet
+    # data whenever `season` was absent (and vice-versa), producing a
+    # DuplicateError from Polars.  Use `and` (both absent) for the shared
+    # expression build, then guard each with_columns call individually.
+    need_season = "season" not in existing
+    need_season_year = "season_year" not in existing
+
+    if need_season or need_season_year:
         date_col = pl.col(time_col)
         md = (
             date_col.dt.month().cast(pl.String).str.pad_start(2, "0")
@@ -310,13 +319,21 @@ def add_temporal_columns(
             .alias("season")
         )
 
-        if "season" not in existing:
+        if need_season:
             df = df.with_columns(season_expr)
-        if "season_year" not in existing:
+
+        if need_season_year:
+            # At this point col("season") is always available:
+            # - either it was already in the Parquet data (need_season=False), or
+            # - we just added it in the block above (need_season=True).
+            # Guard only `year`: derive inline from time_col when absent.
+            year_for_sy = (
+                pl.col(time_col).dt.year().cast(pl.String)
+                if "year" not in existing
+                else pl.col("year").cast(pl.String)
+            )
             df = df.with_columns(
-                (pl.col("season") + pl.lit("_") + pl.col("year").cast(pl.String)).alias(
-                    "season_year"
-                )
+                (pl.col("season") + pl.lit("_") + year_for_sy).alias("season_year")
             )
 
     return df

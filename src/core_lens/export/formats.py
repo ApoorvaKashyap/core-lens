@@ -91,7 +91,23 @@ def csv(result: "Result", path: str | pathlib.Path, **kwargs: Any) -> None:
         raise TypeError(
             "This Result has geometry. Exporting geospatial data to CSV is not supported."
         )
-    result.df().write_csv(path, **kwargs)
+    import polars as pl
+
+    df = result.df()
+
+    # Cast any list columns to string (joined by comma) to support CSV export
+    list_cols = [
+        name for name, dtype in zip(df.columns, df.dtypes) if isinstance(dtype, pl.List)
+    ]
+    if list_cols:
+        df = df.with_columns(
+            [
+                pl.col(c).list.eval(pl.element().cast(pl.String)).list.join(", ")
+                for c in list_cols
+            ]
+        )
+
+    df.write_csv(path, **kwargs)
 
 
 def geoparquet(result: "Result", path: str | pathlib.Path, **kwargs: Any) -> None:
