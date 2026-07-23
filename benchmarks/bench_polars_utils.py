@@ -188,6 +188,34 @@ print(
 )
 
 
+# ── 7. cached_read_schema() — cold vs cached ──────────────────────────────────
+_section("7. cached_read_schema()  [cold vs functools.cache warm]")
+from core_lens.utils.polars_utils import cached_read_schema  # noqa: E402
+from core_lens.utils.polars_utils import _cached_schema_internal  # noqa: E402
+
+# Warm the cache first (may already be warm from module import chain).
+cached_read_schema(static_path)
+
+REPS_CS = 100_000
+t0 = time.perf_counter()
+for _ in range(REPS_CS):
+    cached_read_schema(static_path)
+t1 = time.perf_counter()
+print(
+    f"cached_read_schema (warm) ×{REPS_CS}: {(t1 - t0) * 1000:.2f} ms total  "
+    f"({(t1 - t0) / REPS_CS * 1e6:.3f} µs/call)"
+)
+print(f"Schema columns: {list(cached_read_schema(static_path).names())[:5]} ...")
+
+# Cold path: clear the underlying cache, measure one miss.
+_cached_schema_internal.cache_clear()
+t0 = time.perf_counter()
+cached_read_schema(static_path)
+t1 = time.perf_counter()
+print(f"cached_read_schema (cold) : {(t1 - t0) * 1000:.2f} ms  (Parquet footer read)")
+print(f"Cache info after: {_cached_schema_internal.cache_info()}")
+
+
 # ── Cleanup ───────────────────────────────────────────────────────────────────
 AoI.deregister(MWSEntity)
 print("\n✓ bench_polars_utils.py complete")

@@ -17,7 +17,9 @@ MODE="${1:---profile}"
 
 BENCHMARKS=(
     "bench_aoi"
+    "bench_entity"
     "bench_spatial"
+    # "bench_paths"
     "bench_view"
     "bench_result"
     "bench_season"

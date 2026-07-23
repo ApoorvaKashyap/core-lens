@@ -6,6 +6,10 @@ Targets:
   - _infer_geometry_type()      dtype-based geometry type inference
   - _infer_bbox_cols()          pattern-match against known bbox column sets
   - _infer_time_col()           name + dtype heuristic time column detection
+  - _is_year_col_from_schema()  integer-year vs Date/Datetime column detection
+  - _find_lon_companion()       lat-column → lon companion heuristic
+  - _require_cols()             missing-column guard (error path)
+  - SchemaProfile.from_file()   JSON round-trip construction
   - entity.schema_profile       cached vs cold access on BaseEntity
 
 Scalene focuses on:
@@ -28,7 +32,12 @@ from core_lens.schema.detection import (
     _infer_geometry_type,
     _infer_time_col,
     _read_schema,
+    _is_year_col_from_schema,
+    _find_lon_companion,
+    _require_cols,
+    SchemaDetectionError,
 )
+from core_lens.schema.profile import SchemaProfile
 
 # ── Config ────────────────────────────────────────────────────────────────────
 DATA_ROOT = "data/"
@@ -184,5 +193,100 @@ print(
     f"schema_profile (warm) ×{REPS}: {(t1 - t0) * 1000:.2f} ms total  "
     f"({(t1 - t0) / REPS * 1e6:.3f} µs/call)"
 )
+
+
+# ── 8. _is_year_col_from_schema() ────────────────────────────────────────────
+_section("8. _is_year_col_from_schema()  [dtype check — O(1)]")
+# annual schema — has an integer year column
+if annual_path:
+    annual_schema_for_test = _read_schema(annual_path, label="annual")
+    REPS = 500_000
+    t0 = time.perf_counter()
+    for _ in range(REPS):
+        _is_year_col_from_schema(annual_schema_for_test, "year")
+    t1 = time.perf_counter()
+    print(
+        f"_is_year_col ×{REPS}: {(t1 - t0) * 1000:.2f} ms total  "
+        f"({(t1 - t0) / REPS * 1e6:.3f} µs/call)"
+    )
+    print(
+        f"is_year_col (annual 'year'): {_is_year_col_from_schema(annual_schema_for_test, 'year')!r}"
+    )
+    print(
+        f"is_year_col (None):          {_is_year_col_from_schema(annual_schema_for_test, None)!r}"
+    )
+else:
+    print("[skip] No annual path on entity")
+
+
+# ── 9. _find_lon_companion() ─────────────────────────────────────────────────
+_section("9. _find_lon_companion()  [lat→lon heuristic — O(candidates)]")
+import polars as pl  # noqa: E401, E402  (already imported; re-stated for Scalene trace clarity)
+
+# Build a synthetic schema with lat + lon columns to exercise the positive branch.
+synthetic_schema = pl.Schema(
+    {
+        "id": pl.Int64,
+        "lat": pl.Float64,
+        "lon": pl.Float64,
+        "ndvi": pl.Float32,
+    }
+)
+REPS_FC = 500_000
+t0 = time.perf_counter()
+for _ in range(REPS_FC):
+    _find_lon_companion(synthetic_schema, "lat")
+t1 = time.perf_counter()
+print(
+    f"_find_lon_companion ×{REPS_FC}: {(t1 - t0) * 1000:.2f} ms total  "
+    f"({(t1 - t0) / REPS_FC * 1e6:.3f} µs/call)"
+)
+print(
+    f"Found companion      : {_find_lon_companion(synthetic_schema, 'lat')!r}  (expect 'lon')"
+)
+print(
+    f"No companion         : {_find_lon_companion(synthetic_schema, 'ndvi')!r}  (expect None)"
+)
+
+
+# ── 10. _require_cols() — error path ─────────────────────────────────────────
+_section("10. _require_cols() error path  [missing column raises SchemaDetectionError]")
+err_raised = False
+try:
+    _require_cols(schema, ["nonexistent_col_xyz"], static_path)
+except SchemaDetectionError:
+    err_raised = True
+print(f"SchemaDetectionError  : {err_raised} (expect True)")
+
+# Happy path — should not raise.
+_require_cols(schema, list(schema.names()[:2]), static_path)
+print("_require_cols (ok)    : no error (expect no error)")
+
+
+# ── 11. SchemaProfile.from_file() — JSON round-trip ──────────────────────────
+_section("11. SchemaProfile.from_file()  [JSON round-trip]")
+import json  # noqa: E402
+import tempfile  # noqa: E402
+import pathlib  # noqa: E402
+
+profile2 = entity2.schema_profile
+profile_dict = profile2.model_dump()
+
+with tempfile.NamedTemporaryFile(suffix=".json", mode="w", delete=False) as tmp:
+    json.dump(profile_dict, tmp)
+    tmp_path = tmp.name
+
+REPS_FF = 1_000
+t0 = time.perf_counter()
+for _ in range(REPS_FF):
+    reloaded = SchemaProfile.from_file(tmp_path)
+t1 = time.perf_counter()
+print(
+    f"from_file ×{REPS_FF}: {(t1 - t0) * 1000:.2f} ms total  "
+    f"({(t1 - t0) / REPS_FF * 1000:.2f} ms/call)"
+)
+print(f"Round-trip geometry_type: {reloaded.geometry_type!r}")
+pathlib.Path(tmp_path).unlink(missing_ok=True)
+
 
 print("\n✓ bench_schema.py complete")

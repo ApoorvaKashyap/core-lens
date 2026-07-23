@@ -42,8 +42,8 @@ AoI.register(MWSEntity)
 aoi_all = AoI(DATA_ROOT, bbox=INDIA_BBOX)
 aoi_small = AoI(DATA_ROOT, bbox=SMALL_BBOX)
 
-result_all = aoi_all.mws.static  # full dataset — geometry present
-result_small = aoi_small.mws.static  # small subset
+result_all = aoi_all.mws.static.materialise()  # full dataset — geometry present
+result_small = aoi_small.mws.static.materialise()  # small subset
 
 print(f"All   result : {result_all.df().shape}")
 print(f"Small result : {result_small.df().shape}")
@@ -204,6 +204,69 @@ with tempfile.TemporaryDirectory() as tmpdir:
     print(
         f"Ratio      : geojson is {t_gj / t_gpq:.2f}× {'slower' if t_gj > t_gpq else 'faster'}"
     )
+
+    # ── 8. Export error paths — geometry guards ───────────────────────────────
+    _section("8. Export error paths  [TypeError guards — no write, O(1)]")
+
+    errs = 0
+
+    # parquet() with geometry raises TypeError.
+    try:
+        parquet(result_small, tmp / "err.parquet")
+    except TypeError:
+        errs += 1
+
+    # json() with geometry raises TypeError.
+    try:
+        json(result_small, tmp / "err.json")
+    except TypeError:
+        errs += 1
+
+    # csv() with geometry raises TypeError.
+    try:
+        csv(result_small, tmp / "err.csv")
+    except TypeError:
+        errs += 1
+
+    # geoparquet() without geometry raises TypeError.
+    try:
+        geoparquet(result_no_geom, tmp / "err.geoparquet")
+    except TypeError:
+        errs += 1
+
+    # geojson() without geometry raises TypeError.
+    try:
+        geojson(result_no_geom, tmp / "err.geojson")
+    except TypeError:
+        errs += 1
+
+    print(f"TypeError guards raised  : {errs}/5 (expect 5)")
+
+    # ── 9. GeoJSONSeq (newline-delimited GeoJSON) driver ─────────────────────
+    _section("9. geojson(driver='GeoJSONSeq')  [streaming newline-delimited GeoJSON]")
+    out_gjseq = tmp / "bench.geojsonl"
+    t0 = time.perf_counter()
+    for _ in range(REPS_IO):
+        geojson(result_small, out_gjseq, driver="GeoJSONSeq")
+    t1 = time.perf_counter()
+    sz = out_gjseq.stat().st_size
+    print(
+        f"GeoJSONSeq (small) ×{REPS_IO}: {(t1 - t0) * 1000:.2f} ms total  "
+        f"({(t1 - t0) / REPS_IO * 1000:.2f} ms/call)  → {sz // 1024} KB"
+    )
+
+    # ── 10. Format comparison summary (small dataset) ─────────────────────────
+    _section("10. Format size comparison  [small dataset]")
+    sizes = {
+        "parquet": (tmp / "bench.parquet").stat().st_size,
+        "json": (tmp / "bench.json").stat().st_size,
+        "csv": (tmp / "bench.csv").stat().st_size,
+        "geoparquet": (tmp / "bench.geoparquet").stat().st_size,
+        "geojson": (tmp / "bench.geojson").stat().st_size,
+        "geojsonseq": (tmp / "bench.geojsonl").stat().st_size,
+    }
+    for fmt, sz_bytes in sorted(sizes.items(), key=lambda x: x[1]):
+        print(f"  {fmt:12} : {sz_bytes // 1024:6} KB")
 
 
 # ── Cleanup ───────────────────────────────────────────────────────────────────

@@ -4,10 +4,14 @@ Targets:
   - Result.df()                 zero-copy accessor
   - Result.gdf()                WKB decode + GeoPandas construction
   - Result.lazy()               LazyFrame wrapping
+  - Result.materialise()        eager evaluate + re-wrap as in-memory lazy
   - Result.with_geometry()      static-join to attach geometry to non-static result
   - Result.derive()             with_columns expression append
   - Result.aggregate()          group_by + agg (no temporal grouping)
   - Result.aggregate(by=...)    temporal grouping (annual / sub_annual)
+  - Result.aggregate errors     STATIC resolution guard, invalid by, sub_annual-only by
+  - Result.gdf errors           TypeError when has_geometry=False
+  - Result.stats / Result.plot  namespace accessor overhead
 
 Scalene focuses on:
   - shapely.wkb.loads() in gdf() — Python loop over WKB bytes
@@ -39,8 +43,8 @@ aoi = AoI(DATA_ROOT, bbox=INDIA_BBOX)
 aoi_small = AoI(DATA_ROOT, bbox=SMALL_BBOX)
 
 # Materialise once — all benchmarks below operate on this result.
-result = aoi.mws.static
-result_small = aoi_small.mws.static
+result = aoi.mws.static.materialise()
+result_small = aoi_small.mws.static.materialise()
 print(f"Dataset: {result.df().shape[0]} MWS, {result.df().shape[1]} columns")
 
 
@@ -168,6 +172,94 @@ print(f"aggregate(year)  : {(t1 - t0) * 1000:.2f} ms")
 print(f"Shape            : {agg_year.df().shape}")
 
 
-# ── Cleanup ───────────────────────────────────────────────────────────────
+# ── 9. Result.materialise() — eager evaluate (≈ df + wrap) ────────────────────
+_section("9. Result.materialise()  [collect + re-wrap in-memory lazy]")
+# Use result (all-India static) — data already in memory so measures wrap cost.
+REPS_M = 100
+t0 = time.perf_counter()
+for _ in range(REPS_M):
+    result.materialise()
+t1 = time.perf_counter()
+print(
+    f"materialise (— mem) ×{REPS_M}: {(t1 - t0) * 1000:.2f} ms total  "
+    f"({(t1 - t0) / REPS_M * 1000:.2f} ms/call)"
+)
+
+
+# ── 10. Result.aggregate(by='season') / by='month' / by='year_month' ─────────
+_section("10. Result.aggregate() sub_annual groupings")
+from core_lens.base.view import Season  # noqa: E402
+
+result_fn = aoi_small.mws.between(season=Season.KHARIF, year=(2018, 2022)).sub_annual
+
+data_col = result_fn.columns[-1]  # last column (data column)
+
+for by_key in ("month", "season", "year_month", "season_year", "year"):
+    t0 = time.perf_counter()
+    agg_r = result_fn.aggregate(pl.first(data_col), by=by_key)
+    t1 = time.perf_counter()
+    print(
+        f"aggregate(by={by_key!r:12}) : {(t1 - t0) * 1000:.2f} ms  shape={agg_r.df().shape}"
+    )
+
+
+# ── 11. Result.aggregate() error paths ──────────────────────────────────
+_section("11. Result.aggregate() error paths  [guard branches — no I/O]")
+errors_caught = 0
+
+# 11a. aggregate on STATIC resolution is forbidden
+try:
+    result.aggregate(pl.mean(result.columns[-1]))
+except ValueError:
+    errors_caught += 1
+
+# 11b. unknown by key
+try:
+    result_annual.aggregate(pl.mean(result_annual.columns[-1]), by="quarter")
+except ValueError:
+    errors_caught += 1
+
+# 11c. sub_annual-only grouping on annual resolution
+try:
+    result_annual.aggregate(pl.mean(result_annual.columns[-1]), by="season")
+except ValueError:
+    errors_caught += 1
+
+print(f"Error guards raised  : {errors_caught}/3 (expect 3)")
+
+
+# ── 12. Result.gdf() TypeError when has_geometry=False ───────────────────────
+_section("12. Result.gdf() TypeError  [no geometry guard]")
+gdf_err = False
+try:
+    result_annual.gdf()  # annual result has no geometry
+except TypeError:
+    gdf_err = True
+print(f"gdf() TypeError guard: {gdf_err} (expect True)")
+
+
+# ── 13. Result.stats / Result.plot namespace access ────────────────────────
+_section("13. Result.stats / Result.plot  [namespace accessor cost]")
+REPS_NS = 50_000
+t0 = time.perf_counter()
+for _ in range(REPS_NS):
+    result_annual.stats
+t1 = time.perf_counter()
+print(
+    f"result.stats ×{REPS_NS}: {(t1 - t0) * 1000:.2f} ms total  "
+    f"({(t1 - t0) / REPS_NS * 1e6:.2f} µs/call)"
+)
+
+t0 = time.perf_counter()
+for _ in range(REPS_NS):
+    result_annual.plot
+t1 = time.perf_counter()
+print(
+    f"result.plot  ×{REPS_NS}: {(t1 - t0) * 1000:.2f} ms total  "
+    f"({(t1 - t0) / REPS_NS * 1e6:.2f} µs/call)"
+)
+
+
+# ── Cleanup ───────────────────────────────────────────────────────────────────
 AoI.deregister(MWSEntity)
 print("\n✓ bench_result.py complete")

@@ -5,6 +5,9 @@ Targets:
   - bbox_intersects_geometry()  pure-Polars rectangular pre-filter
   - exact_spatial_filter()      STRtree centroid + area modes
   - execute_spatial_join()      cross-entity aggregated spatial join
+  - _bbox_sidecar_path()        sidecar path resolution (local vs cache fallback)
+  - _read_bbox_sidecar()        stale/absent sidecar detection
+  - BaseEntity.spatial_filter() error path (neither geometry nor bbox)
 
 Scalene focuses on:
   - shapely.from_wkb()          WKB decode per-row
@@ -186,6 +189,71 @@ t0 = time.perf_counter()
 view2 = entity.spatial_filter(geometry=small_poly)
 t1 = time.perf_counter()
 print(f"spatial_filter (geom) : {(t1 - t0) * 1000:.2f} ms")
+
+
+# ── 9. execute_spatial_join() — cross-entity agg join ────────────────────────
+_section("9. execute_spatial_join()  [cross-entity agg on small bbox]")
+from core_lens.utils.spatial import execute_spatial_join  # noqa: E402
+
+# Use the small-AoI static data as primary and the same entity as secondary.
+aoi_sj = AoI(DATA_ROOT, bbox=SMALL_BBOX)
+result_sj = aoi_sj.mws.static.materialise()
+df_sj = result_sj.df()
+
+t0 = time.perf_counter()
+joined_df = execute_spatial_join(
+    primary_df=df_sj,
+    primary_key_cols=entity.key_cols,
+    primary_geom_col=profile.geometry_col,
+    primary_geom_type=profile.geometry_type,
+    other_entity=entity,
+    agg={"area_in_ha": "sum"},
+    other_entity_name="mws",
+)
+t1 = time.perf_counter()
+print(f"execute_spatial_join : {(t1 - t0) * 1000:.2f} ms")
+print(f"Joined shape         : {joined_df.shape}")
+
+
+# ── 10. _bbox_sidecar_path() — sidecar path helpers ────────────────────────
+_section("10. _bbox_sidecar_path() / _read_bbox_sidecar()  [helper cost]")
+from core_lens.utils.spatial import _bbox_sidecar_path, _read_bbox_sidecar  # noqa: E402
+
+REPS_SC = 100_000
+t0 = time.perf_counter()
+for _ in range(REPS_SC):
+    _bbox_sidecar_path(static_path)
+t1 = time.perf_counter()
+sc_path = _bbox_sidecar_path(static_path)
+print(
+    f"_bbox_sidecar_path ×{REPS_SC}: {(t1 - t0) * 1000:.2f} ms total  "
+    f"({(t1 - t0) / REPS_SC * 1e6:.3f} µs/call)"
+)
+print(f"Sidecar path         : {sc_path}")
+
+# _read_bbox_sidecar: sidecar doesn't exist yet — should return None immediately.
+if sc_path is not None and not sc_path.exists():
+    REPS_RS = 1_000
+    t0 = time.perf_counter()
+    for _ in range(REPS_RS):
+        result = _read_bbox_sidecar(sc_path, static_path)
+    t1 = time.perf_counter()
+    print(
+        f"_read_bbox_sidecar (absent) ×{REPS_RS}: {(t1 - t0) * 1000:.2f} ms total  "
+        f"({(t1 - t0) / REPS_RS * 1e6:.3f} µs/call)  result={result!r}"
+    )
+else:
+    print("Sidecar already exists or is cloud — skipping absent-sidecar timing.")
+
+
+# ── 11. entity.spatial_filter() error path ────────────────────────────────
+_section("11. entity.spatial_filter() error path  [no geometry, no bbox]")
+err_raised = False
+try:
+    entity.spatial_filter()  # neither geometry nor bbox — must raise
+except ValueError:
+    err_raised = True
+print(f"ValueError guard     : {err_raised} (expect True)")
 
 
 # ── Cleanup ───────────────────────────────────────────────────────────────────

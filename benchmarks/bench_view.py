@@ -4,8 +4,12 @@ Targets:
   - View.where()                attribute filter (Polars semi-join on static file)
   - View.spatial_filter()       STRtree filter narrowing existing keys
   - View.between()              time-filter dict construction (no I/O)
+  - View.between(season=CURRENT)  current-season resolution
+  - View.between(year=tuple)    year-range season filter
+  - View.spatial_join()         deferred cross-entity join spec
   - View._materialise()         static / annual / sub_annual Parquet reads
   - View chaining               where → spatial_filter → between → static
+  - View.between error paths    mutual-exclusivity and missing-arg guards
 
 Scalene focuses on:
   - scan_with_key_filter()      predicate-pushdown LazyFrame
@@ -109,14 +113,14 @@ print(
 # ── 7. View.static — full materialise (all rows) ─────────────────────────────
 _section("7. aoi.mws.static  [full static materialisation]")
 t0 = time.perf_counter()
-result_static = aoi.mws.static
+result_static = aoi.mws.static.materialise()
 t1 = time.perf_counter()
 print(f"static (all)     : {(t1 - t0) * 1000:.2f} ms")
 print(f"Shape            : {result_static.df().shape}")
 
 _section("8. aoi_small.mws.static  [small-bbox materialisation]")
 t0 = time.perf_counter()
-result_small = aoi_small.mws.static
+result_small = aoi_small.mws.static.materialise()
 t1 = time.perf_counter()
 print(f"static (small)   : {(t1 - t0) * 1000:.2f} ms")
 print(f"Shape            : {result_small.df().shape}")
@@ -125,7 +129,7 @@ print(f"Shape            : {result_small.df().shape}")
 # ── 9. Chained pipeline: where → spatial_filter → static ─────────────────────
 _section("9. Full chain: where → spatial_filter → static")
 t0 = time.perf_counter()
-result_chain = aoi.mws.spatial_filter(bbox=SMALL_BBOX).static
+result_chain = aoi.mws.spatial_filter(bbox=SMALL_BBOX).static.materialise()
 t1 = time.perf_counter()
 print(f"Chain            : {(t1 - t0) * 1000:.2f} ms")
 print(f"Shape            : {result_chain.df().shape}")
@@ -134,7 +138,7 @@ print(f"Shape            : {result_chain.df().shape}")
 # ── 10. annual materialisation ──────────────────────────────────────────────────
 _section("10. aoi_small.mws.annual  [annual materialisation]")
 t0 = time.perf_counter()
-result_annual = aoi_small.mws.between("2018-01-01", "2023-12-31").annual
+result_annual = aoi_small.mws.between("2018-01-01", "2023-12-31").annual.materialise()
 t1 = time.perf_counter()
 print(f"annual           : {(t1 - t0) * 1000:.2f} ms")
 print(f"Shape            : {result_annual.df().shape}")
@@ -143,10 +147,100 @@ print(f"Shape            : {result_annual.df().shape}")
 # ── 11. sub_annual materialisation ───────────────────────────────────────────
 _section("11. aoi_small.mws.sub_annual  [sub_annual materialisation]")
 t0 = time.perf_counter()
-result_fn = aoi_small.mws.between(season=Season.KHARIF, year=2022).sub_annual
+result_fn = aoi_small.mws.between(
+    season=Season.KHARIF, year=2022
+).sub_annual.materialise()
 t1 = time.perf_counter()
 print(f"sub_annual      : {(t1 - t0) * 1000:.2f} ms")
 print(f"Shape            : {result_fn.df().shape}")
+
+
+# ── 12. View.between(season=Season.CURRENT) — current season (no year) ───────
+_section("12. View.between(season=Season.CURRENT)  [no year — resolves to now]")
+t0 = time.perf_counter()
+for _ in range(REPS):
+    view_bihar.between(season=Season.CURRENT)
+t1 = time.perf_counter()
+print(
+    f"between(CURRENT) ×{REPS}: {(t1 - t0) * 1000:.2f} ms total  "
+    f"({(t1 - t0) / REPS * 1e6:.2f} µs/call)"
+)
+
+
+# ── 13. View.between(season=..., year=(from, to)) — year-range tuple ──────────
+_section("13. View.between(season=Season.KHARIF, year=(2018, 2023))  [year range]")
+t0 = time.perf_counter()
+for _ in range(REPS):
+    view_bihar.between(season=Season.KHARIF, year=(2018, 2023))
+t1 = time.perf_counter()
+print(
+    f"between(year-range) ×{REPS}: {(t1 - t0) * 1000:.2f} ms total  "
+    f"({(t1 - t0) / REPS * 1e6:.2f} µs/call)"
+)
+
+
+# ── 14. View.between() error paths ───────────────────────────────────────────
+_section("14. View.between() error paths  [guard branches — no I/O]")
+
+errors_caught = 0
+
+# 14a. season + start/end are mutually exclusive
+try:
+    view_bihar.between("2020-01-01", "2023-12-31", season=Season.KHARIF)
+except ValueError:
+    errors_caught += 1
+
+# 14b. year without season
+try:
+    view_bihar.between(year=2022)
+except ValueError:
+    errors_caught += 1
+
+# 14c. season=CURRENT + year is invalid
+try:
+    view_bihar.between(season=Season.CURRENT, year=2022)
+except ValueError:
+    errors_caught += 1
+
+# 14d. date-range mode without end
+try:
+    view_bihar.between(start="2020-01-01")
+except ValueError:
+    errors_caught += 1
+
+# 14e. season not a Season enum
+try:
+    view_bihar.between(season="kharif")  # type: ignore[arg-type]
+except ValueError:
+    errors_caught += 1
+
+print(f"Error guards raised  : {errors_caught}/5 (expect 5)")
+
+
+# ── 15. View.spatial_join() — deferred cross-entity join spec ─────────────────
+_section("15. View.spatial_join()  [deferred spec — no I/O]")
+from core_lens.entities.mws import MWSEntity as _MWS2  # noqa: E402
+
+other_entity = _MWS2(data_root=DATA_ROOT)
+REPS_SJ = 10_000
+t0 = time.perf_counter()
+for _ in range(REPS_SJ):
+    view_all.spatial_join(other=other_entity, agg={"area_in_ha": "sum"})
+t1 = time.perf_counter()
+print(
+    f"spatial_join (spec) ×{REPS_SJ}: {(t1 - t0) * 1000:.2f} ms total  "
+    f"({(t1 - t0) / REPS_SJ * 1e6:.2f} µs/call)"
+)
+
+# 15b. Double spatial_join raises ValueError
+duplicate_raised = False
+try:
+    view_all.spatial_join(other_entity, {"x": "sum"}).spatial_join(
+        other_entity, {"y": "mean"}
+    )
+except ValueError:
+    duplicate_raised = True
+print(f"Double join guard    : {duplicate_raised} (expect True)")
 
 
 # ── Cleanup ───────────────────────────────────────────────────────────────────
