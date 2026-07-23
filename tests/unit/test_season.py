@@ -128,3 +128,124 @@ def test_year_bounds() -> None:
     assert _year_bounds(None) == (1900, 2100)
     assert _year_bounds(2020) == (2020, 2020)
     assert _year_bounds((2020, 2025)) == (2020, 2025)
+
+
+from core_lens.utils.season import add_temporal_columns  # noqa: E402
+
+
+_DATES = [
+    datetime.date(2022, 8, 1),  # kharif
+    datetime.date(2022, 12, 15),  # rabi
+    datetime.date(2023, 5, 10),  # zaid
+]
+_EXPECTED_SEASON_YEAR = ["kharif_2022", "rabi_2022", "zaid_2023"]
+
+
+class TestAddTemporalColumns:
+    """Tests for the ``add_temporal_columns`` guard logic.
+
+    Regression suite for the ``or``→``and`` bug where ``season_year`` was
+    added even when it already existed in the incoming DataFrame, causing a
+    ``polars.exceptions.DuplicateError``.
+    """
+
+    def test_normal_path_all_columns_derived(self, season_config: SeasonConfig) -> None:
+        """All five temporal columns are added when none are pre-existing."""
+        df = pl.DataFrame({"date": _DATES, "val": [1, 2, 3]})
+        result = add_temporal_columns(df, "date", season_config)
+        assert isinstance(result, pl.DataFrame)
+
+        assert "year" in result.columns
+        assert "month" in result.columns
+        assert "year_month" in result.columns
+        assert "season" in result.columns
+        assert "season_year" in result.columns
+        assert result["season_year"].to_list() == _EXPECTED_SEASON_YEAR
+
+    def test_season_year_preexisting_is_not_overwritten(
+        self, season_config: SeasonConfig
+    ) -> None:
+        """``season_year`` already present in Parquet data must not be replaced.
+
+        This is the primary regression case: the old ``or`` guard entered the
+        block whenever ``season`` was absent and tried to add ``season_year``
+        again, raising ``DuplicateError``.
+        """
+        df = pl.DataFrame(
+            {"date": _DATES, "val": [1, 2, 3], "season_year": ["x", "y", "z"]}
+        )
+        result = add_temporal_columns(df, "date", season_config)
+        assert isinstance(result, pl.DataFrame)
+
+        # season_year must be left untouched.
+        assert result["season_year"].to_list() == ["x", "y", "z"]
+        # season should still be derived (it was absent).
+        assert "season" in result.columns
+
+    def test_season_preexisting_season_year_derived(
+        self, season_config: SeasonConfig
+    ) -> None:
+        """``season`` present, ``season_year`` absent → derive ``season_year`` only."""
+        df = pl.DataFrame(
+            {
+                "date": _DATES,
+                "val": [1, 2, 3],
+                "season": ["kharif", "rabi", "zaid"],
+            }
+        )
+        result = add_temporal_columns(df, "date", season_config)
+        assert isinstance(result, pl.DataFrame)
+
+        assert result["season_year"].to_list() == _EXPECTED_SEASON_YEAR
+        # Original season column should be unchanged.
+        assert result["season"].to_list() == ["kharif", "rabi", "zaid"]
+
+    def test_all_preexisting_noop(self, season_config: SeasonConfig) -> None:
+        """When all five columns are pre-existing, nothing is overwritten."""
+        df = pl.DataFrame(
+            {
+                "date": _DATES,
+                "val": [1, 2, 3],
+                "year": [2022, 2022, 2023],
+                "month": [8, 12, 5],
+                "year_month": ["2022-08", "2022-12", "2023-05"],
+                "season": ["kharif", "rabi", "zaid"],
+                "season_year": ["A", "B", "C"],
+            }
+        )
+        result = add_temporal_columns(df, "date", season_config)
+        assert isinstance(result, pl.DataFrame)
+
+        # All pre-existing values must be preserved verbatim.
+        assert result["season_year"].to_list() == ["A", "B", "C"]
+        assert result["season"].to_list() == ["kharif", "rabi", "zaid"]
+        assert result["year"].to_list() == [2022, 2022, 2023]
+        assert result["month"].to_list() == [8, 12, 5]
+        assert result["year_month"].to_list() == ["2022-08", "2022-12", "2023-05"]
+
+    def test_lazy_frame_input(self, season_config: SeasonConfig) -> None:
+        """Function accepts and returns a ``pl.LazyFrame`` transparently."""
+        lf = pl.DataFrame({"date": _DATES, "val": [1, 2, 3]}).lazy()
+        result_lf = add_temporal_columns(lf, "date", season_config)
+
+        assert isinstance(result_lf, pl.LazyFrame)
+        result = result_lf.collect()
+        assert result["season_year"].to_list() == _EXPECTED_SEASON_YEAR
+
+    def test_season_and_season_year_both_preexisting(
+        self, season_config: SeasonConfig
+    ) -> None:
+        """Both season and season_year present → block skipped entirely, no duplicate."""
+        df = pl.DataFrame(
+            {
+                "date": _DATES,
+                "val": [1, 2, 3],
+                "season": ["kharif", "rabi", "zaid"],
+                "season_year": ["kharif_2022", "rabi_2022", "zaid_2023"],
+            }
+        )
+        # Must not raise DuplicateError.
+        result = add_temporal_columns(df, "date", season_config)
+        assert isinstance(result, pl.DataFrame)
+        assert result["season_year"].to_list() == _EXPECTED_SEASON_YEAR
+        assert result["season"].to_list() == ["kharif", "rabi", "zaid"]

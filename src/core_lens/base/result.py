@@ -279,12 +279,23 @@ class Result:
             )
 
         if by is None:
-            new_data = self.data.group_by(self.key_cols).agg(*exprs)
+            group_cols = self.key_cols
         else:
             # Temporal grouping columns are expected to already exist on the
             # frame (added by the materialisation layer from the time column).
             group_cols = self.key_cols + [by]
-            new_data = self.data.group_by(group_cols).agg(*exprs)
+
+        # Polars group_by throws DuplicateError if an aggregation expression
+        # outputs a column name that is already present in the grouping keys.
+        # Filter them out to prevent crashes when users iterate over all columns.
+        safe_exprs = [
+            expr
+            for expr in exprs
+            if getattr(expr, "meta", None) is None
+            or expr.meta.output_name() not in group_cols
+        ]
+
+        new_data = self.data.group_by(group_cols).agg(*safe_exprs)
 
         return self._replace(data=new_data)
 
