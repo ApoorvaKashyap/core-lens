@@ -284,7 +284,8 @@ class AoI:
 
     **Registration** must happen before any ``AoI`` is constructed::
 
-        from core_lens import AoI, MWSEntity, TehsilEntity
+        from core_lens import AoI
+        from core_lens.entities import MWSEntity, TehsilEntity
 
         AoI.register(MWSEntity)
         AoI.register(TehsilEntity)

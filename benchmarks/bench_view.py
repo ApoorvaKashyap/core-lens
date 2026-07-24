@@ -2,7 +2,7 @@
 =======================================================
 Targets:
   - View.where()                attribute filter (Polars semi-join on static file)
-  - View.spatial_filter()       STRtree filter narrowing existing keys
+  - View.spatial_filter()       vectorized centroid test (or STRtree for area)
   - View.between()              time-filter dict construction (no I/O)
   - View.between(season=CURRENT)  current-season resolution
   - View.between(year=tuple)    year-range season filter
