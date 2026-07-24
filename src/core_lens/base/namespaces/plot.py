@@ -731,31 +731,45 @@ class PlotNamespace:
             )
 
             entities = df.get_column(key_col).unique().to_list()
-            for i, entity in enumerate(entities):
-                row = df.filter(pl.col(key_col) == entity)
 
-                # Replace None with NaN for numeric columns to prevent Bokeh JS rendering crashes
-                source_data = {}
-                for c in hover_cols:
-                    if c in row.columns:
-                        lst = row.get_column(c).to_list()
-                        if row.schema[c].is_numeric():
-                            lst = [float("nan") if v is None else v for v in lst]
-                        source_data[c] = lst
-
-                source = ColumnDataSource(source_data)  # type: ignore[arg-type]
+            if len(entities) > 20:
+                # Fast path: single dataset, single colour, no legend
+                pdf = df.drop_nulls(subset=[x, y_col]).select(hover_cols).to_pandas()
+                source = ColumnDataSource(pdf)
                 fig.scatter(
                     x=x,
                     y=y_col,
                     source=source,
-                    color=_color_for(i),
-                    legend_label=str(entity),
+                    color=_color_for(0),
                     size=8,
                     alpha=0.7,
                 )
-            if fig.legend:
-                fig.legend.click_policy = "hide"
-                fig.add_layout(fig.legend[0], "right")
+            else:
+                for i, entity in enumerate(entities):
+                    row = df.filter(pl.col(key_col) == entity)
+
+                    # Replace None with NaN for numeric columns to prevent Bokeh JS rendering crashes
+                    source_data = {}
+                    for c in hover_cols:
+                        if c in row.columns:
+                            lst = row.get_column(c).to_list()
+                            if row.schema[c].is_numeric():
+                                lst = [float("nan") if v is None else v for v in lst]
+                            source_data[c] = lst
+
+                    source = ColumnDataSource(source_data)  # type: ignore[arg-type]
+                    fig.scatter(
+                        x=x,
+                        y=y_col,
+                        source=source,
+                        color=_color_for(i),
+                        legend_label=str(entity),
+                        size=8,
+                        alpha=0.7,
+                    )
+                if fig.legend:
+                    fig.legend.click_policy = "hide"
+                    fig.add_layout(fig.legend[0], "right")
             _apply_theme(fig, self.result, "Scatter Distribution")
             return fig
 
