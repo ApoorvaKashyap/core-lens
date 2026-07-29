@@ -21,8 +21,8 @@ from core_lens.base.namespaces.stats import CorrelateMethod
 
 corr = res.stats.correlate(
     columns=["ndvi", "rainfall", "temperature"],
-    method=CorrelateMethod.PEARSON, # or SPEARMAN, KENDALL
-    across="entity"      # correlate across entities or time
+    method=CorrelateMethod.PEARSON,  # or SPEARMAN, KENDALL
+    across="entity",  # correlate across entities or time
 )
 ```
 
@@ -37,14 +37,12 @@ from core_lens.base.namespaces.stats import TestMethod
 test_res = res.stats.test(
     column="cropping_intensity",
     groups="temperature_zone",
-    method=TestMethod.MANN_WHITNEY
+    method=TestMethod.MANN_WHITNEY,
 )
 
 # Period-based testing
 test_period = res.stats.test(
-    column="ndvi",
-    periods=[(2010, 2015), (2016, 2023)],
-    method=TestMethod.T_TEST
+    column="ndvi", periods=[(2010, 2015), (2016, 2023)], method=TestMethod.T_TEST
 )
 ```
 
@@ -57,10 +55,7 @@ from core_lens.base.namespaces.stats import ChangeMethod
 
 # Trend over time
 trend = res.stats.change(
-    column="ndvi",
-    from_period=2010,
-    to_period=2023,
-    method=ChangeMethod.TREND
+    column="ndvi", from_period=2010, to_period=2023, method=ChangeMethod.TREND
 )
 
 # Absolute or percentage change
@@ -68,7 +63,7 @@ pct_change = res.stats.change(
     column="tree_cover",
     from_period=2018,
     to_period=2023,
-    method=ChangeMethod.PERCENTAGE
+    method=ChangeMethod.PERCENTAGE,
 )
 ```
 
@@ -81,10 +76,7 @@ from core_lens.base.namespaces.stats import AnomalyTsMethod, AnomalyCrossMethod
 
 # Timeseries anomaly against its own history
 ts_anomalies = res.stats.anomaly(
-    column="ndvi",
-    mode="timeseries",
-    method=AnomalyTsMethod.STL,
-    baseline=(2010, 2018)
+    column="ndvi", mode="timeseries", method=AnomalyTsMethod.STL, baseline=(2010, 2018)
 )
 
 # Cross-sectional anomaly against other entities
@@ -92,7 +84,7 @@ cross_anomalies = res.stats.anomaly(
     column="ndvi",
     mode="cross_sectional",
     method=AnomalyCrossMethod.ZSCORE,
-    baseline=(2010, 2020)
+    baseline=(2010, 2020),
 )
 ```
 
@@ -107,9 +99,9 @@ similar = res.stats.similarity(
     target="13_551",
     columns={
         "rainfall": ("annual", {"year": 2018}),
-        "ndvi": ("sub_annual", {"season": "kharif", "year": 2020})
+        "ndvi": ("sub_annual", {"season": "kharif", "year": 2020}),
     },
     method=SimilarityMethod.EUCLIDEAN,
-    top_n=10
+    top_n=10,
 )
 ```

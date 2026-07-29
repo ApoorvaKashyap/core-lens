@@ -5,6 +5,7 @@ You can extend CoreLens by defining your own entities. Simply subclass `BaseEnti
 ```python
 from core_lens.base import BaseEntity
 
+
 class CustomEntity(BaseEntity):
     @property
     def key_cols(self) -> list[str]:
@@ -21,6 +22,7 @@ class CustomEntity(BaseEntity):
     @property
     def annual_path(self) -> str | None:
         return "custom/annual.parquet"
+
 
 # Register before use
 AoI.register(CustomEntity)

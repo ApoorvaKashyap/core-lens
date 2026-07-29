@@ -29,15 +29,11 @@ Create an `AoI` (Area of Interest) by specifying the `data_root` (which can be a
 
 ```python
 # Create an AoI scoped to a specific Tehsil using a local path
-aoi = AoI(
-    data_root="/path/to/data",
-    tehsil="Pangi"
-)
+aoi = AoI(data_root="/path/to/data", tehsil="Pangi")
 
 # Or scope it directly to a specific list of entity IDs using an S3 bucket
 aoi_specific = AoI(
-    data_root="s3://my-cloud-bucket/core-lens-data",
-    mws_id=["13_001", "13_002"]
+    data_root="s3://my-cloud-bucket/core-lens-data", mws_id=["13_001", "13_002"]
 )
 
 # You can now access entities scoped to this AoI:

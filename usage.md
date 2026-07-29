@@ -89,8 +89,8 @@ spatial_view = mws_view.spatial_filter(bbox=(76.5, 31.5, 77.5, 32.5))
 from core_lens.base.view import Season
 
 temporal_view = mws_view.between(
-    year=(2020, 2022),       # Inclusive year range
-    season=Season.KHARIF     # Filter to specific season
+    year=(2020, 2022),  # Inclusive year range
+    season=Season.KHARIF,  # Filter to specific season
 )
 ```
 
@@ -101,8 +101,7 @@ You can define a spatial join to enrich one entity with aggregated data from ano
 ```python
 # Join MWS with Tehsil entity to calculate the sum of tehsil areas per MWS
 joined_view = mws_view.spatial_join(
-    other=TehsilEntity(data_root=DATA_ROOT),
-    agg={"Shape_Area": "sum"}
+    other=TehsilEntity(data_root=DATA_ROOT), agg={"Shape_Area": "sum"}
 )
 ```
 
@@ -127,22 +126,24 @@ A `Result` object provides access to the materialized data. `core-lens` uses zer
 
 ```python
 # 1. Zero-copy access (Instantaneous)
-pl_df = result_static.df()          # Polars DataFrame
-pl_lazy = result_static.lazy()      # Polars LazyFrame
+pl_df = result_static.df()  # Polars DataFrame
+pl_lazy = result_static.lazy()  # Polars LazyFrame
 
 # 2. Decode WKB geometries to Shapely (CPU intensive)
-gdf = result_static.gdf()           # GeoPandas GeoDataFrame
+gdf = result_static.gdf()  # GeoPandas GeoDataFrame
 
 # 3. Data Transformations (Returns a new Result)
 # Derive new columns using Polars expressions
 import polars as pl
-result_derived = result_annual.derive("yield_per_ha", pl.col("yield") / pl.col("area_in_ha"))
+
+result_derived = result_annual.derive(
+    "yield_per_ha", pl.col("yield") / pl.col("area_in_ha")
+)
 
 # 4. Fast aggregations (Returns a new Result)
 # Aggregate by a key column using Polars expressions
 result_agg = result_derived.aggregate(
-    pl.col("yield_per_ha").mean().alias("avg_yield_per_ha"),
-    by="year"
+    pl.col("yield_per_ha").mean().alias("avg_yield_per_ha"), by="year"
 )
 ```
 
@@ -173,9 +174,7 @@ By default, `core-lens` uses Indian agricultural seasons. You can inject a custo
 from core_lens.aoi import SeasonConfig
 
 custom_seasons = SeasonConfig(
-    kharif=("06-01", "10-15"),
-    rabi=("10-16", "02-28"),
-    zaid=("03-01", "05-31")
+    kharif=("06-01", "10-15"), rabi=("10-16", "02-28"), zaid=("03-01", "05-31")
 )
 
 aoi = AoI(DATA_ROOT, bbox=(...), seasons=custom_seasons)

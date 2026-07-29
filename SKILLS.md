@@ -45,9 +45,9 @@ view.between("2010-01-01", "2023-12-31")
 view.between(season="kharif", year=2020)
 
 # Materialise into a Result object
-static_result = view.static         # has geometry
-annual_result = view.annual         # no geometry
-sub_annual_result = view.sub_annual # no geometry
+static_result = view.static  # has geometry
+annual_result = view.annual  # no geometry
+sub_annual_result = view.sub_annual  # no geometry
 ```
 
 ## 3. Operations on Results (Compute & Aggregation)
@@ -67,11 +67,7 @@ Spatial joins can be performed across different entities. Aggregation rules appl
 
 ```python
 aoi.mws.spatial_join(
-    aoi.forest,
-    agg={
-        "tree_cover": "area",
-        "canopy_density": "mean"
-    }
+    aoi.forest, agg={"tree_cover": "area", "canopy_density": "mean"}
 ).annual.between(2010, 2023)
 ```
 
@@ -89,9 +85,7 @@ result.stats.describe(by="entity")  # per entity breakdown
 Calculates correlation between columns either across entities or across time. Supported methods: `"pearson"`, `"spearman"`, `"kendall"`.
 ```python
 result.stats.correlate(
-    columns=["ndvi", "rainfall", "temperature"],
-    method="pearson",
-    across="entity"
+    columns=["ndvi", "rainfall", "temperature"], method="pearson", across="entity"
 )
 ```
 
@@ -99,7 +93,9 @@ result.stats.correlate(
 Supports testing differences between groups, time periods, or against a baseline. Supported methods: `"t-test"`, `"mann-whitney"` (default), `"wilcoxon"`, `"ks"`, `"chi-square"`. Auto-selects method via Shapiro-Wilk if not specified.
 ```python
 # Group-based
-result.stats.test(column="cropping_intensity", groups="temperature_zone", method="mann-whitney")
+result.stats.test(
+    column="cropping_intensity", groups="temperature_zone", method="mann-whitney"
+)
 # Period-based
 result.stats.test(column="ndvi", periods=[(2010, 2015), (2016, 2023)], method="t-test")
 ```
@@ -107,7 +103,9 @@ result.stats.test(column="ndvi", periods=[(2010, 2015), (2016, 2023)], method="t
 ### Change Detection
 Measures structural or absolute change over time. Supported methods: `"absolute"` (default), `"percentage"`, `"trend"`.
 ```python
-result.stats.change(column="tree_cover", from_period=2018, to_period=2023, method="percentage")
+result.stats.change(
+    column="tree_cover", from_period=2018, to_period=2023, method="percentage"
+)
 result.stats.change(column="ndvi", from_period=2010, to_period=2023, method="trend")
 ```
 
@@ -117,9 +115,13 @@ Identifies anomalies cross-sectionally (vs other entities) or over time.
 - **Time-series methods:** `"stl"`, `"cusum"`, `"mad"`.
 ```python
 # Cross-sectional
-result.stats.anomaly(column="ndvi", mode="cross_sectional", method="zscore", baseline=(2010, 2020))
+result.stats.anomaly(
+    column="ndvi", mode="cross_sectional", method="zscore", baseline=(2010, 2020)
+)
 # Time-series
-result.stats.anomaly(column="ndvi", mode="timeseries", method="stl", baseline=(2010, 2018))
+result.stats.anomaly(
+    column="ndvi", mode="timeseries", method="stl", baseline=(2010, 2018)
+)
 ```
 
 ### Similarity
@@ -129,10 +131,10 @@ result.stats.similarity(
     target="13_551",
     columns={
         "rainfall": ("annual", {"year": 2018}),
-        "ndvi": ("sub_annual", {"season": "kharif", "year": 2020})
+        "ndvi": ("sub_annual", {"season": "kharif", "year": 2020}),
     },
     method="euclidean",
-    top_n=10
+    top_n=10,
 )
 ```
 
@@ -168,11 +170,13 @@ You can extend core-lens with custom entities by subclassing `BaseEntity`.
 ```python
 from core_lens.base import BaseEntity
 
+
 class ForestEntity(BaseEntity):
-    key_cols      = ["forest_patch_id"]
-    geometry_col  = "geometry"
-    static_path   = "data/forest/static.geoparquet"
-    annual_path   = "data/forest/annual.parquet"
+    key_cols = ["forest_patch_id"]
+    geometry_col = "geometry"
+    static_path = "data/forest/static.geoparquet"
+    annual_path = "data/forest/annual.parquet"
+
 
 AoI.register(ForestEntity)
 ```
@@ -211,6 +215,7 @@ When building pipelines with `core-lens`, you should generally follow this seque
 ```python
 from core_lens import AoI
 from core_lens.entities import MWSEntity
+
 AoI.register(MWSEntity)
 ```
 
@@ -237,10 +242,11 @@ result = temporal_view.sub_annual
 **6. Compute & Analysis:** Chain computations, derive metrics, or run statistical tests on the returned `Result`.
 ```python
 import polars as pl
-analyzed_result = (
-    result
-    .derive("et_ratio", (pl.col("df_et") / pl.col("df_precipitation")))
-    .stats.anomaly(column="et_ratio", mode="timeseries", method="stl", baseline=(2015, 2020))
+
+analyzed_result = result.derive(
+    "et_ratio", (pl.col("df_et") / pl.col("df_precipitation"))
+).stats.anomaly(
+    column="et_ratio", mode="timeseries", method="stl", baseline=(2015, 2020)
 )
 ```
 

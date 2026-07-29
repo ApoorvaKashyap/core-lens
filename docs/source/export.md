@@ -32,12 +32,7 @@ from core_lens.export import geoparquet, geojson
 spatial_res = aoi.mws.annual.with_geometry()
 
 # Export to GeoParquet with DuckDB COPY options (e.g., partitioning)
-geoparquet(
-    spatial_res,
-    "output.geoparquet",
-    compression="ZSTD",
-    partition_by="year"
-)
+geoparquet(spatial_res, "output.geoparquet", compression="ZSTD", partition_by="year")
 
 # Export to GeoJSON
 geojson(spatial_res, "output.json")

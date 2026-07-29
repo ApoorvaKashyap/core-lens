@@ -27,8 +27,7 @@ import polars as pl
 # 1. Derive new columns (works on any Result)
 res_annual = aoi.mws.annual
 derived_res = res_annual.derive(
-    "drought_flag",
-    pl.when(pl.col("rainfall") < 500).then(1).otherwise(0)
+    "drought_flag", pl.when(pl.col("rainfall") < 500).then(1).otherwise(0)
 )
 
 # 2. Aggregate (temporal grouping like "month" requires sub-annual, but "year" works on annual too)
@@ -47,11 +46,7 @@ Spatially join data from two different entities (e.g. Microwatersheds and Forest
 
 # Join forest metrics onto MWS geometries
 joined_view = aoi.mws.spatial_join(
-    aoi.forest,
-    agg={
-        "tree_cover": "area",
-        "canopy_density": "mean"
-    }
+    aoi.forest, agg={"tree_cover": "area", "canopy_density": "mean"}
 )
 
 # Materialise the joined view
