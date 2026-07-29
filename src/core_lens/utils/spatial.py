@@ -607,3 +607,109 @@ def execute_spatial_join(
         on=primary_key_cols,
         how="left",
     )
+
+
+def point_in_entities(
+    latlon: dict[str, float],
+    entities: list[Any],
+) -> dict[str, Any | None]:
+    """Return the entity-id in which a lat/lon point falls, per entity.
+
+    For each entity, performs a two-phase lookup:
+
+    1. **Bbox pre-filter** — eliminates entities whose bounding box doesn't
+       contain the point using the in-memory ``_index`` (no I/O).
+    2. **Exact containment** — loads geometry only for bbox candidates and
+       runs a vectorised Shapely ``contains`` test.
+
+    The function is designed for repeated hot-path calls; it relies on
+    ``entity._index`` and ``entity.geometry_lazy`` which are both
+    process-level cached after first access.
+
+    Args:
+        latlon (dict[str, float]): Point coordinates with keys ``"lat"`` and
+            ``"lon"`` (or ``"lng"`` as an alias for longitude).
+        entities (list[BaseEntity]): List of entity instances to test against.
+            Each must expose ``_index``, ``key_cols``, ``schema_profile``,
+            ``_resolve``, and ``static_path``.
+
+    Returns:
+        dict[str, Any | None]: Mapping of ``entity_class_name → entity_id``
+        (the value of the first ``key_col``). ``None`` if the point doesn't
+        fall inside any geometry of that entity.
+
+    Raises:
+        KeyError: If neither ``"lon"`` nor ``"lng"`` key exists in ``latlon``.
+
+    Example::
+
+        result = point_in_entities(
+            {"lat": 28.6139, "lon": 77.2090},
+            [district_entity, block_entity],
+        )
+        # {"DistrictEntity": "DEL_001", "BlockEntity": None}
+
+    """
+    lat: float = latlon["lat"]
+    lon: float = latlon.get("lon", latlon.get("lng"))  # type: ignore[assignment]
+
+    # Shapely Point — created once, reused across all entities.
+    pt = shapely.Point(lon, lat)
+
+    result: dict[str, Any | None] = {}
+
+    for entity in entities:
+        entity_name = type(entity).__name__
+
+        # Phase 1: bbox pre-filter (pure in-memory, no I/O) ---------------
+        index_df = (
+            entity._index
+        )  # pl.DataFrame with (key_cols…, minx, miny, maxx, maxy)
+        candidates = index_df.filter(
+            (pl.col("minx") <= lon)
+            & (pl.col("maxx") >= lon)
+            & (pl.col("miny") <= lat)
+            & (pl.col("maxy") >= lat)
+        )
+
+        if candidates.is_empty():
+            result[entity_name] = None
+            continue
+
+        # Phase 2: exact containment (load only candidate geometries) ------
+        profile = entity.schema_profile
+        geom_col = profile.geometry_col
+        geom_type = profile.geometry_type
+        key_cols: list[str] = entity.key_cols
+        static_path: str = entity._resolve(entity.static_path)
+
+        geom_df = (
+            pl.scan_parquet(static_path)
+            .select(key_cols + [geom_col])
+            .join(candidates.select(key_cols).lazy(), on=key_cols, how="semi")
+            .collect()
+        )
+
+        if geom_df.is_empty():
+            result[entity_name] = None
+            continue
+
+        raw = geom_df[geom_col].to_numpy()
+        if geom_type == "wkb":
+            geoms = shapely.from_wkb(raw)
+        else:
+            geoms = shapely.from_wkt(raw)
+
+        # Vectorised contains — after bbox pre-filter candidates are O(1~10),
+        # so tree construction would cost more than the query itself.
+        mask = shapely.contains(geoms, pt)  # C-level, no Python loop
+        hit_indices = np.where(mask)[0]
+
+        if len(hit_indices) == 0:
+            result[entity_name] = None
+        else:
+            # Return first key_col value of the first match.
+            primary_key = key_cols[0]
+            result[entity_name] = geom_df[primary_key][int(hit_indices[0])]
+
+    return result

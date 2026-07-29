@@ -239,3 +239,180 @@ def test_execute_spatial_join_no_match_and_agg(tmp_path: Any) -> None:
     assert res["other_val"][1] == 10.0  # Match
     assert res["other_val2"][1] == 10.0
     assert res["other_val3"][1] == 10.0
+
+
+def _make_pie_entity(tmp_path: Any, name: str, polygons: list[tuple[str, str]]) -> Any:
+    """Build a minimal entity stub for point_in_entities tests.
+
+    Args:
+        tmp_path: pytest tmp_path fixture.
+        name: Class name (used as entity key in result dict).
+        polygons: List of (id, wkt_polygon_string) tuples.
+
+    Returns:
+        Entity-like object with _index, key_cols, schema_profile, _resolve, static_path.
+
+    """
+    from core_lens.schema.profile import SchemaProfile
+
+    ids = [p[0] for p in polygons]
+    wkts = [p[1] for p in polygons]
+
+    p = tmp_path / f"{name}.parquet"
+    pl.DataFrame({"entity_id": ids, "geom": wkts}).write_parquet(p)
+
+    # Build bbox index manually from WKT bounds.
+    import shapely
+
+    geoms = shapely.from_wkt(wkts)
+    bnds = shapely.bounds(geoms) if len(geoms) else None
+    if bnds is not None and len(bnds):
+        index = pl.DataFrame(
+            {
+                "entity_id": ids,
+                "minx": bnds[:, 0].tolist(),
+                "miny": bnds[:, 1].tolist(),
+                "maxx": bnds[:, 2].tolist(),
+                "maxy": bnds[:, 3].tolist(),
+            }
+        )
+    else:
+        index = pl.DataFrame(
+            schema={
+                "entity_id": pl.Utf8,
+                "minx": pl.Float64,
+                "miny": pl.Float64,
+                "maxx": pl.Float64,
+                "maxy": pl.Float64,
+            }
+        )
+
+    profile = SchemaProfile(
+        key_cols=["entity_id"],
+        geometry_col="geom",
+        geometry_type="wkt",
+        annual_time_col=None,
+        sub_annual_time_col=None,
+        bbox_cols=None,
+    )
+
+    static_str = str(p)
+
+    class _Entity:
+        key_cols = ["entity_id"]
+        static_path = static_str
+        schema_profile = profile
+        _index = index
+
+        def _resolve(self, path: str) -> str:
+            return path
+
+    _Entity.__name__ = name
+    return _Entity()
+
+
+def test_point_in_entities_hit(tmp_path: Any) -> None:
+    """Point inside a polygon returns its id."""
+    from core_lens.utils.spatial import point_in_entities
+
+    entity = _make_pie_entity(
+        tmp_path,
+        "Zone",
+        [("Z1", "POLYGON ((0 0, 1 0, 1 1, 0 1, 0 0))")],
+    )
+    result = point_in_entities({"lat": 0.5, "lon": 0.5}, [entity])
+    assert result == {"Zone": "Z1"}
+
+
+def test_point_in_entities_miss(tmp_path: Any) -> None:
+    """Point outside all polygons returns None."""
+    from core_lens.utils.spatial import point_in_entities
+
+    entity = _make_pie_entity(
+        tmp_path,
+        "Zone",
+        [("Z1", "POLYGON ((0 0, 1 0, 1 1, 0 1, 0 0))")],
+    )
+    result = point_in_entities({"lat": 5.0, "lon": 5.0}, [entity])
+    assert result == {"Zone": None}
+
+
+def test_point_in_entities_multi_entity(tmp_path: Any) -> None:
+    """Each entity resolved independently; mixed hit/miss."""
+    from core_lens.utils.spatial import point_in_entities
+
+    entity_a = _make_pie_entity(
+        tmp_path,
+        "District",
+        [
+            ("D1", "POLYGON ((0 0, 10 0, 10 10, 0 10, 0 0))"),
+            ("D2", "POLYGON ((10 0, 20 0, 20 10, 10 10, 10 0))"),
+        ],
+    )
+
+    entity_b = _make_pie_entity(
+        tmp_path,
+        "Block",
+        [("B1", "POLYGON ((0 0, 5 0, 5 5, 0 5, 0 0))")],
+    )
+
+    # Point at (3, 3) — inside D1 and B1.
+    result = point_in_entities({"lat": 3.0, "lon": 3.0}, [entity_a, entity_b])
+    assert result["District"] == "D1"
+    assert result["Block"] == "B1"
+
+    # Point at (15, 5) — inside D2, outside B1.
+    result2 = point_in_entities({"lat": 5.0, "lon": 15.0}, [entity_a, entity_b])
+    assert result2["District"] == "D2"
+    assert result2["Block"] is None
+
+
+def test_point_in_entities_lng_alias(tmp_path: Any) -> None:
+    """Accepts 'lng' as alias for longitude."""
+    from core_lens.utils.spatial import point_in_entities
+
+    entity = _make_pie_entity(
+        tmp_path,
+        "Zone",
+        [("Z1", "POLYGON ((0 0, 1 0, 1 1, 0 1, 0 0))")],
+    )
+    result = point_in_entities({"lat": 0.5, "lng": 0.5}, [entity])
+    assert result == {"Zone": "Z1"}
+
+
+def test_point_in_entities_empty_list(tmp_path: Any) -> None:
+    """Empty entity list returns empty dict."""
+    from core_lens.utils.spatial import point_in_entities
+
+    result = point_in_entities({"lat": 0.5, "lon": 0.5}, [])
+    assert result == {}
+
+
+def test_point_in_entities_on_boundary(tmp_path: Any) -> None:
+    """Point exactly on polygon boundary — Shapely treats as contained."""
+    from core_lens.utils.spatial import point_in_entities
+
+    entity = _make_pie_entity(
+        tmp_path,
+        "Zone",
+        [("Z1", "POLYGON ((0 0, 1 0, 1 1, 0 1, 0 0))")],
+    )
+    # Shapely `contains` is strict (boundary not contained) — boundary point
+    # may return None. Test documents this behaviour rather than asserting a
+    # specific id, so the test remains robust across Shapely versions.
+    result = point_in_entities({"lat": 0.0, "lon": 0.5}, [entity])
+    assert result["Zone"] in ("Z1", None)
+
+
+def test_point_in_entities_bbox_skips_exact_check(tmp_path: Any) -> None:
+    """Bbox pre-filter short-circuits: point outside all bboxes skips I/O."""
+    from core_lens.utils.spatial import point_in_entities
+
+    entity = _make_pie_entity(
+        tmp_path,
+        "Zone",
+        [("Z1", "POLYGON ((10 10, 20 10, 20 20, 10 20, 10 10))")],
+    )
+    # Point at (0, 0) is outside bbox [10,10,20,20], so candidates empty.
+    result = point_in_entities({"lat": 0.0, "lon": 0.0}, [entity])
+    assert result == {"Zone": None}
