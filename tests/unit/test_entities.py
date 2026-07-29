@@ -7,8 +7,8 @@ from core_lens.schema.profile import SchemaProfile
 
 def test_tehsil_entity() -> None:
     entity = TehsilEntity()
-    assert entity.key_cols == ["id"]
-    assert entity.geometry_col == "geom"
+    assert entity.key_cols == ["tehsil_id"]
+    assert entity.geometry_col == "geometry"
     assert entity.static_path == "tehsil/static.parquet"
     assert entity.annual_path is None
     assert entity.sub_annual_path is None
@@ -16,9 +16,15 @@ def test_tehsil_entity() -> None:
     # Check schema profile override
     profile = entity.schema_profile
     assert isinstance(profile, SchemaProfile)
-    assert profile.key_cols == ["id"]
-    assert profile.geometry_col == "geom"
-    assert "TEHSIL" in profile.extra_static_cols
+    assert profile.key_cols == ["tehsil_id"]
+    assert profile.geometry_col == "geometry"
+    assert profile.extra_static_cols == [
+        "tehsil",
+        "district",
+        "state",
+        "shape_area",
+        "shape_length",
+    ]
 
 
 def test_mws_entity() -> None:
