@@ -43,7 +43,7 @@ class TehsilEntity(BaseEntity):
             str: The relative path to the static data.
 
         """
-        return "tehsil/static/tehsil.parquet"
+        return "tehsil/static.parquet"
 
     @property
     def schema_profile(self) -> SchemaProfile:

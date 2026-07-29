@@ -9,7 +9,7 @@ def test_tehsil_entity() -> None:
     entity = TehsilEntity()
     assert entity.key_cols == ["id"]
     assert entity.geometry_col == "geom"
-    assert entity.static_path == "tehsil/static/tehsil.parquet"
+    assert entity.static_path == "tehsil/static.parquet"
     assert entity.annual_path is None
     assert entity.sub_annual_path is None
 
