@@ -102,10 +102,12 @@ def detect(
     if lon_col:
         reserved_static.add(lon_col)
     extra_static_cols = [c for c in static_schema if c not in reserved_static]
+    col_types_static = {col: str(dtype) for col, dtype in static_schema.items()}
 
     annual_time_col: str | None = None
     extra_annual_cols: list[str] = []
     annual_is_year_col: bool | None = None
+    col_types_annual: dict[str, str] = {}
     if annual_path:
         annual_schema = _read_schema(
             annual_path, label="annual", storage_options=_so or None
@@ -116,10 +118,12 @@ def detect(
         )
         extra_annual_cols = [c for c in annual_schema if c not in reserved_annual]
         annual_is_year_col = _is_year_col_from_schema(annual_schema, annual_time_col)
+        col_types_annual = {col: str(dtype) for col, dtype in annual_schema.items()}
 
     sub_annual_time_col: str | None = None
     extra_sub_annual_cols: list[str] = []
     sub_annual_is_year_col: bool | None = None
+    col_types_sub_annual: dict[str, str] = {}
     if sub_annual_path:
         sub_annual_schema = _read_schema(
             sub_annual_path, label="sub_annual", storage_options=_so or None
@@ -132,6 +136,9 @@ def detect(
         sub_annual_is_year_col = _is_year_col_from_schema(
             sub_annual_schema, sub_annual_time_col
         )
+        col_types_sub_annual = {
+            col: str(dtype) for col, dtype in sub_annual_schema.items()
+        }
 
     return SchemaProfile(
         key_cols=key_cols,
@@ -143,6 +150,9 @@ def detect(
         extra_static_cols=extra_static_cols,
         extra_annual_cols=extra_annual_cols,
         extra_sub_annual_cols=extra_sub_annual_cols,
+        col_types_static=col_types_static,
+        col_types_annual=col_types_annual,
+        col_types_sub_annual=col_types_sub_annual,
         annual_is_year_col=annual_is_year_col,
         sub_annual_is_year_col=sub_annual_is_year_col,
     )
@@ -153,10 +163,18 @@ def _read_schema(
     label: str,
     storage_options: dict[str, Any] | None = None,
 ) -> pl.Schema:
+    import os
+
     _so = storage_options or {}
+    # When path is a directory, use a glob to read only .parquet files.
+    # This prevents polars from raising InvalidOperationError when the directory
+    # contains mixed-extension files (e.g. data_dictionary.csv alongside .parquet).
+    scan_path = path
+    if os.path.isdir(path):
+        scan_path = os.path.join(path, "**", "*.parquet")
     try:
         return pl.scan_parquet(
-            path,
+            scan_path,
             hive_partitioning=True,
             storage_options=_so or None,
         ).collect_schema()

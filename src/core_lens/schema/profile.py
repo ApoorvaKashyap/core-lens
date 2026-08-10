@@ -56,6 +56,12 @@ class SchemaProfile(BaseModel):
             is used for validation and documentation only.
         extra_annual_cols: Additional attribute columns in the annual file.
         extra_sub_annual_cols: Additional attribute columns in the sub_annual file.
+        col_types_static: Mapping of **all** column names in the static file to
+            their Polars dtype string (e.g. ``{"basin_id": "Int32", "geometry": "Binary"}``).
+            Populated by the auto-detection layer; ``{}`` when the profile is
+            constructed manually.
+        col_types_annual: Same as ``col_types_static`` but for the annual file.
+        col_types_sub_annual: Same as ``col_types_static`` but for the sub_annual file.
 
     """
 
@@ -70,6 +76,11 @@ class SchemaProfile(BaseModel):
     extra_static_cols: list[str] = []
     extra_annual_cols: list[str] = []
     extra_sub_annual_cols: list[str] = []
+    # Column name → Polars dtype string for every column in each resolution.
+    # Populated by the auto-detection layer; empty dict when built manually.
+    col_types_static: dict[str, str] = {}
+    col_types_annual: dict[str, str] = {}
+    col_types_sub_annual: dict[str, str] = {}
     # Whether the time column is an integer-year column (True), a Date/Datetime
     # column (False), or absent/unknown (None).  Determined at detect() time from
     # the Parquet schema — eliminates a redundant collect_schema() call in
