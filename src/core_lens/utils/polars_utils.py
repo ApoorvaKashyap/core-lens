@@ -7,6 +7,8 @@ import functools
 
 import polars as pl
 
+import os
+
 _GPU_AVAILABLE: bool | None = None  # None = not yet probed
 
 
@@ -16,9 +18,34 @@ def _so_key(storage_options: dict[str, Any] | None) -> tuple[tuple[str, Any], ..
     return tuple(sorted(storage_options.items()))
 
 
+def parquet_scan_path(path: str) -> str:
+    """Return a glob-safe path for ``pl.scan_parquet``.
+
+    When *path* is a directory polars will reject it if the directory contains
+    files with mixed extensions (e.g. a ``data_dictionary.csv`` sitting
+    alongside Hive-partitioned ``.parquet`` files).  This helper coerces a bare
+    directory to ``<path>/**/*.parquet`` so only Parquet files are matched.
+
+    Args:
+        path (str): Filesystem path or cloud URI to a Parquet file or directory.
+
+    Returns:
+        str: The original path if it already points to a file, otherwise
+        ``<path>/**/*.parquet``.
+    """
+    if os.path.isdir(path):
+        return os.path.join(path, "**", "*.parquet")
+    return path
+
+
 @functools.cache
 def _cached_schema_internal(path: str, so_key: tuple[tuple[str, Any], ...]) -> Any:
-    return pl.scan_parquet(path, storage_options=dict(so_key) or None).collect_schema()
+    # Coerce bare directory paths to a *.parquet glob so polars doesn't raise
+    # InvalidOperationError when the directory contains mixed-extension files
+    # (e.g. data_dictionary.csv alongside Hive-partitioned .parquet files).
+    return pl.scan_parquet(
+        parquet_scan_path(path), storage_options=dict(so_key) or None
+    ).collect_schema()
 
 
 def cached_read_schema(path: str, storage_options: dict[str, Any] | None = None) -> Any:

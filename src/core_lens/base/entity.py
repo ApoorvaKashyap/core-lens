@@ -29,7 +29,7 @@ from core_lens.utils.spatial import (
     build_bbox_index,
     exact_spatial_filter,
 )
-from core_lens.utils.polars_utils import cached_read_schema
+from core_lens.utils.polars_utils import cached_read_schema, parquet_scan_path
 
 if TYPE_CHECKING:
     import shapely
@@ -475,7 +475,7 @@ class BaseEntity(ABC):
                 )
 
         # --- Combine attribute and spatial filters into a single lazy pipeline ---
-        lf = pl.scan_parquet(static)
+        lf = pl.scan_parquet(parquet_scan_path(static))
 
         if attr_kwargs:
             filter_expr = pl.lit(True)

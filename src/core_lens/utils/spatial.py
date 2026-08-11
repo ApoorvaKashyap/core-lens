@@ -12,6 +12,7 @@ import shapely
 from loguru import logger
 
 from core_lens.utils.paths import is_cloud_uri, path_exists, resolve_fs_and_path
+from core_lens.utils.polars_utils import parquet_scan_path
 
 if TYPE_CHECKING:
     pass
@@ -361,7 +362,7 @@ def exact_spatial_filter(
 
     # Build a lazy scan and push down an inner join to load only required geometries.
     full_df = (
-        pl.scan_parquet(static_path)
+        pl.scan_parquet(parquet_scan_path(static_path))
         .select(key_cols + [geometry_col])
         .join(candidates.select(key_cols).lazy(), on=key_cols, how="semi")
         .collect()
@@ -684,7 +685,7 @@ def point_in_entities(
         static_path: str = entity._resolve(entity.static_path)
 
         geom_df = (
-            pl.scan_parquet(static_path)
+            pl.scan_parquet(parquet_scan_path(static_path))
             .select(key_cols + [geom_col])
             .join(candidates.select(key_cols).lazy(), on=key_cols, how="semi")
             .collect()
