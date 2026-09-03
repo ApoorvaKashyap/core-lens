@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="en" data-accent-color="violet" data-content_root="../../../../">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"><title>core_lens.utils.paths - CoreLens documentation</title><link rel="index" title="Index" href="../../../../genindex.html" /><link rel="search" title="Search" href="../../../../search.html" /><link rel="next" title="core_lens.utils.polars_utils" href="../polars_utils/index.html" /><link rel="prev" title="core_lens.utils" href="../index.html" /><script>
+    function setColorMode(t){let e=document.documentElement;e.setAttribute("data-color-mode",t);let a=window.matchMedia&&window.matchMedia("(prefers-color-scheme: dark)").matches,s=t;"auto"===t&&(s=a?"dark":"light"),"light"===s?(e.classList.remove("dark"),e.classList.add("light")):(e.classList.remove("light"),e.classList.add("dark"))}
+    setColorMode(localStorage._theme||"auto");
+  </script><link rel="stylesheet" type="text/css" href="../../../../_static/pygments.css?v=e1a1ceaf" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/shibuya.css?v=2ceb65ce" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/graphviz.css?v=4ae1632d" />
+    <link media="print" rel="stylesheet" type="text/css" href="../../../../_static/print.css?v=20ff2c19" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --sy-f-text: "Inter", var(--sy-f-sys), var(--sy-f-cjk), sans-serif;
+  --sy-f-heading: "Inter", var(--sy-f-sys), var(--sy-f-cjk), sans-serif;
+}
+</style>
+    
+  <meta property="og:type" content="website"/><meta property="og:title" content="core_lens.utils.paths"/>
+    <meta name="twitter:card" content="summary"/>
+  </head>
+<body><div class="sy-head">
+  <div class="sy-head-blur"></div>
+  <div class="sy-head-inner sy-container mx-auto">
+    <a class="sy-head-brand" href="../../../../index.html">
+      
+      
+      <strong>CoreLens</strong>
+    </a>
+    <div class="sy-head-nav" id="head-nav">
+      <nav class="sy-head-links"></nav>
+      <div class="sy-head-extra flex items-center print:hidden"><form class="searchbox flex items-center" action="../../../../search.html" method="get">
+  <input type="text" name="q" placeholder="Search" />
+  <kbd>/</kbd>
+</form><div class="sy-head-socials"></div></div>
+    </div>
+    <div class="sy-head-actions flex items-center shrink-0 print:hidden"><button class="js-theme theme-switch flex items-center"
+data-aria-auto="Switch to light color mode"
+data-aria-light="Switch to dark color mode"
+data-aria-dark="Switch to auto color mode">
+<i class="i-lucide theme-icon"></i>
+</button><button class="md:hidden flex items-center js-menu" aria-label="Menu" type="button" aria-controls="head-nav" aria-expanded="false">
+        <div class="hamburger">
+          <span class="hamburger_1"></span>
+          <span class="hamburger_2"></span>
+          <span class="hamburger_3"></span>
+        </div>
+      </button>
+    </div>
+  </div>
+</div>
+<div class="sy-page sy-container flex mx-auto">
+  <aside id="lside" class="sy-lside md:w-72 md:shrink-0 print:hidden">
+    <div class="sy-lside-inner md:sticky">
+      <div class="sy-scrollbar p-6">
+        <div class="globaltoc" data-expand-depth="0"><p class="caption" role="heading" aria-level="3"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../../../../intro.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../quickstart.html">Quickstart</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../concepts.html">Core Concepts</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../queries.html">Example Queries</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../stats.html">Statistical Analysis</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../plots.html">Visualisation and Plots</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../export.html">Data Export</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../plugins.html">Plugin System</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../logging.html">Logging</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="../../../index.html">API Reference</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="../../index.html">core_lens</a><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="../../aoi/index.html">core_lens.aoi</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../base/index.html">core_lens.base</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../../base/entity/index.html">core_lens.base.entity</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../base/namespaces/index.html">core_lens.base.namespaces</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../base/result/index.html">core_lens.base.result</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../base/view/index.html">core_lens.base.view</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../../entities/index.html">core_lens.entities</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../../entities/mws/index.html">core_lens.entities.mws</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../entities/tehsil/index.html">core_lens.entities.tehsil</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../entities/waterbody/index.html">core_lens.entities.waterbody</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../../export/index.html">core_lens.export</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../../export/formats/index.html">core_lens.export.formats</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../../schema/index.html">core_lens.schema</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../../schema/detection/index.html">core_lens.schema.detection</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../schema/profile/index.html">core_lens.schema.profile</a></li>
+</ul>
+</li>
+<li class="toctree-l3 current"><a class="reference internal" href="../index.html">core_lens.utils</a><ul class="current">
+<li class="toctree-l4 current"><a class="current reference internal" href="#">core_lens.utils.paths</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../polars_utils/index.html">core_lens.utils.polars_utils</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../season/index.html">core_lens.utils.season</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../spatial/index.html">core_lens.utils.spatial</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+        </div>
+      </div>
+    </div>
+  </aside>
+  <div class="lside-overlay js-menu" role="button" aria-label="Close left sidebar" aria-controls="lside" aria-expanded="false"></div>
+  <aside id="rside" class="sy-rside pb-3 w-64 shrink-0 order-last">
+    <button class="rside-close js-menu xl:hidden" aria-label="Close Table of Contents" type="button" aria-controls="rside" aria-expanded="false">
+      <i class="i-lucide close"></i>
+    </button>
+    <div class="sy-scrollbar sy-rside-inner px-6 xl:top-16 xl:sticky xl:pl-0 pt-6 pb-4"><div class="localtoc"><h3>On this page</h3><ul>
+<li><a class="reference internal" href="#cloud-path-notes">Cloud path notes</a></li>
+<li><a class="reference internal" href="#performance-notes">Performance notes</a></li>
+<li><a class="reference internal" href="#functions">Functions</a></li>
+<li><a class="reference internal" href="#module-contents">Module Contents</a><ul>
+<li><a class="reference internal" href="#core_lens.utils.paths.is_cloud_uri"><code class="docutils literal notranslate"><span class="pre">is_cloud_uri()</span></code></a></li>
+<li><a class="reference internal" href="#core_lens.utils.paths.resolve_fs_and_path"><code class="docutils literal notranslate"><span class="pre">resolve_fs_and_path()</span></code></a></li>
+<li><a class="reference internal" href="#core_lens.utils.paths.path_exists"><code class="docutils literal notranslate"><span class="pre">path_exists()</span></code></a></li>
+<li><a class="reference internal" href="#core_lens.utils.paths.join_uri"><code class="docutils literal notranslate"><span class="pre">join_uri()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</div><div id="ethical-ad-placement" data-ea-publisher="readthedocs"></div></div>
+  </aside>
+  <div class="rside-overlay js-menu" role="button" aria-label="Close Table of Contents" aria-controls="rside" aria-expanded="false"></div>
+  <main class="sy-main w-full max-sm:max-w-full print:pt-6">
+<div class="sy-breadcrumbs" role="navigation">
+  <div class="sy-breadcrumbs-inner flex items-center">
+    <div class="md:hidden mr-3">
+      <button class="js-menu" aria-label="Menu" type="button" aria-controls="lside" aria-expanded="false">
+        <i class="i-lucide menu"></i>
+      </button>
+    </div>
+    <ol class="flex-1" itemscope itemtype="https://schema.org/BreadcrumbList"><li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+        <a itemprop="item" href="../../../../index.html"><span itemprop="name">CoreLens</span></a>
+        <span>/</span>
+        <meta itemprop="position" content="1" />
+      </li><li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+        <a itemprop="item" href="../../../index.html"><span itemprop="name">API Reference</span></a>
+        <span>/</span>
+        <meta itemprop="position" content="2" />
+      </li><li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+        <a itemprop="item" href="../../index.html"><span itemprop="name">core_lens</span></a>
+        <span>/</span>
+        <meta itemprop="position" content="3" />
+      </li><li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+        <a itemprop="item" href="../index.html"><span itemprop="name">core_lens.utils</span></a>
+        <span>/</span>
+        <meta itemprop="position" content="4" />
+      </li><li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+        <strong itemprop="name">core_lens.utils.paths</strong>
+        <meta itemprop="position" content="5" />
+      </li></ol>
+    <div class="xl:hidden ml-1">
+      <button class="js-menu" aria-label="Show table of contents" type="button" aria-controls="rside"
+        aria-expanded="false">
+        <i class="i-lucide outdent"></i>
+      </button>
+    </div>
+  </div>
+</div><div class="flex flex-col break-words justify-between">
+      <div class="relative min-w-0 max-w-6xl px-6 pb-6 pt-8 xl:px-12">
+  <article class="yue" role="main">
+          <section id="module-core_lens.utils.paths">
+<span id="core-lens-utils-paths"></span><h1>core_lens.utils.paths<a class="headerlink" href="#module-core_lens.utils.paths" title="Link to this heading">#</a></h1>
+<p>URI-agnostic path helpers built on <code class="docutils literal notranslate"><span class="pre">pyarrow.fs</span></code>.</p>
+<p>Abstracts over local filesystem and cloud object stores (S3, GCS, Azure)
+so the rest of the codebase never has to branch on URI scheme.</p>
+<section id="cloud-path-notes">
+<h2>Cloud path notes<a class="headerlink" href="#cloud-path-notes" title="Link to this heading">#</a></h2>
+<p>For cloud URIs (<code class="docutils literal notranslate"><span class="pre">s3://</span></code>, <code class="docutils literal notranslate"><span class="pre">gs://</span></code>, <code class="docutils literal notranslate"><span class="pre">abfs://</span></code>, etc.) <a class="reference internal" href="#core_lens.utils.paths.path_exists" title="core_lens.utils.paths.path_exists"><code class="xref py py-func docutils literal notranslate"><span class="pre">path_exists()</span></code></a>
+performs a real remote metadata call (e.g. <code class="docutils literal notranslate"><span class="pre">HeadObject</span></code> on S3).  To avoid
+the per-call latency when registering many entities, existence checks are
+<strong>skipped at</strong> <code class="xref py py-meth docutils literal notranslate"><span class="pre">_resolve()</span></code> <strong>time for
+cloud roots</strong> and are only performed once inside
+<code class="xref py py-func docutils literal notranslate"><span class="pre">_validate_entity()</span></code> via the schema-read path (Polars
+raises a meaningful error if the file is absent).  Local paths continue to
+receive eager existence checks as before.</p>
+</section>
+<section id="performance-notes">
+<h2>Performance notes<a class="headerlink" href="#performance-notes" title="Link to this heading">#</a></h2>
+<p><a class="reference internal" href="#core_lens.utils.paths.resolve_fs_and_path" title="core_lens.utils.paths.resolve_fs_and_path"><code class="xref py py-func docutils literal notranslate"><span class="pre">resolve_fs_and_path()</span></code></a> is called on every Parquet scan, index build, and
+schema read.  The hot path for cloud URIs previously paid
+<code class="docutils literal notranslate"><span class="pre">pyarrow.fs.FileSystem.from_uri</span></code> C++ object-construction cost on every
+invocation.  This is now eliminated by a two-level cache:</p>
+<ol class="arabic simple">
+<li><p><strong>Per-URI cache</strong> — <code class="xref py py-func docutils literal notranslate"><span class="pre">_resolve_fs_and_path_cached()</span></code> is wrapped with
+<code class="xref py py-func docutils literal notranslate"><span class="pre">functools.lru_cache()</span></code>.  Identical URIs (same string) return the
+cached <code class="docutils literal notranslate"><span class="pre">(FileSystem,</span> <span class="pre">path)</span></code> tuple in ~50 ns instead of ~50–200 µs.</p></li>
+<li><p><strong>LocalFileSystem singleton</strong> — <code class="docutils literal notranslate"><span class="pre">pafs.LocalFileSystem()</span></code> is allocated
+once at module import time; local-path calls reuse the same object.</p></li>
+</ol>
+<p>Cache diagnostics:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span data-line="1"><span class="kn">from</span><span class="w"> </span><span class="nn">core_lens.utils.paths</span><span class="w"> </span><span class="kn">import</span> <span class="n">_resolve_fs_and_path_cached</span>
+</span><span data-line="2"><span class="n">_resolve_fs_and_path_cached</span><span class="o">.</span><span class="n">cache_info</span><span class="p">()</span>   <span class="c1"># hits / misses / maxsize</span>
+</span></pre></div>
+</div>
+<p>Cache invalidation (tests / credential rotation):</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span data-line="1"><span class="n">_resolve_fs_and_path_cached</span><span class="o">.</span><span class="n">cache_clear</span><span class="p">()</span>
+</span></pre></div>
+</div>
+</section>
+<section id="functions">
+<h2>Functions<a class="headerlink" href="#functions" title="Link to this heading">#</a></h2>
+<div class="table-wrapper autosummary longtable docutils container">
+<table class="autosummary longtable docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#core_lens.utils.paths.is_cloud_uri" title="core_lens.utils.paths.is_cloud_uri"><code class="xref py py-obj docutils literal notranslate"><span class="pre">is_cloud_uri</span></code></a>(→ bool)</p></td>
+<td><p>Return <code class="docutils literal notranslate"><span class="pre">True</span></code> if <em>uri</em> refers to a cloud object store.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#core_lens.utils.paths.resolve_fs_and_path" title="core_lens.utils.paths.resolve_fs_and_path"><code class="xref py py-obj docutils literal notranslate"><span class="pre">resolve_fs_and_path</span></code></a>(→ tuple[pyarrow.fs.FileSystem, str])</p></td>
+<td><p>Resolve a URI to a <code class="docutils literal notranslate"><span class="pre">(FileSystem,</span> <span class="pre">path)</span></code> pair.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#core_lens.utils.paths.path_exists" title="core_lens.utils.paths.path_exists"><code class="xref py py-obj docutils literal notranslate"><span class="pre">path_exists</span></code></a>(→ bool)</p></td>
+<td><p>Return <code class="docutils literal notranslate"><span class="pre">True</span></code> if the path or object exists on the filesystem.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#core_lens.utils.paths.join_uri" title="core_lens.utils.paths.join_uri"><code class="xref py py-obj docutils literal notranslate"><span class="pre">join_uri</span></code></a>(→ str)</p></td>
+<td><p>Join <em>rel</em> onto <em>root</em>, handling both local paths and cloud URIs.</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+<section id="module-contents">
+<h2>Module Contents<a class="headerlink" href="#module-contents" title="Link to this heading">#</a></h2>
+<dl class="py function">
+<dt class="sig sig-object py" id="core_lens.utils.paths.is_cloud_uri">
+<span class="sig-prename descclassname"><span class="pre">core_lens.utils.paths.</span></span><span class="sig-name descname"><span class="pre">is_cloud_uri</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">uri</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">bool</span></span></span><a class="headerlink" href="#core_lens.utils.paths.is_cloud_uri" title="Link to this definition">#</a></dt>
+<dd><p>Return <code class="docutils literal notranslate"><span class="pre">True</span></code> if <em>uri</em> refers to a cloud object store.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>uri</strong> (<em>str</em>) – Any path or URI string.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><code class="docutils literal notranslate"><span class="pre">True</span></code> for URIs starting with a recognised cloud scheme.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>bool</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="core_lens.utils.paths.resolve_fs_and_path">
+<span class="sig-prename descclassname"><span class="pre">core_lens.utils.paths.</span></span><span class="sig-name descname"><span class="pre">resolve_fs_and_path</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">uri</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">pyarrow.fs.FileSystem</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#core_lens.utils.paths.resolve_fs_and_path" title="Link to this definition">#</a></dt>
+<dd><p>Resolve a URI to a <code class="docutils literal notranslate"><span class="pre">(FileSystem,</span> <span class="pre">path)</span></code> pair.</p>
+<p>Delegates to <code class="xref py py-func docutils literal notranslate"><span class="pre">pyarrow.fs.FileSystem.from_uri()</span></code> for cloud URIs and
+returns a <code class="xref py py-class docutils literal notranslate"><span class="pre">pyarrow.fs.LocalFileSystem</span></code> for plain local paths.</p>
+<p>Results are cached by <code class="xref py py-func docutils literal notranslate"><span class="pre">_resolve_fs_and_path_cached()</span></code> so repeated
+calls with the same URI are effectively free (~50 ns per call after the
+first hit).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>uri</strong> (<em>str</em>) – A local path or cloud URI (e.g. <code class="docutils literal notranslate"><span class="pre">s3://bucket/prefix</span></code>).</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The resolved filesystem and the
+normalised path within that filesystem.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>tuple[pyarrow.fs.FileSystem, str]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="core_lens.utils.paths.path_exists">
+<span class="sig-prename descclassname"><span class="pre">core_lens.utils.paths.</span></span><span class="sig-name descname"><span class="pre">path_exists</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">uri</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">bool</span></span></span><a class="headerlink" href="#core_lens.utils.paths.path_exists" title="Link to this definition">#</a></dt>
+<dd><p>Return <code class="docutils literal notranslate"><span class="pre">True</span></code> if the path or object exists on the filesystem.</p>
+<p>Uses <code class="xref py py-meth docutils literal notranslate"><span class="pre">pyarrow.fs.FileSystem.get_file_info()</span></code> so it works for both
+local paths and cloud URIs.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>uri</strong> (<em>str</em>) – A local path or cloud URI.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><code class="docutils literal notranslate"><span class="pre">True</span></code> if the path exists (file or directory).</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>bool</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="core_lens.utils.paths.join_uri">
+<span class="sig-prename descclassname"><span class="pre">core_lens.utils.paths.</span></span><span class="sig-name descname"><span class="pre">join_uri</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">root</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rel</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">str</span></span></span><a class="headerlink" href="#core_lens.utils.paths.join_uri" title="Link to this definition">#</a></dt>
+<dd><p>Join <em>rel</em> onto <em>root</em>, handling both local paths and cloud URIs.</p>
+<p>For cloud roots the join is a simple string concatenation with <code class="docutils literal notranslate"><span class="pre">/</span></code> as
+separator (object-store “directories” are just key prefixes).  For local
+roots <code class="xref py py-func docutils literal notranslate"><span class="pre">pathlib.Path.__truediv__()</span></code> is used for correct OS handling.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>root</strong> (<em>str</em>) – The root directory path or cloud URI prefix.</p></li>
+<li><p><strong>rel</strong> (<em>str</em>) – A relative sub-path to append.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The joined URI or absolute path string.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>str</p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+</section>
+
+        </article><button class="back-to-top" type="button">
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+    <path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8v12z"></path>
+  </svg>
+  <span>Back to top</span>
+</button><div class="navigation flex print:hidden"><div class="navigation-prev">
+    <a href="../index.html">
+      <i class="i-lucide chevron-left"></i>
+      <div class="page-info">
+        <span>Previous</span><div class="title">core_lens.utils</div></div>
+    </a>
+  </div><div class="navigation-next">
+    <a href="../polars_utils/index.html">
+      <div class="page-info">
+        <span>Next</span>
+        <div class="title">core_lens.utils.polars_utils</div>
+      </div>
+      <i class="i-lucide chevron-right"></i>
+    </a>
+  </div></div></div>
+    </div>
+  </main>
+</div>
+<footer class="sy-foot">
+  <div class="sy-foot-inner sy-container mx-auto">
+    <div class="sy-foot-reserved md:flex justify-between items-center">
+      <div class="sy-foot-copyright"><p>2026, Apoorva Kashyap</p>
+  
+  <p>
+    Made with
+    
+    <a href="https://www.sphinx-doc.org/">Sphinx</a> and
+    
+    <a href="https://shibuya.lepture.com">Shibuya theme</a>.
+  </p>
+</div>
+      <div class="sy-foot-socials"></div>
+    </div>
+  </div>
+</footer>
+      <script src="../../../../_static/documentation_options.js?v=5929fcd5"></script>
+      <script src="../../../../_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="../../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
+      <script src="../../../../_static/clipboard.min.js?v=a7894cd8"></script>
+      <script src="../../../../_static/copybutton.js?v=f281be69"></script>
+      <script src="../../../../_static/shibuya.js?v=50760d75"></script></body>
+</html>

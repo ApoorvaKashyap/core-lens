@@ -1,0 +1,76 @@
+core_lens.entities.waterbody
+============================
+
+.. py:module:: core_lens.entities.waterbody
+
+.. autoapi-nested-parse::
+
+   Module for Core Lens.
+
+
+
+Classes
+-------
+
+.. autoapisummary::
+
+   core_lens.entities.waterbody.WaterbodyEntity
+
+
+Module Contents
+---------------
+
+.. py:class:: WaterbodyEntity(data_root: str | pathlib.Path | None = None, storage_options: dict[str, Any] | None = None)
+
+   Bases: :py:obj:`core_lens.base.entity.BaseEntity`
+
+
+   Waterbody entity.
+
+   Backed by:
+   - Static: waterbodies/static
+   - Annual: waterbodies/annual (partitioned by basin)
+
+   All paths are relative to the AoI ``data_root``.
+
+
+   .. py:property:: key_cols
+      :type: list[str]
+
+
+      Get the property value.
+
+      :returns: The key columns for the entity.
+      :rtype: list[str]
+
+
+   .. py:property:: geometry_col
+      :type: str
+
+
+      Get the property value.
+
+      :returns: The geometry column name.
+      :rtype: str
+
+
+   .. py:property:: static_path
+      :type: str
+
+
+      Get the property value.
+
+      :returns: The relative path to the static data.
+      :rtype: str
+
+
+   .. py:property:: annual_path
+      :type: str | None
+
+
+      Get the property value.
+
+      :returns: The relative path to the annual data.
+      :rtype: str | None
+
+

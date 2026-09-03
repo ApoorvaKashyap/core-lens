@@ -1,0 +1,21 @@
+core_lens.schema
+================
+
+.. py:module:: core_lens.schema
+
+.. autoapi-nested-parse::
+
+   Schema introspection utilities for core_lens.
+
+
+
+Submodules
+----------
+
+.. toctree::
+   :maxdepth: 1
+
+   /autoapi/core_lens/schema/detection/index
+   /autoapi/core_lens/schema/profile/index
+
+

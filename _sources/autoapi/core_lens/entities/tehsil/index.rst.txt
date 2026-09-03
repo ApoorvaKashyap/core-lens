@@ -1,0 +1,80 @@
+core_lens.entities.tehsil
+=========================
+
+.. py:module:: core_lens.entities.tehsil
+
+.. autoapi-nested-parse::
+
+   Module for Core Lens.
+
+
+
+Classes
+-------
+
+.. autoapisummary::
+
+   core_lens.entities.tehsil.TehsilEntity
+
+
+Module Contents
+---------------
+
+.. py:class:: TehsilEntity(data_root: str | pathlib.Path | None = None, storage_options: dict[str, Any] | None = None)
+
+   Bases: :py:obj:`core_lens.base.entity.BaseEntity`
+
+
+   Tehsil administrative boundary entity.
+
+   Static file columns (from parquet schema):
+       tehsil_id     — unique tehsil key
+       tehsil        — tehsil name
+       district      — parent district name
+       state         — parent state name
+       shape_area    — polygon area
+       shape_length  — polygon perimeter
+       geometry      — WKB geometry
+       bbox          — struct<xmin, ymin, xmax, ymax> pre-computed bounds
+
+
+   .. py:property:: key_cols
+      :type: list[str]
+
+
+      Get the property value.
+
+      :returns: The key columns for the entity.
+      :rtype: list[str]
+
+
+   .. py:property:: geometry_col
+      :type: str
+
+
+      Get the property value.
+
+      :returns: The geometry column name.
+      :rtype: str
+
+
+   .. py:property:: static_path
+      :type: str
+
+
+      Get the property value.
+
+      :returns: The relative path to the static data.
+      :rtype: str
+
+
+   .. py:property:: schema_profile
+      :type: core_lens.schema.profile.SchemaProfile
+
+
+      Get the property value.
+
+      :returns: The hardcoded schema profile.
+      :rtype: SchemaProfile
+
+
