@@ -57,7 +57,9 @@ aoi = AoI(DATA_ROOT, bbox=(76.0, 31.0, 78.0, 33.0))
 aoi = AoI(DATA_ROOT, mws_id="13_551")
 
 # Optional: Override default seasons (kharif, rabi, zaid)
-custom_seasons = SeasonConfig(kharif=("06-01", "10-15"), rabi=("10-16", "02-28"), zaid=("03-01", "05-31"))
+custom_seasons = SeasonConfig(
+    kharif=("06-01", "10-15"), rabi=("10-16", "02-28"), zaid=("03-01", "05-31")
+)
 aoi_custom = AoI(DATA_ROOT, tehsil="Pangi", seasons=custom_seasons)
 ```
 
@@ -78,6 +80,7 @@ spatial_filtered = mws_view.spatial_filter(bbox=(76.5, 31.5, 77.5, 32.5))
 # Temporal Filtering
 # Note: You can filter by exact years, a range of years, or predefined seasons.
 from core_lens.base.view import Season
+
 temporal_view = mws_view.between(year=(2020, 2022), season=Season.KHARIF)
 current_view = mws_view.between(season=Season.CURRENT)
 ```
@@ -98,9 +101,9 @@ annual_result = temporal_view.annual.materialise()
 
 ```python
 # To access underlying data structures:
-df = static_result.df()        # Polars DataFrame (Zero-copy)
-lazy_df = static_result.lazy() # Polars LazyFrame
-gdf = static_result.gdf()      # GeoPandas GeoDataFrame (Heavy!)
+df = static_result.df()  # Polars DataFrame (Zero-copy)
+lazy_df = static_result.lazy()  # Polars LazyFrame
+gdf = static_result.gdf()  # GeoPandas GeoDataFrame (Heavy!)
 ```
 
 ## 5. Computation and Data Manipulation (Result API)
@@ -145,30 +148,53 @@ result.stats.describe(columns=["ndvi", "rainfall"])
 
 # Correlation (pearson, spearman, kendall)
 from core_lens.base.namespaces.stats import CorrelateMethod
-result.stats.correlate(columns=["ndvi", "rainfall"], method=CorrelateMethod.PEARSON, across="entity")
+
+result.stats.correlate(
+    columns=["ndvi", "rainfall"], method=CorrelateMethod.PEARSON, across="entity"
+)
 
 # Hypothesis Testing (t-test, mann-whitney, wilcoxon, ks, chi-square)
 from core_lens.base.namespaces.stats import TestMethod
-result.stats.test(column="cropping_intensity", groups="temperature_zone", method=TestMethod.MANN_WHITNEY)
+
+result.stats.test(
+    column="cropping_intensity",
+    groups="temperature_zone",
+    method=TestMethod.MANN_WHITNEY,
+)
 
 # Change Detection (absolute, percentage, trend)
 from core_lens.base.namespaces.stats import ChangeMethod
-result.stats.change(column="tree_cover", from_period=2018, to_period=2023, method=ChangeMethod.PERCENTAGE)
+
+result.stats.change(
+    column="tree_cover",
+    from_period=2018,
+    to_period=2023,
+    method=ChangeMethod.PERCENTAGE,
+)
 
 # Anomaly Detection
 from core_lens.base.namespaces.stats import AnomalyTsMethod, AnomalyCrossMethod
+
 # Mode 1: Cross-sectional (zscore, iqr, percentile, threshold)
-result.stats.anomaly(column="ndvi", mode="cross_sectional", method=AnomalyCrossMethod.ZSCORE, baseline=(2010, 2020))
+result.stats.anomaly(
+    column="ndvi",
+    mode="cross_sectional",
+    method=AnomalyCrossMethod.ZSCORE,
+    baseline=(2010, 2020),
+)
 # Mode 2: Time-series (stl, cusum, mad)
-result.stats.anomaly(column="ndvi", mode="timeseries", method=AnomalyTsMethod.STL, baseline=(2010, 2018))
+result.stats.anomaly(
+    column="ndvi", mode="timeseries", method=AnomalyTsMethod.STL, baseline=(2010, 2018)
+)
 
 # Similarity Matching (euclidean, cosine, mahalanobis, manhattan)
 from core_lens.base.namespaces.stats import SimilarityMethod
+
 result.stats.similarity(
     target="13_551",
     columns={"rainfall": ("annual", {"year": 2018})},
     method=SimilarityMethod.EUCLIDEAN,
-    top_n=10
+    top_n=10,
 )
 ```
 
@@ -214,6 +240,7 @@ You can extend core-lens with custom entities by subclassing `BaseEntity`.
 ```python
 from core_lens.base import BaseEntity
 
+
 class CustomEntity(BaseEntity):
     @property
     def key_cols(self) -> list[str]:
@@ -230,6 +257,7 @@ class CustomEntity(BaseEntity):
     @property
     def annual_path(self) -> str | None:
         return "custom/annual.parquet"
+
 
 AoI.register(CustomEntity)
 ```
