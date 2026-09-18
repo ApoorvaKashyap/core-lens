@@ -1,0 +1,258 @@
+core_lens.base.namespaces.plot
+==============================
+
+.. py:module:: core_lens.base.namespaces.plot
+
+.. autoapi-nested-parse::
+
+   Visualisation namespace for Results.
+
+
+
+Classes
+-------
+
+.. autoapisummary::
+
+   core_lens.base.namespaces.plot.SubplotOn
+   core_lens.base.namespaces.plot.MapWithLegend
+   core_lens.base.namespaces.plot.PlotNamespace
+
+
+Module Contents
+---------------
+
+.. py:class:: SubplotOn(*args, **kwds)
+
+   Bases: :py:obj:`enum.Enum`
+
+
+   Temporal dimensions to split plot data across.
+
+   Used to specify how data should be partitioned into subplots or map layers
+   based on temporal columns added during materialisation.
+
+   :ivar YEAR: Split data by year.
+   :ivar MONTH: Split data by month.
+   :ivar SEASON: Split data by meteorological season.
+   :ivar SEASON_YEAR: Split data by season and year.
+
+
+
+
+   .. py:attribute:: YEAR
+      :value: 'year'
+
+
+
+   .. py:attribute:: MONTH
+      :value: 'month'
+
+
+
+   .. py:attribute:: SEASON
+      :value: 'season'
+
+
+
+   .. py:attribute:: SEASON_YEAR
+      :value: 'season_year'
+
+
+
+.. py:class:: MapWithLegend(map_widget: Any, cmap: Any, v_min: float, v_max: float, column_name: str, clamped_min: bool = False, clamped_max: bool = False)
+
+   Wrapper around lonboard.Map that adds a legend for Jupyter and HTML exports.
+
+
+   .. py:method:: __getattr__(name: str) -> Any
+
+      Get map attribute.
+
+      :param name: The attribute name to look up on the underlying map.
+
+      :returns: The requested attribute from the map widget.
+
+
+
+   .. py:method:: to_html(filename: str | None = None, title: str | None = None) -> str | None
+
+      Export the map to a static HTML string or file, injecting the legend.
+
+
+
+.. py:class:: PlotNamespace(result: core_lens.base.result.Result)
+
+   Visualisation namespace for :class:`~core_lens.base.result.Result`.
+
+   Methods return map or chart objects.
+
+   :ivar result: The parent Result object.
+
+
+
+
+   .. py:attribute:: result
+
+
+   .. py:method:: choropleth(column: str, subplot_on: SubplotOn | None = None, v_min: float | None = None, v_max: float | None = None) -> MapWithLegend
+
+      Render an interactive choropleth map using Lonboard.
+
+      If the Result does not already have geometry, it will be attached
+      automatically via :meth:`~core_lens.base.result.Result.with_geometry`.
+
+      :param column: The column to use for colour mapping.
+      :type column: str
+      :param subplot_on: Optional temporal dimension to split data across.
+                         A :class:`~core_lens.base.namespaces.plot.SubplotOn` enum value. When set, one layer is rendered per unique
+                         value of ``subplot_on`` in the data.
+      :type subplot_on: SubplotOn | None, optional
+      :param v_min: Minimum value for color scale.
+      :type v_min: float | None, optional
+      :param v_max: Maximum value for color scale.
+      :type v_max: float | None, optional
+
+      :returns: A Lonboard Map object.
+      :rtype: lonboard.Map
+
+      :raises ValueError: If ``column`` or ``subplot_on`` column not found in data.
+      :raises NotImplementedError: Lonboard does not support native subplot grids;
+          only single-value ``subplot_on`` is rendered when specified.
+
+      Under the hood:
+          - Calls ``lonboard.Map`` and ``lonboard.PolygonLayer`` to render high-performance WebGL maps.
+          - Uses ``geoarrow.rust.core.from_wkb`` for zero-copy geometry conversion from Polars WKB.
+          - Colormaps are applied via ``lonboard.colormap.apply_continuous_cmap`` (using matplotlib colormaps).
+
+
+
+
+   .. py:method:: timeseries(x: str | None = None, y: str | list[str] | None = None, subplot_on: SubplotOn | str | None = None, top_n: int = 10, aggregate: bool = False) -> Any
+
+      Render a timeseries line chart using Bokeh.
+
+      Returns a :class:`bokeh.models.Tabs` widget with two panels:
+      *Per Entity* (up to ``top_n`` entities) and *Aggregated Mean*.
+      When ``aggregate=True``, only the aggregated panel is returned as a
+      plain :class:`bokeh.plotting.figure`.
+
+      :param x: The temporal column to plot on the x-axis.
+      :type x: str | None, optional
+      :param y: The value column(s) to plot on the y-axis.
+                If ``None``, all numeric columns (except ``x``) are used.
+      :type y: str | list[str] | None, optional
+      :param subplot_on: Optional temporal dimension to split data across.
+                         A :class:`~core_lens.base.namespaces.plot.SubplotOn` enum value or string.
+      :type subplot_on: SubplotOn | str | None, optional
+      :param top_n: Maximum number of entities rendered in per-entity view.
+      :type top_n: int, optional
+      :param aggregate: If ``True``, renders only the aggregated mean view.
+      :type aggregate: bool, optional
+
+      :returns: A Bokeh Tabs object (or a single Figure when ``aggregate=True``).
+      :rtype: Any
+
+      Under the hood:
+          Uses ``bokeh.plotting.figure`` to construct interactive line and scatter charts.
+          Data is passed via ``bokeh.models.ColumnDataSource`` and split into tabs using ``bokeh.models.Tabs``.
+
+
+
+
+   .. py:method:: scatter(x: str | None = None, y: str | list[str] | None = None, top_n: int = 10) -> Any
+
+      Render a scatter plot using Bokeh.
+
+      :param x: The column to plot on the x-axis.
+      :type x: str | None, optional
+      :param y: The column(s) to plot on the y-axis. If None, auto-selects all numeric.
+      :type y: str | list[str] | None, optional
+      :param top_n: Maximum number of entities to plot.
+      :type top_n: int, optional
+
+      :returns: A Bokeh Figure or Tabs object.
+      :rtype: Any
+
+      Under the hood:
+          Uses ``bokeh.plotting.figure`` for the scatter plot rendering, populating
+          data through a ``ColumnDataSource`` to enable tooltips and interactive panning.
+
+
+
+
+   .. py:method:: distribution(x: str | list[str] | None = None, top_n: int = 10) -> Any
+
+      Render a distribution (histogram) plot using Bokeh.
+
+      :param x: The column(s) to plot the distribution for. If None, auto-selects all numeric.
+      :type x: str | list[str] | None, optional
+      :param top_n: Maximum number of entities to include.
+      :type top_n: int, optional
+
+      :returns: A Bokeh Figure or Tabs object.
+      :rtype: Any
+
+      Under the hood:
+          - Computes histogram bins and counts efficiently using ``numpy.histogram_bin_edges`` and ``numpy.histogram``.
+          - Renders the resulting distribution using the ``quad`` glyph in ``bokeh.plotting.figure``.
+
+
+
+
+   .. py:method:: correlation(columns: list[str] | None = None, top_n: int = 10) -> Any
+
+      Render a correlation heatmap using Bokeh.
+
+      :param columns: Optional list of columns to correlate. Defaults to all numeric.
+      :type columns: list[str] | None, optional
+      :param top_n: Maximum number of entities to include (currently unused).
+      :type top_n: int, optional
+
+      :returns: A Bokeh Figure object.
+      :rtype: Any
+
+      Under the hood:
+          - Computes the Pearson correlation matrix using pandas' native ``corr()`` method.
+          - Renders a heatmap grid using Bokeh's ``rect`` glyph and ``LinearColorMapper``.
+
+
+
+
+   .. py:method:: heatmap(x: str | None = None, y: str | None = None, value: str | None = None, top_n: int = 10) -> Any
+
+      Render a heatmap using Bokeh.
+
+      :param x: The column for the x-axis.
+      :type x: str | None, optional
+      :param y: The column for the y-axis.
+      :type y: str | None, optional
+      :param value: The column for the colour values.
+      :type value: str | None, optional
+      :param top_n: Maximum number of entities to include (currently unused).
+      :type top_n: int, optional
+
+      :returns: A Bokeh Figure object.
+      :rtype: Any
+
+      Under the hood:
+          - Pivots the Polars DataFrame to a 2D matrix.
+          - Uses ``bokeh.plotting.figure`` with ``rect`` glyphs and ``LinearColorMapper`` for the color scale.
+
+
+
+
+   .. py:method:: matrix() -> Any
+
+      Render a scatter matrix (pairs plot) using Bokeh.
+
+      :returns: A Bokeh ``gridplot`` object.
+      :rtype: Any
+
+      Under the hood:
+          Iterates through all pairs of numeric columns, creating a grid of individual Bokeh
+          scatter plots and assembling them into a single layout using ``bokeh.layouts.gridplot``.
+
+
+
+

@@ -1,0 +1,29 @@
+core_lens.base
+==============
+
+.. py:module:: core_lens.base
+
+.. autoapi-nested-parse::
+
+   Public API surface for core_lens plugin authors.
+
+   Plugin authors should import only from this package::
+
+       from core_lens.base import BaseEntity, View, Result
+
+   Internal modules (namespaces, schema helpers) are not re-exported here.
+
+
+
+Submodules
+----------
+
+.. toctree::
+   :maxdepth: 1
+
+   /autoapi/core_lens/base/entity/index
+   /autoapi/core_lens/base/namespaces/index
+   /autoapi/core_lens/base/result/index
+   /autoapi/core_lens/base/view/index
+
+
