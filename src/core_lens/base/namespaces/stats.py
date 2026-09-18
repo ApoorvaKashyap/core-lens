@@ -239,26 +239,80 @@ class StatsNamespace:
         columns: list[str],
         method: CorrelateMethod = CorrelateMethod.PEARSON,
         across: str = "entity",
-    ) -> Result:
-        """Pairwise correlations between columns.
+        group_by: str | None = None,
+        min_obs: int = 3,
+    ) -> "Result":
+        """Compute pairwise correlations between columns.
+
+        Correlations are computed with ``scipy.stats`` and returned as a
+        :class:`~core_lens.base.result.Result` whose ``data`` is a Polars
+        ``DataFrame``. Two modes are supported:
+
+        * **Pooled** (``group_by is None``): all rows are treated as one
+        observation set and a single correlation is computed per column pair.
+        * **Per-entity** (``group_by`` set): the result is grouped by the given
+        key column (e.g. ``"mws_id"``) and one correlation is computed per
+        entity across its remaining rows (typically its time series). This is
+        what enables questions such as "which MWS show the strongest
+        dependence of cropping intensity on annual rainfall?".
 
         Args:
-            columns (list[str]): At least 2 column names.
-            method (CorrelateMethod, optional): A :class:`~core_lens.base.namespaces.stats.CorrelateMethod` enum value.
-            across (str, optional): ``"entity"`` or ``"time"`` — recorded in metadata only.
+            columns: Column names to correlate. Must contain at least two
+                entries. In pooled mode every pair is computed; in per-entity
+                mode the first two columns are used as the pair.
+            method: The correlation coefficient to compute. One of
+                :class:`CorrelateMethod` (``PEARSON``, ``SPEARMAN``, ``KENDALL``).
+            across: ``"entity"`` or ``"time"``. Recorded in result metadata to
+                describe the intended axis of the relationship.
+            group_by: Optional key column to compute one correlation per group
+                (e.g. ``"mws_id"``). When ``None``, the pooled behaviour is
+                preserved for backward compatibility.
+            min_obs: Minimum number of non-null observations required per group
+                (per-entity mode) or overall (pooled mode) before a correlation
+                is computed. Groups below this threshold are skipped.
 
         Returns:
-            Result: Result whose data has columns
-            ``column_a | column_b | correlation | p_value``.
+            Result: A :class:`~core_lens.base.result.Result` whose ``data``
+                DataFrame has the following columns:
+
+                * Pooled mode: ``column_a | column_b | correlation | p_value``
+                * Per-entity mode: ``{group_by} | correlation | p_value | n_obs``
+
+                Geometry is dropped (``has_geometry=False``).
 
         Raises:
-            CorrelationError: If fewer than 2 columns supplied.
-            ValueError: If ``method`` is not recognised.
+            CorrelationError: If fewer than two columns are supplied.
+            ValueError: If ``method`` is not a valid :class:`CorrelateMethod`,
+                or if ``group_by`` is set but the column is not present in the
+                underlying data.
 
-        Under the hood:
-            Calls ``scipy.stats.pearsonr``, ``scipy.stats.spearmanr``, or ``scipy.stats.kendalltau``
-            to compute the corresponding correlation coefficients and p-values.
+        Examples:
+            Pooled correlation across all MWS in the AoI::
 
+                result = aoi.mws.annual.stats.correlate(
+                    columns=["dw_precipitation", "ci_cropping_intensity"],
+                    method=CorrelateMethod.PEARSON,
+                )
+                print(result.data.collect())
+
+            Per-MWS correlation, ranked by strength of dependence::
+
+                top5 = (
+                    aoi.mws.annual.stats
+                    .correlate(
+                        columns=["dw_precipitation", "ci_cropping_intensity"],
+                        method=CorrelateMethod.PEARSON,
+                        group_by="mws_id",
+                        min_obs=3,
+                    )
+                    .data
+                    .with_columns(pl.col("correlation").abs().alias("abs_corr"))
+                    .sort("abs_corr", descending=True)
+                    .select("mws_id", "correlation", "p_value", "n_obs")
+                    .limit(5)
+                    .collect()
+                )
+                print(top5)
         """
         if len(columns) < 2:
             raise CorrelationError(
@@ -266,27 +320,124 @@ class StatsNamespace:
             )
         if not isinstance(method, CorrelateMethod):
             raise ValueError(
-                f"StatsNamespace.correlate: method must be a CorrelateMethod. Valid options: {[e.name for e in CorrelateMethod]}."
+                f"StatsNamespace.correlate: method must be a CorrelateMethod. "
+                f"Valid options: {[e.name for e in CorrelateMethod]}."
             )
 
         import scipy.stats as sp
 
-        df = self._r.df()
-        n_obs = len(df)
-        rows: list[dict[str, Any]] = []
+        lf = (
+            self._r.lazy()
+        )  # LazyFrame — stays lazy until an explicit collect boundary below
 
+        def _t_pvals(corr_col: "pl.Expr", n_col: "pl.Expr") -> "pl.Expr":
+            r_safe = corr_col.clip(-0.9999999, 0.9999999)
+            return (corr_col * ((n_col - 2) / (1 - r_safe**2)).sqrt()).alias("t_stat")
+
+        # Per-entity mode
+        if group_by is not None:
+            # Schema check only — does NOT execute the query plan.
+            if group_by not in lf.collect_schema().names():
+                raise ValueError(
+                    f"StatsNamespace.correlate: group_by column '{group_by}' "
+                    f"not found in data. Available: {lf.collect_schema().names()}"
+                )
+
+            col_a, col_b = columns[0], columns[1]
+
+            if method in (CorrelateMethod.PEARSON, CorrelateMethod.SPEARMAN):
+                # Fully lazy path: rank (if Spearman) -> group_by -> agg -> filter.
+                # No collect until the very end, where scipy needs numpy anyway.
+                if method is CorrelateMethod.SPEARMAN:
+                    src = lf.with_columns(
+                        pl.col(col_a)
+                        .rank(method="average")
+                        .over(group_by)
+                        .alias("__a"),
+                        pl.col(col_b)
+                        .rank(method="average")
+                        .over(group_by)
+                        .alias("__b"),
+                    )
+                    a_col, b_col = "__a", "__b"
+                else:
+                    src, a_col, b_col = lf, col_a, col_b
+
+                lazy_result = (
+                    src.group_by(group_by)
+                    .agg(
+                        pl.corr(pl.col(a_col), pl.col(b_col), method="pearson").alias(
+                            "correlation"
+                        ),
+                        pl.len().alias("n_obs"),
+                    )
+                    .filter(pl.col("correlation").is_finite())
+                    .filter(pl.col("n_obs") >= min_obs)
+                    .with_columns(_t_pvals(pl.col("correlation"), pl.col("n_obs")))
+                    .filter(pl.col("t_stat").is_finite())
+                )
+
+                # --- single collect boundary: scipy.t.sf needs eager numpy ---
+                result = lazy_result.collect()
+                t_vals = result["t_stat"].to_numpy()
+                df_vals = result["n_obs"].to_numpy() - 2
+                p_vals = 2.0 * sp.t.sf(np.abs(t_vals), df_vals)
+                result = result.with_columns(pl.Series("p_value", p_vals))
+
+                data = result.select([group_by, "correlation", "p_value", "n_obs"])
+
+            else:
+                # Kendall: scipy has no batched/lazy equivalent, so this branch
+                # is inherently eager. Collect ONCE here — not scattered filters.
+                df = lf.collect()
+                rows: list[dict[str, Any]] = []
+                for sub_full in df.partition_by(group_by):
+                    key = sub_full[group_by][0]
+                    sub = sub_full.select([col_a, col_b]).drop_nulls()
+                    a = sub[col_a].to_numpy().astype(float)
+                    b = sub[col_b].to_numpy().astype(float)
+                    n = len(a)
+                    if n < min_obs or a.std() == 0 or b.std() == 0:
+                        continue
+                    corr, pval = sp.kendalltau(a, b)
+                    rows.append(
+                        {
+                            group_by: key,
+                            "correlation": float(cast(float, corr)),
+                            "p_value": float(cast(float, pval)),
+                            "n_obs": n,
+                        }
+                    )
+                data = pl.DataFrame(rows)
+
+            metadata: dict[str, Any] = {
+                "method": method.value,
+                "columns": [col_a, col_b],
+                "across": across,
+                "group_by": group_by,
+                "min_obs": min_obs,
+                "n_entities_computed": len(data),
+            }
+            return self._r._replace(data=data, has_geometry=False, metadata=metadata)
+
+        # Pooled mode — eager needed regardless (scipy.pearsonr/spearmanr/
+        # kendalltau all take raw numpy arrays). Collect ONCE here.
+        df = lf.collect()
+        n_obs = len(df)
+
+        rows = []
         for col_a, col_b in combinations(columns, 2):
             sub = df.select([col_a, col_b]).drop_nulls()
             a = sub[col_a].to_numpy().astype(float)
             b = sub[col_b].to_numpy().astype(float)
-
+            if len(a) < min_obs or a.std() == 0 or b.std() == 0:
+                continue
             if method is CorrelateMethod.PEARSON:
                 corr, pval = sp.pearsonr(a, b)
             elif method is CorrelateMethod.SPEARMAN:
                 corr, pval = sp.spearmanr(a, b)
             else:
                 corr, pval = sp.kendalltau(a, b)
-
             rows.append(
                 {
                     "column_a": col_a,
@@ -297,8 +448,8 @@ class StatsNamespace:
             )
 
         data = pl.DataFrame(rows)
-        metadata: dict[str, Any] = {
-            "method": method.value if method is not None else None,
+        metadata = {
+            "method": method.value,
             "columns": columns,
             "across": across,
             "n_observations": n_obs,
