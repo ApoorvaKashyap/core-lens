@@ -11,6 +11,7 @@ import numpy as np
 import polars as pl
 
 from core_lens.utils.polars_utils import collect_lf, cached_read_schema
+from core_lens.base.result import Result
 
 if TYPE_CHECKING:
     from core_lens.base.result import Result
@@ -157,7 +158,7 @@ class StatsNamespace:
     Computed values always go in ``data``; method parameters go in ``metadata``.
     """
 
-    def __init__(self, result: "Result") -> None:
+    def __init__(self, result: Result) -> None:
         """Initialize StatsNamespace.
 
         Args:
@@ -178,7 +179,7 @@ class StatsNamespace:
         self,
         columns: list[str] | None = None,
         by: str = "column",
-    ) -> "Result":
+    ) -> Result:
         r"""Per-column or per-entity descriptive statistics.
 
         Uses polars' in-built methods for mean, std, min, max, quantiles etc.
@@ -238,7 +239,7 @@ class StatsNamespace:
         columns: list[str],
         method: CorrelateMethod = CorrelateMethod.PEARSON,
         across: str = "entity",
-    ) -> "Result":
+    ) -> Result:
         """Pairwise correlations between columns.
 
         Args:
@@ -312,7 +313,7 @@ class StatsNamespace:
         against: float | None = None,
         method: TestMethod | None = None,
         significance_level: float = 0.05,
-    ) -> "Result":
+    ) -> Result:
         """Hypothesis test in three modes: group-based, period-based, single-sample.
 
         Args:
@@ -470,7 +471,7 @@ class StatsNamespace:
         from_period: int,
         to_period: int,
         method: ChangeMethod = ChangeMethod.ABSOLUTE,
-    ) -> "Result":
+    ) -> Result:
         """Change between two time periods per entity.
 
         Args:
@@ -596,7 +597,7 @@ class StatsNamespace:
         method: AnomalyCrossMethod | AnomalyTsMethod,
         baseline: tuple[int, int] | None = None,
         threshold: float = 2.0,
-    ) -> "Result":
+    ) -> Result:
         """Anomaly detection in cross-sectional or timeseries mode.
 
         Args:
@@ -863,7 +864,7 @@ class StatsNamespace:
         columns: dict[str, Any],
         method: SimilarityMethod = SimilarityMethod.EUCLIDEAN,
         top_n: int = 10,
-    ) -> "Result":
+    ) -> Result:
         """Find entities most similar to ``target`` across ``columns``.
 
         Args:
