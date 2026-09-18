@@ -747,6 +747,7 @@ class StatsNamespace:
         mode: str,
         method: AnomalyCrossMethod | AnomalyTsMethod,
         baseline: tuple[int, int] | None = None,
+        target_years: tuple[int, int] | None = None,
         threshold: float = 2.0,
     ) -> Result:
         """Anomaly detection in cross-sectional or timeseries mode.
@@ -754,26 +755,40 @@ class StatsNamespace:
         Args:
             column (str): Value column to analyse.
             mode (str): ``"cross_sectional"`` or ``"timeseries"``.
-            method (AnomalyCrossMethod | AnomalyTsMethod): An :class:`~core_lens.base.namespaces.stats.AnomalyCrossMethod` or :class:`~core_lens.base.namespaces.stats.AnomalyTsMethod` enum value.
-            baseline (tuple[int, int] | None, optional): ``(from_year, to_year)`` inclusive.  Required for
-                timeseries; optional for cross-sectional.
+            method (AnomalyCrossMethod | AnomalyTsMethod): Enum value for detection method.
+            baseline (tuple[int, int] | None, optional): ``(from_year, to_year)`` inclusive,
+                used as the reference/"normal" period. Required for timeseries; optional
+                for cross-sectional.
+            target_years (tuple[int, int] | None, optional): ``(from_year, to_year)`` inclusive,
+                the years actually scored for anomalies. Timeseries: defaults to "everything
+                after ``baseline[1]``" if omitted (old behaviour preserved). Cross-sectional:
+                defaults to all rows if omitted. Must not overlap ``baseline``.
             threshold (float, optional): Sigma / score threshold for anomaly flag (default 2.0).
 
         Returns:
-            Result: Result whose data has ``key_col | anomaly_score | is_anomaly``
-            (cross-sectional) or ``key_col | year | anomaly_score | is_anomaly``
-            (timeseries, baseline period excluded).
+            Result: data has ``key_col | anomaly_score | is_anomaly`` (cross-sectional) or
+            ``key_col | year | anomaly_score | is_anomaly`` (timeseries, baseline excluded,
+            restricted to ``target_years`` if given). ``metadata`` includes
+            ``n_entities_dropped`` (entities skipped for insufficient baseline obs).
 
         Raises:
-            ValueError: If ``mode``, ``method``, or observation count invalid.
-
-        Under the hood:
-            - Most anomaly methods (ZSCORE, IQR, PERCENTILE, THRESHOLD, MAD, CUSUM) are implemented
-              using native Polars aggregations for high performance.
-            - The STL method calls ``statsmodels.tsa.seasonal.STL`` to decompose timeseries data.
-
+            ValueError: If ``mode``/``method`` invalid, observation count too low, or
+                ``baseline`` and ``target_years`` overlap.
         """
+        if baseline is not None and target_years is not None:
+            b_lo, b_hi = baseline
+            t_lo, t_hi = target_years
+            if b_lo <= t_hi and t_lo <= b_hi:
+                raise ValueError(
+                    f"StatsNamespace.anomaly: baseline={baseline} and "
+                    f"target_years={target_years} overlap. They must be disjoint."
+                )
+
+        # Single explicit collect boundary — everything below is eager by necessity
+        # (numpy/scipy/statsmodels have no lazy path).
         df = self._r.df()
+        if isinstance(df, pl.LazyFrame):
+            df = df.collect()
         key = self._r.key_cols[0]
 
         if mode == "cross_sectional":
@@ -783,13 +798,13 @@ class StatsNamespace:
                     f"Valid options: {[e.name for e in AnomalyCrossMethod]}."
                 )
 
-            # baseline subset for computing reference stats
-            if baseline is not None and "year" in df.columns:
+            has_year = "year" in df.columns
+
+            if baseline is not None and has_year:
                 ref_vals = (
-                    df.filter(
-                        (pl.col("year") >= baseline[0])
-                        & (pl.col("year") <= baseline[1])
-                    )[column]
+                    df.filter(pl.col("year").is_between(baseline[0], baseline[1]))[
+                        column
+                    ]
                     .drop_nulls()
                     .to_numpy()
                     .astype(float)
@@ -804,7 +819,13 @@ class StatsNamespace:
                     f"but only got {len(ref_vals)}."
                 )
 
-            all_vals = df[column].to_numpy().astype(float)
+            # target_years scopes which rows get scored/returned; baseline stays reference-only.
+            eval_df = df
+            if target_years is not None and has_year:
+                eval_df = df.filter(
+                    pl.col("year").is_between(target_years[0], target_years[1])
+                )
+            all_vals = eval_df[column].to_numpy().astype(float)
 
             if method is AnomalyCrossMethod.ZSCORE:
                 _rs = pl.Series(ref_vals)
@@ -816,23 +837,23 @@ class StatsNamespace:
                     "mode": "cross_sectional",
                     "method": "zscore",
                     "baseline": baseline,
+                    "target_years": target_years,
                     "baseline_mean": mean,
                     "baseline_std": std,
                 }
 
             elif method is AnomalyCrossMethod.IQR:
                 _rs = pl.Series(ref_vals)
-                q1 = _sf(_rs.quantile(0.25))
-                q3 = _sf(_rs.quantile(0.75))
+                q1, q3 = _sf(_rs.quantile(0.25)), _sf(_rs.quantile(0.75))
                 iqr = q3 - q1
                 lo, hi = q1 - 1.5 * iqr, q3 + 1.5 * iqr
-                med = _sf(_rs.median())
-                scores = (all_vals - med) / (iqr or 1.0)
+                scores = (all_vals - _sf(_rs.median())) / (iqr or 1.0)
                 flags = (all_vals < lo) | (all_vals > hi)
                 meta = {
                     "mode": "cross_sectional",
                     "method": "iqr",
                     "baseline": baseline,
+                    "target_years": target_years,
                     "baseline_mean": _sf(_rs.mean()),
                     "q1": q1,
                     "q3": q3,
@@ -841,16 +862,15 @@ class StatsNamespace:
 
             elif method is AnomalyCrossMethod.PERCENTILE:
                 _rs = pl.Series(ref_vals)
-                lo = _sf(_rs.quantile(0.05))
-                hi = _sf(_rs.quantile(0.95))
-                med = _sf(_rs.median())
+                lo, hi = _sf(_rs.quantile(0.05)), _sf(_rs.quantile(0.95))
                 std = _sf(_rs.std()) or 1.0
-                scores = (all_vals - med) / std
+                scores = (all_vals - _sf(_rs.median())) / std
                 flags = (all_vals < lo) | (all_vals > hi)
                 meta = {
                     "mode": "cross_sectional",
                     "method": "percentile",
                     "baseline": baseline,
+                    "target_years": target_years,
                     "baseline_mean": _sf(_rs.mean()),
                     "lower_pct": lo,
                     "upper_pct": hi,
@@ -864,15 +884,15 @@ class StatsNamespace:
                     "mode": "cross_sectional",
                     "method": "threshold",
                     "baseline": baseline,
+                    "target_years": target_years,
                     "baseline_mean": mean,
                     "threshold": threshold,
                 }
 
-            data = df.select(pl.col(key)).with_columns(
-                [
-                    pl.Series("anomaly_score", scores.tolist(), dtype=pl.Float64),
-                    pl.Series("is_anomaly", flags.tolist(), dtype=pl.Boolean),
-                ]
+            # Build straight from numpy — no .tolist() round-trip.
+            data = eval_df.select(pl.col(key)).with_columns(
+                pl.Series("anomaly_score", scores, dtype=pl.Float64),
+                pl.Series("is_anomaly", flags, dtype=pl.Boolean),
             )
 
         elif mode == "timeseries":
@@ -889,117 +909,199 @@ class StatsNamespace:
             year_col = self._year_col()
             if year_col is None:
                 raise ValueError(
-                    "StatsNamespace.anomaly: mode 'timeseries' requires a year/time column. Ensure data is at annual or sub_annual resolution."
+                    "StatsNamespace.anomaly: mode 'timeseries' requires a year/time column. "
+                    "Ensure data is at annual or sub_annual resolution."
                 )
 
             min_obs = _MIN_OBS[method.value]
-            rows: list[dict[str, Any]] = []
+            n_dropped = 0
 
-            for eid in df[key].unique().sort().to_list():
-                sub = df.filter(pl.col(key) == eid).sort(year_col)
-                base_vals = (
-                    sub.filter(
-                        (pl.col(year_col) >= baseline[0])
-                        & (pl.col(year_col) <= baseline[1])
-                    )[column]
-                    .drop_nulls()
-                    .to_numpy()
-                    .astype(float)
+            # ---- MAD: fully vectorized, no per-entity loop ----
+            if method is AnomalyTsMethod.MAD:
+                base_df = df.filter(
+                    pl.col(year_col).is_between(baseline[0], baseline[1])
                 )
-                if len(base_vals) < min_obs:
-                    continue
+                counts = base_df.group_by(key).agg(
+                    pl.col(column).drop_nulls().len().alias("_n")
+                )
+                valid_keys = counts.filter(pl.col("_n") >= min_obs).select(key)
+                n_dropped = counts.height - valid_keys.height
 
-                eval_sub = sub.filter(pl.col(year_col) > baseline[1])
-                eval_vals = eval_sub[column].drop_nulls().to_numpy().astype(float)
-                eval_years = eval_sub[year_col].to_list()
+                med_df = (
+                    base_df.join(valid_keys, on=key)
+                    .group_by(key)
+                    .agg(pl.col(column).median().alias("_med"))
+                )
+                mad_df = (
+                    base_df.join(valid_keys, on=key)
+                    .join(med_df, on=key)
+                    .with_columns(
+                        (pl.col(column) - pl.col("_med")).abs().alias("_absdev")
+                    )
+                    .group_by(key)
+                    .agg(pl.col("_absdev").median().alias("_mad"))
+                )
+                stats_df = med_df.join(mad_df, on=key).with_columns(
+                    (pl.col("_mad") * 1.4826).clip(lower_bound=1e-12).alias("_scale")
+                )
 
-                ts_scores: list[float] = []
-                ts_flags: list[bool] = []
+                eval_df = (
+                    df.filter(pl.col(year_col) > baseline[1])
+                    if target_years is None
+                    else df.filter(
+                        pl.col(year_col).is_between(target_years[0], target_years[1])
+                    )
+                )
 
-                if method is AnomalyTsMethod.MAD:
-                    _bs = pl.Series(base_vals)
-                    med = _sf(_bs.median())
-                    mad = _sf(pl.Series(np.abs(base_vals - med)).median())
-                    scale = (mad * 1.4826) or 1.0
-                    ts_scores = [(v - med) / scale for v in eval_vals]
-                    ts_flags = [abs(s) > threshold for s in ts_scores]
+                data = (
+                    eval_df.join(stats_df, on=key, how="inner")
+                    .with_columns(
+                        ((pl.col(column) - pl.col("_med")) / pl.col("_scale")).alias(
+                            "anomaly_score"
+                        ),
+                    )
+                    .with_columns(
+                        (pl.col("anomaly_score").abs() > threshold).alias("is_anomaly")
+                    )
+                    .select(key, year_col, "anomaly_score", "is_anomaly")
+                    .drop_nulls("anomaly_score")
+                )
 
-                elif method is AnomalyTsMethod.CUSUM:
-                    _bs = pl.Series(base_vals)
-                    mean = _sf(_bs.mean())
-                    std = _sf(_bs.std(ddof=1)) or 1.0
-                    k, h = 0.5 * std, threshold * std
-                    cp, cn = 0.0, 0.0
-                    for v in eval_vals:
-                        cp = max(0.0, cp + v - mean - k)
-                        cn = max(0.0, cn - v + mean - k)
-                        s = max(cp, cn)
-                        ts_scores.append(s)
-                        ts_flags.append(s > h)
+            # ---- CUSUM / STL: inherently sequential/per-entity, keep loop but partition_by ----
+            else:
+                rows: list[dict[str, Any]] = []
+                for sub in df.sort(year_col).partition_by(key, maintain_order=True):
+                    eid = sub[key][0]
+                    base_vals = (
+                        sub.filter(
+                            pl.col(year_col).is_between(baseline[0], baseline[1])
+                        )[column]
+                        .drop_nulls()
+                        .to_numpy()
+                        .astype(float)
+                    )
+                    if len(base_vals) < min_obs:
+                        n_dropped += 1
+                        continue
 
-                else:  # stl
-                    try:
-                        from statsmodels.tsa.seasonal import (  # type: ignore[import-untyped]
-                            STL,
+                    if target_years is not None:
+                        eval_sub = sub.filter(
+                            pl.col(year_col).is_between(
+                                target_years[0], target_years[1]
+                            )
+                        )
+                    else:
+                        eval_sub = sub.filter(pl.col(year_col) > baseline[1])
+                    eval_vals = eval_sub[column].drop_nulls().to_numpy().astype(float)
+                    eval_years = eval_sub.filter(pl.col(column).is_not_null())[
+                        year_col
+                    ].to_list()
+
+                    ts_scores: list[float] = []
+                    ts_flags: list[bool] = []
+
+                    if method is AnomalyTsMethod.CUSUM:
+                        mean = _sf(pl.Series(base_vals).mean())
+                        std = _sf(pl.Series(base_vals).std(ddof=1)) or 1.0
+                        k, h = 0.5 * std, threshold * std
+                        cp, cn = 0.0, 0.0
+                        for v in eval_vals:
+                            cp = max(0.0, cp + v - mean - k)
+                            cn = max(0.0, cn - v + mean - k)
+                            s = max(cp, cn)
+                            ts_scores.append(s)
+                            ts_flags.append(s > h)
+
+                    else:  # STL
+                        try:
+                            from statsmodels.tsa.seasonal import STL  # type: ignore[import-untyped]
+
+                            full = sub.filter(pl.col(column).is_not_null())
+                            full_vals = full[column].to_numpy().astype(float)
+                            full_years = full[year_col].to_list()
+                            if len(full_vals) < min_obs:
+                                n_dropped += 1
+                                continue
+
+                            # Seasonal period: sub-annual cadence assumed 24 steps/year
+                            # (e.g. fortnightly). Falls back to half the series length
+                            # for shorter records. Adjust if your data's cadence differs.
+                            period = (
+                                24
+                                if len(full_vals) >= 24
+                                else max(2, len(full_vals) // 2)
+                            )
+                            res = STL(full_vals, period=period).fit()
+                            resid = res.resid
+
+                            # Match residuals to years EXPLICITLY (not positional slicing) —
+                            # positional slicing silently misaligns if there are gaps between
+                            # baseline and eval rows.
+                            resid_by_year = dict(zip(full_years, resid))
+                            base_resid = [
+                                resid_by_year[y]
+                                for y in full_years
+                                if baseline[0] <= y <= baseline[1]
+                            ]
+                            std = _sf(pl.Series(base_resid).std(ddof=1)) or 1.0
+
+                            ts_scores = [
+                                float(resid_by_year[y] / std)
+                                if y in resid_by_year
+                                else float("nan")
+                                for y in eval_years
+                            ]
+                            ts_flags = [
+                                abs(s) > threshold if s == s else False
+                                for s in ts_scores
+                            ]  # s==s filters NaN
+
+                        except Exception as e:
+                            warnings.warn(
+                                f"StatsNamespace.anomaly: STL fit failed for entity {eid!r}: {e}"
+                            )
+                            ts_scores = [float("nan")] * len(eval_years)
+                            ts_flags = [False] * len(eval_years)
+
+                    for yr, sc, fl in zip(eval_years, ts_scores, ts_flags):
+                        rows.append(
+                            {
+                                key: eid,
+                                year_col: yr,
+                                "anomaly_score": float(sc),
+                                "is_anomaly": bool(fl),
+                            }
                         )
 
-                        full_vals = sub[column].to_numpy().astype(float)
-                        if len(full_vals) < min_obs:
-                            continue
-                        period = (
-                            24 if len(full_vals) >= 24 else max(2, len(full_vals) // 2)
-                        )
-                        res = STL(full_vals, period=period).fit()
-                        resid = res.resid
-                        base_len = len(base_vals)
-                        base_resid = resid[:base_len]
-                        eval_resid = resid[base_len : base_len + len(eval_years)]
-                        std = _sf(pl.Series(base_resid).std(ddof=1)) or 1.0
-                        ts_scores = [float(r / std) for r in eval_resid]
-                        ts_flags = [abs(s) > threshold for s in ts_scores]
-                    except Exception:
-                        ts_scores = [float("nan")] * len(eval_years)
-                        ts_flags = [False] * len(eval_years)
-
-                for yr, sc, fl in zip(eval_years, ts_scores, ts_flags):
-                    rows.append(
+                data = (
+                    pl.DataFrame(rows)
+                    if rows
+                    else pl.DataFrame(
                         {
-                            key: eid,
-                            year_col: yr,
-                            "anomaly_score": float(sc),
-                            "is_anomaly": bool(fl),
+                            key: pl.Series([], dtype=pl.String),
+                            year_col: pl.Series([], dtype=pl.Int32),
+                            "anomaly_score": pl.Series([], dtype=pl.Float64),
+                            "is_anomaly": pl.Series([], dtype=pl.Boolean),
                         }
                     )
-
-            if rows:
-                data = pl.DataFrame(rows)
-            else:
-                data = pl.DataFrame(
-                    {
-                        key: pl.Series([], dtype=pl.String),
-                        year_col: pl.Series([], dtype=pl.Int32),
-                        "anomaly_score": pl.Series([], dtype=pl.Float64),
-                        "is_anomaly": pl.Series([], dtype=pl.Boolean),
-                    }
                 )
+
             global_base_vals = (
-                df.filter(
-                    (pl.col(year_col) >= baseline[0])
-                    & (pl.col(year_col) <= baseline[1])
-                )[column]
+                df.filter(pl.col(year_col).is_between(baseline[0], baseline[1]))[column]
                 .drop_nulls()
                 .to_numpy()
                 .astype(float)
             )
-
             meta = {
                 "mode": "timeseries",
-                "method": method.value if method is not None else None,
+                "method": method.value,
                 "baseline": baseline,
+                "target_years": target_years,
                 "baseline_mean": _sf(pl.Series(global_base_vals).mean())
                 if len(global_base_vals) > 0
                 else float("nan"),
                 "baseline_fitted": True,
+                "n_entities_dropped": n_dropped,
             }
 
         else:
