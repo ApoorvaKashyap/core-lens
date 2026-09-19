@@ -741,6 +741,8 @@ class StatsNamespace:
         }
         return self._r._replace(data=data, has_geometry=False, metadata=metadata)
 
+    import warnings
+
     def anomaly(
         self,
         column: str,
@@ -760,16 +762,17 @@ class StatsNamespace:
                 used as the reference/"normal" period. Required for timeseries; optional
                 for cross-sectional.
             target_years (tuple[int, int] | None, optional): ``(from_year, to_year)`` inclusive,
-                the years actually scored for anomalies. Timeseries: defaults to "everything
-                after ``baseline[1]``" if omitted (old behaviour preserved). Cross-sectional:
-                defaults to all rows if omitted. Must not overlap ``baseline``.
+                years actually scored. Timeseries: defaults to "everything after
+                ``baseline[1]``" if omitted. Cross-sectional: defaults to all rows.
+                Must not overlap ``baseline``.
             threshold (float, optional): Sigma / score threshold for anomaly flag (default 2.0).
 
         Returns:
             Result: data has ``key_col | anomaly_score | is_anomaly`` (cross-sectional) or
-            ``key_col | year | anomaly_score | is_anomaly`` (timeseries, baseline excluded,
-            restricted to ``target_years`` if given). ``metadata`` includes
-            ``n_entities_dropped`` (entities skipped for insufficient baseline obs).
+            ``key_col | <time_col> | anomaly_score | is_anomaly`` (timeseries, baseline
+            excluded, restricted to ``target_years`` if given). ``<time_col>`` is the
+            finer-grained date/period column when the data is sub-annual, falling back
+            to plain ``year`` for annual data. ``metadata`` includes ``n_entities_dropped``.
 
         Raises:
             ValueError: If ``mode``/``method`` invalid, observation count too low, or
@@ -784,8 +787,6 @@ class StatsNamespace:
                     f"target_years={target_years} overlap. They must be disjoint."
                 )
 
-        # Single explicit collect boundary — everything below is eager by necessity
-        # (numpy/scipy/statsmodels have no lazy path).
         df = self._r.df()
         if isinstance(df, pl.LazyFrame):
             df = df.collect()
@@ -819,7 +820,6 @@ class StatsNamespace:
                     f"but only got {len(ref_vals)}."
                 )
 
-            # target_years scopes which rows get scored/returned; baseline stays reference-only.
             eval_df = df
             if target_years is not None and has_year:
                 eval_df = df.filter(
@@ -889,7 +889,6 @@ class StatsNamespace:
                     "threshold": threshold,
                 }
 
-            # Build straight from numpy — no .tolist() round-trip.
             data = eval_df.select(pl.col(key)).with_columns(
                 pl.Series("anomaly_score", scores, dtype=pl.Float64),
                 pl.Series("is_anomaly", flags, dtype=pl.Boolean),
@@ -912,6 +911,13 @@ class StatsNamespace:
                     "StatsNamespace.anomaly: mode 'timeseries' requires a year/time column. "
                     "Ensure data is at annual or sub_annual resolution."
                 )
+
+            # Finer-grained time column for sub-annual data, if present.
+            # `year_col` still drives baseline/target-year windowing regardless.
+            date_col = next(
+                (c for c in ("date", "period", "period_start") if c in df.columns), None
+            )
+            output_time_col = date_col or year_col
 
             min_obs = _MIN_OBS[method.value]
             n_dropped = 0
@@ -963,11 +969,11 @@ class StatsNamespace:
                     .with_columns(
                         (pl.col("anomaly_score").abs() > threshold).alias("is_anomaly")
                     )
-                    .select(key, year_col, "anomaly_score", "is_anomaly")
+                    .select(key, output_time_col, "anomaly_score", "is_anomaly")
                     .drop_nulls("anomaly_score")
                 )
 
-            # ---- CUSUM / STL: inherently sequential/per-entity, keep loop but partition_by ----
+            # ---- CUSUM / STL: inherently sequential/per-entity, partition_by instead of filter-loop ----
             else:
                 rows: list[dict[str, Any]] = []
                 for sub in df.sort(year_col).partition_by(key, maintain_order=True):
@@ -992,10 +998,15 @@ class StatsNamespace:
                         )
                     else:
                         eval_sub = sub.filter(pl.col(year_col) > baseline[1])
-                    eval_vals = eval_sub[column].drop_nulls().to_numpy().astype(float)
-                    eval_years = eval_sub.filter(pl.col(column).is_not_null())[
+                    eval_sub = eval_sub.filter(pl.col(column).is_not_null())
+
+                    eval_vals = eval_sub[column].to_numpy().astype(float)
+                    eval_years_lookup = eval_sub[
                         year_col
-                    ].to_list()
+                    ].to_list()  # for baseline/dict matching
+                    eval_times = eval_sub[
+                        output_time_col
+                    ].to_list()  # for display in output
 
                     ts_scores: list[float] = []
                     ts_flags: list[bool] = []
@@ -1013,30 +1024,42 @@ class StatsNamespace:
                             ts_flags.append(s > h)
 
                     else:  # STL
+                        full = sub.filter(pl.col(column).is_not_null())
+                        full_vals = full[column].to_numpy().astype(float)
+                        full_years = full[year_col].to_list()
+
+                        period = (
+                            26 if len(full_vals) >= 52 else max(2, len(full_vals) // 2)
+                        )
+                        min_required = 2 * period
+                        min_reliable = (
+                            3 * period
+                        )  # want ~3 cycles minimum for a trustworthy seasonal fit, not just 2
+
+                        if len(full_vals) < min_required:
+                            warnings.warn(
+                                f"StatsNamespace.anomaly: entity {eid!r} has {len(full_vals)} points, "
+                                f"period={period} needs >= {min_reliable} for a reliable STL fit. Skipping."
+                            )
+                            n_dropped += 1
+                            continue
+
+                        if len(full_vals) < min_required:
+                            warnings.warn(
+                                f"StatsNamespace.anomaly: entity {eid!r} has {len(full_vals)} points, "
+                                f"needs >= {min_required} for period={period}. Skipping."
+                            )
+                            n_dropped += 1
+                            continue
+
                         try:
                             from statsmodels.tsa.seasonal import STL  # type: ignore[import-untyped]
 
-                            full = sub.filter(pl.col(column).is_not_null())
-                            full_vals = full[column].to_numpy().astype(float)
-                            full_years = full[year_col].to_list()
-                            if len(full_vals) < min_obs:
-                                n_dropped += 1
-                                continue
-
-                            # Seasonal period: sub-annual cadence assumed 24 steps/year
-                            # (e.g. fortnightly). Falls back to half the series length
-                            # for shorter records. Adjust if your data's cadence differs.
-                            period = (
-                                24
-                                if len(full_vals) >= 24
-                                else max(2, len(full_vals) // 2)
-                            )
                             res = STL(full_vals, period=period).fit()
                             resid = res.resid
 
-                            # Match residuals to years EXPLICITLY (not positional slicing) —
-                            # positional slicing silently misaligns if there are gaps between
-                            # baseline and eval rows.
+                            # Match residuals to years EXPLICITLY, not positionally —
+                            # avoids misalignment if there are gaps in the series.
                             resid_by_year = dict(zip(full_years, resid))
                             base_resid = [
                                 resid_by_year[y]
@@ -1049,7 +1072,7 @@ class StatsNamespace:
                                 float(resid_by_year[y] / std)
                                 if y in resid_by_year
                                 else float("nan")
-                                for y in eval_years
+                                for y in eval_years_lookup
                             ]
                             ts_flags = [
                                 abs(s) > threshold if s == s else False
@@ -1060,31 +1083,32 @@ class StatsNamespace:
                             warnings.warn(
                                 f"StatsNamespace.anomaly: STL fit failed for entity {eid!r}: {e}"
                             )
-                            ts_scores = [float("nan")] * len(eval_years)
-                            ts_flags = [False] * len(eval_years)
+                            ts_scores = [float("nan")] * len(eval_years_lookup)
+                            ts_flags = [False] * len(eval_years_lookup)
 
-                    for yr, sc, fl in zip(eval_years, ts_scores, ts_flags):
+                    for t, sc, fl in zip(eval_times, ts_scores, ts_flags):
                         rows.append(
                             {
                                 key: eid,
-                                year_col: yr,
+                                output_time_col: t,
                                 "anomaly_score": float(sc),
                                 "is_anomaly": bool(fl),
                             }
                         )
 
-                data = (
-                    pl.DataFrame(rows)
-                    if rows
-                    else pl.DataFrame(
+                if rows:
+                    data = pl.DataFrame(rows)
+                else:
+                    data = pl.DataFrame(
                         {
                             key: pl.Series([], dtype=pl.String),
-                            year_col: pl.Series([], dtype=pl.Int32),
+                            output_time_col: pl.Series(
+                                [], dtype=pl.Date if date_col else pl.Int32
+                            ),
                             "anomaly_score": pl.Series([], dtype=pl.Float64),
                             "is_anomaly": pl.Series([], dtype=pl.Boolean),
                         }
                     )
-                )
 
             global_base_vals = (
                 df.filter(pl.col(year_col).is_between(baseline[0], baseline[1]))[column]
