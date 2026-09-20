@@ -777,6 +777,17 @@ class StatsNamespace:
         Raises:
             ValueError: If ``mode``/``method`` invalid, observation count too low, or
                 ``baseline`` and ``target_years`` overlap.
+
+        Notes:
+            **STL fitting scope.** For ``AnomalyTsMethod.STL`` the decomposition
+            (trend + seasonal + remainder) is fit on the *entire* series of each entity,
+            baseline and target years together. ``baseline`` is used only to calibrate the scale (standard deviation) of the remainder; ``target_years`` selects which points are scored. Scores are ``remainder / baseline_remainder_std``.
+
+            Because target observations take part in the fit, the trend and seasonal components can partly absorb target-period anomalies, shrinking the remainder and lowering the score. The effect grows with the size and duration of the anomaly; a sustained shift can be absorbed almost entirely into the trend. Scores therefore measure deviation from a locally fitted trend and seasonal pattern, not from the baseline's "normal" behaviour, and the method is conservative: it may miss anomalies but is unlikely to over-flag them.
+
+            A stricter alternative is to fit on the baseline only and forecast the target period (e.g. ``statsmodels.tsa.forecasting.stl.STLForecast``), scoring forecast errors against the baseline error spread. This is not implemented.
+
+            For sub-annual data, residuals are matched to rows by the finer time column (``date``/``period``), not by year, so each observation gets its own score.
         """
         if baseline is not None and target_years is not None:
             b_lo, b_hi = baseline
@@ -976,7 +987,8 @@ class StatsNamespace:
             # ---- CUSUM / STL: inherently sequential/per-entity, partition_by instead of filter-loop ----
             else:
                 rows: list[dict[str, Any]] = []
-                for sub in df.sort(year_col).partition_by(key, maintain_order=True):
+                sort_cols = list(dict.fromkeys([year_col, output_time_col]))
+                for sub in df.sort(sort_cols).partition_by(key, maintain_order=True):
                     eid = sub[key][0]
                     base_vals = (
                         sub.filter(
@@ -1027,6 +1039,7 @@ class StatsNamespace:
                         full = sub.filter(pl.col(column).is_not_null())
                         full_vals = full[column].to_numpy().astype(float)
                         full_years = full[year_col].to_list()
+                        full_times = full[output_time_col].to_list()
 
                         period = (
                             26 if len(full_vals) >= 52 else max(2, len(full_vals) // 2)
@@ -1036,13 +1049,13 @@ class StatsNamespace:
                             3 * period
                         )  # want ~3 cycles minimum for a trustworthy seasonal fit, not just 2
 
-                        if len(full_vals) < min_required:
-                            warnings.warn(
-                                f"StatsNamespace.anomaly: entity {eid!r} has {len(full_vals)} points, "
-                                f"period={period} needs >= {min_reliable} for a reliable STL fit. Skipping."
-                            )
-                            n_dropped += 1
-                            continue
+                        # if len(full_vals) < min_reliable:
+                        #     warnings.warn(
+                        #         f"StatsNamespace.anomaly: entity {eid!r} has {len(full_vals)} points, "
+                        #         f"period={period} needs >= {min_reliable} for a reliable STL fit. Skipping."
+                        #     )
+                        #     n_dropped += 1
+                        #     continue
 
                         if len(full_vals) < min_required:
                             warnings.warn(
@@ -1058,21 +1071,21 @@ class StatsNamespace:
                             res = STL(full_vals, period=period).fit()
                             resid = res.resid
 
-                            # Match residuals to years EXPLICITLY, not positionally —
-                            # avoids misalignment if there are gaps in the series.
-                            resid_by_year = dict(zip(full_years, resid))
+                            # Key residuals by the fine-grained time column (date/period).
+                            # Keying by year collapses ~26 fortnights into one value.
+                            resid_by_time = dict(zip(full_times, resid))
                             base_resid = [
-                                resid_by_year[y]
-                                for y in full_years
+                                r
+                                for y, r in zip(full_years, resid)
                                 if baseline[0] <= y <= baseline[1]
                             ]
                             std = _sf(pl.Series(base_resid).std(ddof=1)) or 1.0
 
                             ts_scores = [
-                                float(resid_by_year[y] / std)
-                                if y in resid_by_year
+                                float(resid_by_time[t] / std)
+                                if t in resid_by_time
                                 else float("nan")
-                                for y in eval_years_lookup
+                                for t in eval_times
                             ]
                             ts_flags = [
                                 abs(s) > threshold if s == s else False
