@@ -25,9 +25,16 @@ if TYPE_CHECKING:
 # dataset (not once per process).  Subsequent runs load the index directly
 # from the sidecar — no geometry decoding required.
 #
-# Sidecar location priority:
+# Local sidecar location priority:
 #   1. Alongside the static parquet directory/file (requires write access).
 #   2. ~/.cache/core_lens/ (fallback for read-only data roots).
+#
+# Cloud (S3 / GCS / ABFS) sidecar:
+#   Always stored in ~/.cache/core_lens/ keyed on a SHA-256 hash of the URI.
+#   A companion <fingerprint>.etag file records the ETag returned by the last
+#   HeadObject call.  On cache hit the ETag is re-fetched (one cheap metadata
+#   call) and compared; a mismatch triggers a full rebuild.  This approach
+#   avoids streaming the entire GeoParquet from S3 on every cold process start.
 # ---------------------------------------------------------------------------
 
 _SIDECAR_SUFFIX = ".bbox_index.parquet"
@@ -40,6 +47,8 @@ def _bbox_sidecar_path(static_path: str) -> pathlib.Path | None:
     Tries the directory alongside ``static_path`` first; if that directory is
     not writable (e.g. read-only data root), falls back to
     ``~/.cache/core_lens/``.
+
+    For cloud URIs use :func:`_cloud_sidecar_path` instead.
 
     Args:
         static_path (str): Absolute local path to the static parquet file/directory.
@@ -64,6 +73,136 @@ def _bbox_sidecar_path(static_path: str) -> pathlib.Path | None:
         _CACHE_DIR.mkdir(parents=True, exist_ok=True)
         sidecar = _CACHE_DIR / (fingerprint + _SIDECAR_SUFFIX)
     return sidecar
+
+
+def _cloud_sidecar_path(static_path: str) -> pathlib.Path:
+    """Return the ``~/.cache/core_lens/`` sidecar path for a cloud URI.
+
+    The path is keyed on a SHA-256 hash of the full URI so different buckets,
+    prefixes, or regions never collide.  The companion ``.etag`` file (same
+    stem, ``.etag`` suffix) stores the last-seen ETag for staleness detection.
+
+    Args:
+        static_path (str): Cloud URI (e.g. ``s3://bucket/prefix/``).
+
+    Returns:
+        pathlib.Path: Local cache path for the sidecar Parquet.
+
+    """
+    import hashlib
+
+    fingerprint = hashlib.sha256(static_path.encode()).hexdigest()[:24]
+    _CACHE_DIR.mkdir(parents=True, exist_ok=True)
+    return _CACHE_DIR / (fingerprint + _SIDECAR_SUFFIX)
+
+
+def _get_cloud_etag(
+    static_path: str,
+    storage_options: dict[str, Any],
+) -> str | None:
+    """Return the ETag (or size-based fingerprint) for a cloud object, or ``None``.
+
+    Performs a single metadata call (``HeadObject`` on S3) — no data is
+    transferred.  The ETag is used as the staleness key for the cloud bbox
+    sidecar: if the ETag matches the stored value the sidecar is fresh.
+
+    Falls back to the object size when the ETag is not exposed by the
+    filesystem implementation, and returns ``None`` on any error so the caller
+    can safely skip the cache.
+
+    Args:
+        static_path (str): Cloud URI to the static GeoParquet file or directory.
+        storage_options (dict[str, Any]): Cloud credential / configuration options.
+
+    Returns:
+        str | None: An opaque fingerprint string, or ``None`` on failure.
+
+    """
+    try:
+        import pyarrow.fs as pafs
+
+        fs, arrow_path = resolve_fs_and_path(static_path)
+        # For a directory (partitioned dataset) inspect the first child file.
+        info = fs.get_file_info(arrow_path)
+        if info.type == pafs.FileType.Directory:
+            selector = pafs.FileSelector(arrow_path, recursive=False)
+            children = fs.get_file_info(selector)
+            parquet_children = [c for c in children if c.base_name.endswith(".parquet")]
+            if not parquet_children:
+                return None
+            info = parquet_children[0]
+
+        # pyarrow S3FileSystem exposes etag via the metadata dict.
+        if hasattr(info, "metadata") and info.metadata:
+            etag = info.metadata.get("ETag") or info.metadata.get("etag")
+            if etag:
+                return str(etag)
+
+        # Fallback: use mtime + size as a combined fingerprint.
+        if info.size is not None and info.size > 0:
+            mtime = getattr(info, "mtime", None)
+            return f"{info.size}-{mtime}"
+
+        return None
+    except Exception as exc:
+        logger.debug(
+            "_get_cloud_etag: could not fetch ETag for {!r}: {}", static_path, exc
+        )
+        return None
+
+
+def _read_cloud_bbox_sidecar(
+    sidecar: pathlib.Path,
+    etag: str,
+) -> pl.DataFrame | None:
+    """Read the cloud bbox sidecar if it exists and its stored ETag matches *etag*.
+
+    Args:
+        sidecar (pathlib.Path): Local cache path returned by :func:`_cloud_sidecar_path`.
+        etag (str): Current ETag / fingerprint of the remote object.
+
+    Returns:
+        pl.DataFrame | None: Cached index DataFrame, or ``None`` if absent or stale.
+
+    """
+    etag_file = sidecar.with_suffix(".etag")
+    if not sidecar.exists() or not etag_file.exists():
+        return None
+    try:
+        stored_etag = etag_file.read_text(encoding="utf-8").strip()
+        if stored_etag != etag:
+            logger.debug(
+                "Cloud bbox sidecar {} is stale (ETag mismatch), rebuilding.",
+                sidecar,
+            )
+            return None
+        logger.debug("Loading cloud bbox index from sidecar: {}", sidecar)
+        return pl.read_parquet(str(sidecar))
+    except Exception as exc:
+        logger.warning("Failed to read cloud bbox sidecar {}: {}", sidecar, exc)
+        return None
+
+
+def _write_cloud_bbox_sidecar(
+    df: pl.DataFrame,
+    sidecar: pathlib.Path,
+    etag: str,
+) -> None:
+    """Persist ``df`` and ``etag`` to the cloud bbox sidecar, silently ignoring errors.
+
+    Args:
+        df (pl.DataFrame): The bbox index DataFrame to persist.
+        sidecar (pathlib.Path): Destination path for the Parquet sidecar.
+        etag (str): ETag / fingerprint to store alongside the sidecar.
+
+    """
+    try:
+        sidecar.parent.mkdir(parents=True, exist_ok=True)
+        df.write_parquet(str(sidecar))
+        sidecar.with_suffix(".etag").write_text(etag, encoding="utf-8")
+        logger.debug("Wrote cloud bbox index sidecar: {}", sidecar)
+    except Exception as exc:
+        logger.debug("Could not write cloud bbox index sidecar {}: {}", sidecar, exc)
 
 
 def _read_bbox_sidecar(sidecar: pathlib.Path, static_path: str) -> pl.DataFrame | None:
@@ -212,10 +351,20 @@ def build_bbox_index(
             + "Cannot compute bounds from separate lat/lon columns without bbox hints."
         )
 
-    # --- Sidecar fast path (local paths only) --------------------------------
+    # --- Sidecar fast path ---------------------------------------------------
     # Check for a pre-built index sidecar before doing the expensive WKB loop.
+    # Local paths use mtime-based invalidation; cloud URIs use ETag.
     sidecar: pathlib.Path | None = None
-    if not is_cloud_uri(static_path):
+    cloud_etag: str | None = None
+    if is_cloud_uri(static_path):
+        # One cheap HeadObject call to get the ETag — no data transferred.
+        cloud_etag = _get_cloud_etag(static_path, _so)
+        if cloud_etag is not None:
+            sidecar = _cloud_sidecar_path(static_path)
+            cached = _read_cloud_bbox_sidecar(sidecar, cloud_etag)
+            if cached is not None:
+                return cached
+    else:
         sidecar = _bbox_sidecar_path(static_path)
         if sidecar is not None:
             cached = _read_bbox_sidecar(sidecar, static_path)
@@ -266,9 +415,14 @@ def build_bbox_index(
             pl.Series("maxy", [], dtype=pl.Float64),
         )
 
-    # Persist the sidecar for future runs (local paths only, errors silenced).
+    # Persist the sidecar for future runs (errors silenced in both helpers).
     if sidecar is not None:
-        _write_bbox_sidecar(result, sidecar)
+        if cloud_etag is not None:
+            # Cloud path — store alongside the ETag fingerprint.
+            _write_cloud_bbox_sidecar(result, sidecar, cloud_etag)
+        else:
+            # Local path — plain mtime-checked sidecar.
+            _write_bbox_sidecar(result, sidecar)
 
     return result
 
