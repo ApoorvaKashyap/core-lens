@@ -137,12 +137,25 @@ def scan_with_key_filter(
 
     1. **Key filter** — restricts to entity instances whose key column(s) are
        in ``key_values``.  For a single-column key this is an ``is_in``
-       predicate pushed down to the Parquet reader.  For composite keys each
-       column is filtered independently (over-selects slightly, then pruned
-       by the join at collect time).
+       predicate; for composite keys each column is filtered independently
+       (slight over-select, pruned by the semi-join at collect time).
+
+       **S3 / cloud note:** ``is_in`` pushdown skips row groups only when the
+       Parquet file was written with Bloom filters on the key column (e.g.
+       ``pyarrow.parquet.write_table(..., bloom_filter_columns=[key])``).  Without
+       Bloom filters the Parquet reader downloads all row groups and filters
+       in-memory regardless.  Use the semi-join path (> 50 000 keys) or add
+       Bloom filters at write time to avoid full-file S3 reads.
 
     2. **Time filter** — an optional Polars expression appended with ``&``,
-       also pushed down if the Parquet file carries column statistics.
+       pushed down when the Parquet file carries min/max column statistics.
+
+    ``use_statistics=True`` and ``parallel="columns"`` are set explicitly on
+    the underlying ``pl.scan_parquet`` call so that:
+
+    * Row-group skipping via Parquet min/max statistics is always active.
+    * On wide Parquet files, column chunks within each row group are fetched
+      concurrently instead of serially — reduces round trips on S3.
 
     Args:
         path (str): Absolute path or cloud URI to a Parquet file.
@@ -159,7 +172,13 @@ def scan_with_key_filter(
 
     """
     _so = storage_options or {}
-    lf = pl.scan_parquet(path, hive_partitioning=True, storage_options=_so or None)
+    lf = pl.scan_parquet(
+        path,
+        hive_partitioning=True,
+        use_statistics=True,
+        parallel="columns",
+        storage_options=_so or None,
+    )
 
     # Use an inner join to filter the parquet file down to the exact requested keys.
     # This avoids building a massive literal expression tree (which consumes gigabytes
@@ -169,9 +188,10 @@ def scan_with_key_filter(
 
     kv_df = key_values.collect() if isinstance(key_values, pl.LazyFrame) else key_values
     if len(key_cols) == 1 and kv_df.height < 50000:
-        # Fast path: For reasonably sized AoIs, `is_in` enables perfect row-group
-        # predicate pushdown in the Parquet reader, avoiding a full table scan.
-        # The literal tree RAM issue only occurs with hundreds of thousands of keys.
+        # Fast path: `is_in` keeps the plan simple and enables row-group skipping
+        # via Parquet Bloom filters when the key column was written with them.
+        # Without Bloom filters on S3, all row groups are downloaded regardless;
+        # see docstring note above.
         key = key_cols[0]
         lf = lf.filter(pl.col(key).is_in(kv_df[key].to_list()))
     else:
