@@ -1,0 +1,87 @@
+core_lens.entities.mws
+======================
+
+.. py:module:: core_lens.entities.mws
+
+.. autoapi-nested-parse::
+
+   Module for Core Lens.
+
+
+
+Classes
+-------
+
+.. autoapisummary::
+
+   core_lens.entities.mws.MWSEntity
+
+
+Module Contents
+---------------
+
+.. py:class:: MWSEntity(data_root: str | pathlib.Path | None = None, storage_options: dict[str, Any] | None = None)
+
+   Bases: :py:obj:`core_lens.base.entity.BaseEntity`
+
+
+   Microwatershed (MWS) entity.
+
+   Backed by:
+   - Static: mws/static (partitioned by year)
+   - Annual: mws/annual (partitioned by year)
+   - SubAnnual: mws/sub_annual (partitioned by basin then year)
+
+   All paths are relative to the AoI ``data_root``.
+
+
+   .. py:property:: key_cols
+      :type: list[str]
+
+
+      Get the property value.
+
+      :returns: The key columns for the entity.
+      :rtype: list[str]
+
+
+   .. py:property:: geometry_col
+      :type: str
+
+
+      Get the property value.
+
+      :returns: The geometry column name.
+      :rtype: str
+
+
+   .. py:property:: static_path
+      :type: str
+
+
+      Get the property value.
+
+      :returns: The relative path to the static data.
+      :rtype: str
+
+
+   .. py:property:: annual_path
+      :type: str | None
+
+
+      Get the property value.
+
+      :returns: The relative path to the annual data.
+      :rtype: str | None
+
+
+   .. py:property:: sub_annual_path
+      :type: str | None
+
+
+      Get the property value.
+
+      :returns: The relative path to the sub_annual data.
+      :rtype: str | None
+
+
