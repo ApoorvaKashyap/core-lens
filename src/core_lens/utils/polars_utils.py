@@ -150,12 +150,7 @@ def scan_with_key_filter(
     2. **Time filter** — an optional Polars expression appended with ``&``,
        pushed down when the Parquet file carries min/max column statistics.
 
-    ``use_statistics=True`` and ``parallel="columns"`` are set explicitly on
-    the underlying ``pl.scan_parquet`` call so that:
-
-    * Row-group skipping via Parquet min/max statistics is always active.
-    * On wide Parquet files, column chunks within each row group are fetched
-      concurrently instead of serially — reduces round trips on S3.
+    ``use_statistics=True`` is set explicitly on the underlying ``pl.scan_parquet`` call so that row-group skipping via Parquet min/max statistics is always active.
 
     Args:
         path (str): Absolute path or cloud URI to a Parquet file.
@@ -176,7 +171,6 @@ def scan_with_key_filter(
         path,
         hive_partitioning=True,
         use_statistics=True,
-        parallel="columns",
         storage_options=_so or None,
     )
 
