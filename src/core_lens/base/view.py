@@ -215,6 +215,7 @@ class View:
             aoi_geometry=geometry,
             relationship=relationship,
             threshold=threshold,
+            storage_options=self.entity._storage_options,
         )
 
         keys_lf = keys_df.lazy()

@@ -650,6 +650,7 @@ class BaseEntity(ABC):
             aoi_geometry=geometry,
             relationship=relationship,
             threshold=threshold,
+            storage_options=self._storage_options,
         )
 
         entity_name = _entity_name(type(self))

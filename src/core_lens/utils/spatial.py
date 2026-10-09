@@ -464,6 +464,7 @@ def exact_spatial_filter(
     aoi_geometry: "shapely.Geometry",
     relationship: str = "centroid",
     threshold: float = 0.5,
+    storage_options: dict[str, Any] | None = None,
 ) -> pl.DataFrame:
     """Refine a bbox candidate set to rows that match ``aoi_geometry``.
 
@@ -473,7 +474,7 @@ def exact_spatial_filter(
     Args:
         candidates (pl.DataFrame): The DataFrame from :func:`bbox_intersects_geometry` —
             only the key columns are used here; the bbox columns are ignored.
-        static_path (str): Absolute path to the static GeoParquet file.
+        static_path (str): Absolute path or cloud URI to the static GeoParquet file.
         key_cols (list[str]): Column name(s) that form the entity's unique key.
         geometry_col (str): Name of the geometry column in the static file.
         geometry_type (str): One of ``"wkb"`` or ``"wkt"``.
@@ -487,6 +488,10 @@ def exact_spatial_filter(
 
         threshold (float, optional): Minimum intersection-to-entity area ratio used in
             ``"area"`` mode.  Ignored in ``"centroid"`` mode.  Default 0.5.
+        storage_options (dict[str, Any] | None, optional): Cloud credential /
+            configuration options forwarded to ``pl.scan_parquet``.  Required
+            when ``static_path`` is a cloud URI; ``None`` uses ambient
+            credentials.
 
     Returns:
         pl.DataFrame: A ``pl.DataFrame`` containing only the key columns for entities that
@@ -515,8 +520,12 @@ def exact_spatial_filter(
         return candidates.select(key_cols)
 
     # Build a lazy scan and push down an inner join to load only required geometries.
+    _so = storage_options or {}
     full_df = (
-        pl.scan_parquet(parquet_scan_path(static_path))
+        pl.scan_parquet(
+            parquet_scan_path(static_path),
+            storage_options=_so or None,
+        )
         .select(key_cols + [geometry_col])
         .join(candidates.select(key_cols).lazy(), on=key_cols, how="semi")
         .collect()
