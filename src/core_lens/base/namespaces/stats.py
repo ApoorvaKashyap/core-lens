@@ -1045,9 +1045,9 @@ class StatsNamespace:
                             26 if len(full_vals) >= 52 else max(2, len(full_vals) // 2)
                         )
                         min_required = 2 * period
-                        min_reliable = (
-                            3 * period
-                        )  # want ~3 cycles minimum for a trustworthy seasonal fit, not just 2
+                        # min_reliable = (
+                        #     3 * period
+                        # )  # want ~3 cycles minimum for a trustworthy seasonal fit, not just 2
 
                         # if len(full_vals) < min_reliable:
                         #     warnings.warn(
