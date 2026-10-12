@@ -668,11 +668,15 @@ def execute_spatial_join(
     ):
         # Pre-filter other_entity using its in-memory bounding box index
         candidates = bbox_intersects_geometry(other_entity._index, primary_total_box)
+        other_so = getattr(other_entity, "_storage_options", None) or {}
         if candidates.is_empty():
             other_df = pl.DataFrame(schema={c: pl.Utf8 for c in other_cols})
         else:
             other_df = (
-                pl.scan_parquet(other_static)
+                pl.scan_parquet(
+                    other_static,
+                    storage_options=other_so or None,
+                )
                 .select(other_cols)
                 .join(
                     candidates.select(other_key_cols).lazy(),
@@ -682,7 +686,12 @@ def execute_spatial_join(
                 .collect()
             )
     else:
-        other_df = pl.read_parquet(other_static, columns=other_cols)
+        other_so = getattr(other_entity, "_storage_options", None) or {}
+        other_df = pl.read_parquet(
+            other_static,
+            columns=other_cols,
+            storage_options=other_so or None,
+        )
 
     if other_df.is_empty():
         other_geoms = np.array([])
@@ -847,8 +856,12 @@ def point_in_entities(
         key_cols: list[str] = entity.key_cols
         static_path: str = entity._resolve(entity.static_path)
 
+        so = getattr(entity, "_storage_options", None) or {}
         geom_df = (
-            pl.scan_parquet(parquet_scan_path(static_path))
+            pl.scan_parquet(
+                parquet_scan_path(static_path),
+                storage_options=so or None,
+            )
             .select(key_cols + [geom_col])
             .join(candidates.select(key_cols).lazy(), on=key_cols, how="semi")
             .collect()

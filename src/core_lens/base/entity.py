@@ -475,7 +475,11 @@ class BaseEntity(ABC):
                 )
 
         # --- Combine attribute and spatial filters into a single lazy pipeline ---
-        lf = pl.scan_parquet(parquet_scan_path(static))
+        _so = self._storage_options or {}
+        lf = pl.scan_parquet(
+            parquet_scan_path(static),
+            storage_options=_so or None,
+        )
 
         if attr_kwargs:
             filter_expr = pl.lit(True)
@@ -510,11 +514,18 @@ class BaseEntity(ABC):
 
             lookup_geoms = []
             for entity_kwarg_name, entity_kwarg_val in entity_kwargs.items():
-                other_entity = _REGISTRY[entity_kwarg_name](data_root=self._data_root)
+                other_entity = _REGISTRY[entity_kwarg_name](
+                    data_root=self._data_root,
+                    storage_options=self._storage_options,
+                )
                 other_profile = other_entity.schema_profile
                 other_static = other_entity._resolve(other_entity.static_path)
 
-                other_lf = pl.scan_parquet(other_static)
+                other_so = other_entity._storage_options or {}
+                other_lf = pl.scan_parquet(
+                    other_static,
+                    storage_options=other_so or None,
+                )
                 match_expr = pl.lit(False)
                 other_schema = cached_read_schema(
                     other_static, other_entity._storage_options
