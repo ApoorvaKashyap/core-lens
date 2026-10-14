@@ -6,10 +6,8 @@
 pip install core-lens
 ```
 
-To enable GPU-accelerated queries (requires an NVIDIA GPU and Linux), install with the `gpu` extra. You will need to configure your package manager to use the NVIDIA PyPI index for RAPIDS dependencies:
-
-```bash
-pip install "core-lens[gpu]" --extra-index-url=https://pypi.nvidia.com
+```{note}
+GPU acceleration (`core-lens[gpu]` via `cudf-polars`) is temporarily paused pending an upstream NVIDIA RAPIDS release supporting Polars 2.0+. Queries currently execute via Polars' CPU streaming and in-memory engine.
 ```
 
 ## Basic Usage

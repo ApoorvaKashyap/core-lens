@@ -71,7 +71,7 @@ Entities on the `AoI` object are accessed as **Views**. Views are lazy and can b
 # Access the view
 mws_view = aoi.mws
 
-# Attribute Filtering
+# Attribute Filtering (supports exact match, lists, and automatically casts to match column dtype)
 filtered = mws_view.where(state="Himachal Pradesh")
 
 # Spatial Filtering (inside the AoI)
@@ -200,7 +200,7 @@ result.stats.similarity(
 
 ## 8. Plotting and Visualization (`Result.plot`)
 
-Plots are explicitly accessed via the `result.plot` namespace. Maps use Lonboard (requires geometry); charts use Plotly. By default, charts render the top 10 entities.
+Plots are explicitly accessed via the `result.plot` namespace. Maps use Lonboard (requires geometry); charts use Bokeh. By default, charts render the top 10 entities.
 
 ```python
 # Map plotting (Requires result.with_geometry() to have been called for time-series)
@@ -268,3 +268,4 @@ AoI.register(CustomEntity)
 - **DO NOT** forget to import and register entities before initializing the `AoI`.
 - **DO** use Polars expressions (`import polars as pl`) inside `.derive()` and `.aggregate()` methods for maximum performance.
 - **DO** always read parameters/testing metrics from `result.metadata` and underlying stats from `result.data` after running any methods in `result.stats`.
+- **DO NOT** rely on implicit type coercion in queries — `core-lens` requires strictly typed operands under Polars 2.0+.

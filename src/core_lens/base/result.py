@@ -335,7 +335,7 @@ class Result:
     def plot(self) -> "PlotNamespace":
         """Return the visualisation namespace for this result.
 
-        Methods here return Lonboard or Plotly objects.
+        Methods here return Lonboard or Bokeh objects.
 
         Example::
 
