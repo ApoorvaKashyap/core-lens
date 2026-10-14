@@ -184,13 +184,24 @@ class Result:
         # 2. Push down the geometry filter into the Parquet reader using is_in
         # so we don't scan the entire static geometry file (which takes ~0.4s).
         geo_lf = self.entity.geometry_lazy
+        geo_schema = geo_lf.collect_schema()
+        cast_exprs = [
+            pl.col(k).cast(geo_schema[k])
+            for k in key_cols
+            if k in geo_schema and keys_df[k].dtype != geo_schema[k]
+        ]
+        if cast_exprs:
+            keys_df = keys_df.with_columns(cast_exprs)
+
         if len(key_cols) == 1 and keys_df.height < 50000:
             key = key_cols[0]
             geo_lf = geo_lf.filter(pl.col(key).is_in(keys_df[key].to_list()))
         else:
-            geo_lf = geo_lf.join(keys_df.lazy(), on=key_cols, how="semi")
+            geo_lf = geo_lf.join(
+                keys_df.lazy(), on=key_cols, how="semi", maintain_order="left"
+            )
 
-        joined = res.data.join(geo_lf, on=key_cols, how="left")
+        joined = res.data.join(geo_lf, on=key_cols, how="left", maintain_order="left")
 
         # 3. Cache the joined geometry so multiple plots are instant.
         return res._replace(data=joined, has_geometry=True).materialise()

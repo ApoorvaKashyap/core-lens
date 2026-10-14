@@ -1,4 +1,5 @@
 import polars as pl
+import pytest
 from core_lens.utils.polars_utils import scan_with_key_filter
 from typing import Any
 
@@ -9,7 +10,7 @@ def test_scan_with_key_filter_composite_key(tmp_path: Any) -> None:
 
     key_values = pl.DataFrame({"id1": [2], "id2": [4]})
     lf = scan_with_key_filter(str(p), ["id1", "id2"], key_values)
-    res = lf.collect()
+    res = lf.collect(engine="in-memory")
     assert res.height == 1
     assert res["val"][0] == "B"
 
@@ -48,12 +49,12 @@ def test_gpu_compute_error(monkeypatch: Any) -> None:
     from core_lens.utils import polars_utils
     import polars as pl
 
-    polars_utils._GPU_AVAILABLE = True
+    monkeypatch.setattr(polars_utils, "_GPU_AVAILABLE", True)
 
     original_collect = pl.LazyFrame.collect
 
     def mock_collect(self: Any, **kwargs: Any) -> Any:
-        if kwargs.get("engine") != "streaming":
+        if isinstance(kwargs.get("engine"), pl.GPUEngine):
             raise pl.exceptions.ComputeError("CUDA out of memory")
         return original_collect(self, **kwargs)
 
@@ -69,19 +70,55 @@ def test_gpu_compute_error_other(monkeypatch: Any) -> None:
     from core_lens.utils import polars_utils
     import polars as pl
 
-    polars_utils._GPU_AVAILABLE = True
+    monkeypatch.setattr(polars_utils, "_GPU_AVAILABLE", True)
 
     original_collect = pl.LazyFrame.collect
 
     def mock_collect(self: Any, **kwargs: Any) -> Any:
-        if kwargs.get("engine") != "streaming":
+        if isinstance(kwargs.get("engine"), pl.GPUEngine):
             raise pl.exceptions.ComputeError("Other error")
         return original_collect(self, **kwargs)
 
     monkeypatch.setattr(pl.LazyFrame, "collect", mock_collect)
 
     lf = pl.LazyFrame({"a": [1, 2, 3]})
-    import pytest
-
     with pytest.raises(pl.exceptions.ComputeError, match="Other error"):
         polars_utils.collect_lf(lf)
+
+
+def test_cast_filter_values() -> None:
+    from core_lens.utils.polars_utils import cast_filter_values
+
+    # Scalar casting
+    assert cast_filter_values("42", pl.Int64) == 42
+    assert isinstance(cast_filter_values("42", pl.Int64), int)
+    assert cast_filter_values(123, pl.String) == "123"
+
+    # List casting
+    res_list = cast_filter_values(["1", "2", "3"], pl.Int64)
+    assert res_list == [1, 2, 3]
+    assert all(isinstance(x, int) for x in res_list)
+
+    # List column inner dtype casting
+    res_inner = cast_filter_values(["10", "20"], pl.List(pl.Int32))
+    assert res_inner == [10, 20]
+
+    # None and empty
+    assert cast_filter_values(None, pl.Int64) is None
+    assert cast_filter_values([1, 2], None) == [1, 2]
+    assert cast_filter_values([], pl.Int64) == []
+
+
+def test_scan_with_key_filter_type_alignment(tmp_path: Any) -> None:
+    p = tmp_path / "typed.parquet"
+    # Column 'id' stored as Int64
+    pl.DataFrame(
+        {"id": pl.Series([10, 20, 30], dtype=pl.Int64), "val": ["x", "y", "z"]}
+    ).write_parquet(p)
+
+    # Query with Int32 keys
+    key_values = pl.DataFrame({"id": pl.Series([20], dtype=pl.Int32)})
+    lf = scan_with_key_filter(str(p), ["id"], key_values)
+    res = lf.collect(engine="in-memory")
+    assert res.height == 1
+    assert res["val"][0] == "y"

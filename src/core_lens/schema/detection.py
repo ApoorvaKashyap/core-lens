@@ -213,7 +213,34 @@ def _infer_geometry_type(
     geometry_col: str,
     path: str,
 ) -> tuple[Literal["wkb", "wkt", "latlon"], str | None]:
-    dtype = schema[geometry_col]
+    raw_dtype = schema[geometry_col]
+    dtype = raw_dtype
+
+    # Unwrap Polars Extension types (e.g. GeoArrow extension types such as
+    # Extension('geoarrow.wkb', Binary) or Extension('geoarrow.wkt', String))
+    # to their underlying storage type.
+    if hasattr(pl, "Extension") and isinstance(dtype, pl.Extension):
+        ext_storage = getattr(dtype, "ext_storage", None)
+        if callable(ext_storage):
+            dtype = ext_storage()
+        elif ext_storage is not None:
+            dtype = ext_storage
+        elif getattr(dtype, "_storage", None) is not None:
+            dtype = getattr(dtype, "_storage")
+        elif getattr(dtype, "storage", None) is not None:
+            dtype = getattr(dtype, "storage")
+
+        ext_name_fn = getattr(raw_dtype, "ext_name", None)
+        ext_name = (
+            ext_name_fn()
+            if callable(ext_name_fn)
+            else getattr(raw_dtype, "_name", getattr(raw_dtype, "name", ""))
+        )
+        if isinstance(ext_name, str):
+            if "wkb" in ext_name.lower():
+                return "wkb", None
+            if "wkt" in ext_name.lower():
+                return "wkt", None
 
     if dtype == pl.Binary:
         return "wkb", None
@@ -234,7 +261,7 @@ def _infer_geometry_type(
 
     raise SchemaDetectionError(
         f"Cannot infer geometry_type from column {geometry_col!r} "
-        f"(dtype={dtype}) in {path!r}. "
+        f"(dtype={raw_dtype}) in {path!r}. "
         "Supported dtypes: Binary (wkb), String (wkt), Float with lon companion (latlon)."
     )
 

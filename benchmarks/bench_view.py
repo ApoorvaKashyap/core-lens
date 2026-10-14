@@ -54,7 +54,7 @@ t0 = time.perf_counter()
 view_all = aoi.mws
 t1 = time.perf_counter()
 print(f"aoi.mws          : {(t1 - t0) * 1000:.2f} ms")
-print(f"Keys             : {view_all.keys.collect().shape}")
+print(f"Keys             : {view_all.keys.collect(engine='in-memory').shape}")
 
 
 # ── 2. View.where() — single filter ──────────────────────────────────────────
@@ -63,7 +63,7 @@ t0 = time.perf_counter()
 view_bihar = view_all.where(state="Bihar")
 t1 = time.perf_counter()
 print(f"where(state)     : {(t1 - t0) * 1000:.2f} ms")
-print(f"Bihar keys       : {view_bihar.keys.collect().shape}")
+print(f"Bihar keys       : {view_bihar.keys.collect(engine='in-memory').shape}")
 
 
 # ── 3. View.where() — composite AND filter ────────────────────────────────────
@@ -72,7 +72,7 @@ t0 = time.perf_counter()
 view_banka = view_all.where(state="Bihar", district="Banka", tehsil="Banka")
 t1 = time.perf_counter()
 print(f"where(3 cols)    : {(t1 - t0) * 1000:.2f} ms")
-print(f"Banka keys       : {view_banka.keys.collect().shape}")
+print(f"Banka keys       : {view_banka.keys.collect(engine='in-memory').shape}")
 
 
 # ── 4. View.spatial_filter() — further narrow ─────────────────────────────────
@@ -82,7 +82,7 @@ t0 = time.perf_counter()
 view_spatial = view_all.spatial_filter(bbox=SMALL_BBOX)
 t1 = time.perf_counter()
 print(f"spatial_filter   : {(t1 - t0) * 1000:.2f} ms")
-print(f"Spatial keys     : {view_spatial.keys.collect().shape}")
+print(f"Spatial keys     : {view_spatial.keys.collect(engine='in-memory').shape}")
 
 
 # ── 5. View.between() — date range (no I/O) ───────────────────────────────────

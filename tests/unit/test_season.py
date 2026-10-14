@@ -229,7 +229,7 @@ class TestAddTemporalColumns:
         result_lf = add_temporal_columns(lf, "date", season_config)
 
         assert isinstance(result_lf, pl.LazyFrame)
-        result = result_lf.collect()
+        result = result_lf.collect(engine="in-memory")
         assert result["season_year"].to_list() == _EXPECTED_SEASON_YEAR
 
     def test_season_and_season_year_both_preexisting(

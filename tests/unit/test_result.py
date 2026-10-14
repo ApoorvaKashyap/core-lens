@@ -97,7 +97,7 @@ class TestResultLazy:
     def test_lazy_data_matches_df(self, entity_cls: Any) -> None:
         result = _make_result(entity_cls())
 
-        collected = result.lazy().collect()
+        collected = result.lazy().collect(engine="in-memory")
 
         assert collected.equals(result.df())
 

@@ -14,6 +14,7 @@ from core_lens.utils.polars_utils import (
     scan_with_key_filter,
     collect_lf,
     cached_read_schema,
+    cast_filter_values,
 )
 
 if TYPE_CHECKING:
@@ -129,20 +130,22 @@ class View:
 
         filter_expr = pl.lit(True)
         for col, val in kwargs.items():
-            is_list_col = isinstance(schema_types.get(col), pl.List)
+            col_dtype = schema_types.get(col)
+            is_list_col = isinstance(col_dtype, pl.List)
+            cast_val = cast_filter_values(val, col_dtype)
             if isinstance(val, list):
                 if is_list_col:
                     filter_expr = (
                         filter_expr
-                        & pl.col(col).list.eval(pl.element().is_in(val)).list.any()
+                        & pl.col(col).list.eval(pl.element().is_in(cast_val)).list.any()
                     )
                 else:
-                    filter_expr = filter_expr & pl.col(col).is_in(val)
+                    filter_expr = filter_expr & pl.col(col).is_in(cast_val)
             else:
                 if is_list_col:
-                    filter_expr = filter_expr & pl.col(col).list.contains(val)
+                    filter_expr = filter_expr & pl.col(col).list.contains(cast_val)
                 else:
-                    filter_expr = filter_expr & (pl.col(col) == val)
+                    filter_expr = filter_expr & (pl.col(col) == cast_val)
 
         keys = lf.filter(filter_expr).select(self.entity.key_cols)
 
@@ -202,8 +205,10 @@ class View:
         candidates = bbox_intersects_geometry(self.entity._index, geometry)
         candidates = (
             candidates.lazy()
-            .join(self.keys, on=self.entity.key_cols, how="inner")
-            .collect()
+            .join(
+                self.keys, on=self.entity.key_cols, how="inner", maintain_order="left"
+            )
+            .collect(engine="in-memory")
         )
 
         keys_df = exact_spatial_filter(
@@ -521,8 +526,11 @@ class View:
                     data_df.select(self.entity.key_cols).lazy(),
                     on=self.entity.key_cols,
                     how="semi",
-                ).collect()
-                data_df = data_df.join(geom_df, on=self.entity.key_cols, how="left")
+                    maintain_order="left",
+                ).collect(engine="in-memory")
+                data_df = data_df.join(
+                    geom_df, on=self.entity.key_cols, how="left", maintain_order="left"
+                )
 
             from core_lens.utils.spatial import execute_spatial_join
 

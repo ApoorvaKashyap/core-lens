@@ -235,3 +235,15 @@ def sample_result(entity_cls: Any) -> Result:
         entity_name="minimalmws",
         entity=entity_cls(),
     )
+
+
+@pytest.fixture(autouse=True)
+def _disable_gpu_for_tests(
+    monkeypatch: pytest.MonkeyPatch, request: pytest.FixtureRequest
+) -> None:
+    """Monkeypatch _GPU_AVAILABLE to False during test runs to ensure CPU mode."""
+    if "test_polars_utils.py" in request.node.nodeid:
+        return
+    import core_lens.utils.polars_utils as pu
+
+    monkeypatch.setattr(pu, "_GPU_AVAILABLE", False)

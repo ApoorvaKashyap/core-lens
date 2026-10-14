@@ -119,13 +119,16 @@ def _get_cloud_etag(
 
     """
     try:
-        import pyarrow.fs as pafs
+        try:
+            from pyarrow._fs import FileSelector, FileType
+        except ImportError:
+            from pyarrow.fs import FileSelector, FileType  # type: ignore[attr-defined]
 
         fs, arrow_path = resolve_fs_and_path(static_path)
         # For a directory (partitioned dataset) inspect the first child file.
         info = fs.get_file_info(arrow_path)
-        if info.type == pafs.FileType.Directory:
-            selector = pafs.FileSelector(arrow_path, recursive=False)
+        if info.type == FileType.Directory:
+            selector = FileSelector(arrow_path, recursive=False)
             children = fs.get_file_info(selector)
             parquet_children = [c for c in children if c.base_name.endswith(".parquet")]
             if not parquet_children:
@@ -378,7 +381,7 @@ def build_bbox_index(
 
     # Resolve filesystem for cloud paths so pyarrow.dataset can open the file.
     fs, arrow_path = resolve_fs_and_path(static_path)
-    dataset = ds.dataset(arrow_path, filesystem=fs)
+    dataset = ds.dataset(arrow_path, filesystem=fs)  # type: ignore[no-untyped-call]
     chunks = []
 
     for batch in dataset.to_batches(columns=cols_to_read, batch_size=25_000):
@@ -527,8 +530,13 @@ def exact_spatial_filter(
             storage_options=_so or None,
         )
         .select(key_cols + [geometry_col])
-        .join(candidates.select(key_cols).lazy(), on=key_cols, how="semi")
-        .collect()
+        .join(
+            candidates.select(key_cols).lazy(),
+            on=key_cols,
+            how="semi",
+            maintain_order="left",
+        )
+        .collect(engine="in-memory")
     )
 
     geom_array = full_df[geometry_col].to_numpy()
@@ -670,7 +678,7 @@ def execute_spatial_join(
         candidates = bbox_intersects_geometry(other_entity._index, primary_total_box)
         other_so = getattr(other_entity, "_storage_options", None) or {}
         if candidates.is_empty():
-            other_df = pl.DataFrame(schema={c: pl.Utf8 for c in other_cols})
+            other_df = pl.DataFrame(schema={c: pl.String for c in other_cols})
         else:
             other_df = (
                 pl.scan_parquet(
@@ -682,8 +690,9 @@ def execute_spatial_join(
                     candidates.select(other_key_cols).lazy(),
                     on=other_key_cols,
                     how="semi",
+                    maintain_order="left",
                 )
-                .collect()
+                .collect(engine="in-memory")
             )
     else:
         other_so = getattr(other_entity, "_storage_options", None) or {}
@@ -779,6 +788,7 @@ def execute_spatial_join(
         ),
         on=primary_key_cols,
         how="left",
+        maintain_order="left",
     )
 
 
@@ -863,8 +873,13 @@ def point_in_entities(
                 storage_options=so or None,
             )
             .select(key_cols + [geom_col])
-            .join(candidates.select(key_cols).lazy(), on=key_cols, how="semi")
-            .collect()
+            .join(
+                candidates.select(key_cols).lazy(),
+                on=key_cols,
+                how="semi",
+                maintain_order="left",
+            )
+            .collect(engine="in-memory")
         )
 
         if geom_df.is_empty():

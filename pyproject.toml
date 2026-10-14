@@ -47,7 +47,7 @@ venv = ".venv"
 
 [project.optional-dependencies]
 core = [
-    "polars>=1.39.0,<2",
+    "polars>=2.0.0,<3",
     "pyarrow>=23.0.0,<25",
     "pydantic>=2.13.3,<3",
     "loguru>=0.7.3",
@@ -69,9 +69,10 @@ viz = [
     "bokeh>=3.6.0,<4",
 ]
 stats = ["core-lens[core]", "scipy>=1.17.1,<2", "statsmodels>=0.14.6,<1"]
-gpu = ["core-lens[core]", "cudf-cu13==26.6.*", "cudf-polars-cu13==26.6.*"]
+# GPU dependencies commented out until NVIDIA RAPIDS releases cudf-polars for Polars 2.0+
+# gpu = ["core-lens[core]", "cudf-cu13==26.6.*", "cudf-polars-cu13==26.6.*"]
 full = ["core-lens[spatial,viz,stats]"]
-full-gpu = ["core-lens[spatial,viz,stats,gpu]"]
+# full-gpu = ["core-lens[spatial,viz,stats,gpu]"]
 
 [dependency-groups]
 dev = [

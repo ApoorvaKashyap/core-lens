@@ -183,7 +183,7 @@ view = entity.spatial_filter(bbox=SMALL_BBOX)
 
 t1 = time.perf_counter()
 print(f"spatial_filter (bbox) : {(t1 - t0) * 1000:.2f} ms")
-print(f"View keys             : {view.keys.collect().shape}")
+print(f"View keys             : {view.keys.collect(engine='in-memory').shape}")
 
 t0 = time.perf_counter()
 view2 = entity.spatial_filter(geometry=small_poly)

@@ -293,7 +293,7 @@ class StatsNamespace:
                     columns=["dw_precipitation", "ci_cropping_intensity"],
                     method=CorrelateMethod.PEARSON,
                 )
-                print(result.data.collect())
+                print(result.data.collect(engine="in-memory"))
 
             Per-MWS correlation, ranked by strength of dependence::
 
@@ -310,7 +310,7 @@ class StatsNamespace:
                     .sort("abs_corr", descending=True)
                     .select("mws_id", "correlation", "p_value", "n_obs")
                     .limit(5)
-                    .collect()
+                    .collect(engine="in-memory")
                 )
                 print(top5)
         """
@@ -378,18 +378,20 @@ class StatsNamespace:
                 )
 
                 # --- single collect boundary: scipy.t.sf needs eager numpy ---
-                result = lazy_result.collect()
+                result = lazy_result.collect(engine="in-memory")
                 t_vals = result["t_stat"].to_numpy()
                 df_vals = result["n_obs"].to_numpy() - 2
                 p_vals = 2.0 * sp.t.sf(np.abs(t_vals), df_vals)
-                result = result.with_columns(pl.Series("p_value", p_vals))
+                result = result.with_columns(
+                    pl.Series("p_value", np.atleast_1d(p_vals))
+                )
 
                 data = result.select([group_by, "correlation", "p_value", "n_obs"])
 
             else:
                 # Kendall: scipy has no batched/lazy equivalent, so this branch
                 # is inherently eager. Collect ONCE here — not scattered filters.
-                df = lf.collect()
+                df = lf.collect(engine="in-memory")
                 rows: list[dict[str, Any]] = []
                 for sub_full in df.partition_by(group_by):
                     key = sub_full[group_by][0]
@@ -422,7 +424,7 @@ class StatsNamespace:
 
         # Pooled mode — eager needed regardless (scipy.pearsonr/spearmanr/
         # kendalltau all take raw numpy arrays). Collect ONCE here.
-        df = lf.collect()
+        df = lf.collect(engine="in-memory")
         n_obs = len(df)
 
         rows = []
@@ -674,7 +676,9 @@ class StatsNamespace:
                 .select(join_keys + [column])
                 .rename({column: "value_to"})
             )
-            joined = from_df.join(to_df, on=join_keys, how="inner").with_columns(
+            joined = from_df.join(
+                to_df, on=join_keys, how="inner", maintain_order="left"
+            ).with_columns(
                 [
                     pl.lit(from_period).alias("year_from").cast(pl.Int32),
                     pl.lit(to_period).alias("year_to").cast(pl.Int32),
@@ -800,7 +804,7 @@ class StatsNamespace:
 
         df = self._r.df()
         if isinstance(df, pl.LazyFrame):
-            df = df.collect()
+            df = df.collect(engine="in-memory")
         key = self._r.key_cols[0]
 
         if mode == "cross_sectional":
@@ -945,20 +949,22 @@ class StatsNamespace:
                 n_dropped = counts.height - valid_keys.height
 
                 med_df = (
-                    base_df.join(valid_keys, on=key)
+                    base_df.join(valid_keys, on=key, maintain_order="left")
                     .group_by(key)
                     .agg(pl.col(column).median().alias("_med"))
                 )
                 mad_df = (
-                    base_df.join(valid_keys, on=key)
-                    .join(med_df, on=key)
+                    base_df.join(valid_keys, on=key, maintain_order="left")
+                    .join(med_df, on=key, maintain_order="left")
                     .with_columns(
                         (pl.col(column) - pl.col("_med")).abs().alias("_absdev")
                     )
                     .group_by(key)
                     .agg(pl.col("_absdev").median().alias("_mad"))
                 )
-                stats_df = med_df.join(mad_df, on=key).with_columns(
+                stats_df = med_df.join(
+                    mad_df, on=key, maintain_order="left"
+                ).with_columns(
                     (pl.col("_mad") * 1.4826).clip(lower_bound=1e-12).alias("_scale")
                 )
 
@@ -971,7 +977,7 @@ class StatsNamespace:
                 )
 
                 data = (
-                    eval_df.join(stats_df, on=key, how="inner")
+                    eval_df.join(stats_df, on=key, how="inner", maintain_order="left")
                     .with_columns(
                         ((pl.col(column) - pl.col("_med")) / pl.col("_scale")).alias(
                             "anomaly_score"
@@ -1203,7 +1209,12 @@ class StatsNamespace:
             if spec is None:
                 # Pull from result.data directly.
                 if col_name in df.columns:
-                    feat = feat.join(df.select([key, col_name]), on=key, how="left")
+                    feat = feat.join(
+                        df.select([key, col_name]),
+                        on=key,
+                        how="left",
+                        maintain_order="left",
+                    )
                 # else silently skip — not in data and no spec provided
                 continue
 
@@ -1286,7 +1297,12 @@ class StatsNamespace:
             else:
                 fetched = collect_lf(col_lf.group_by(key).agg(agg_expr))
 
-            feat = feat.join(fetched.select([key, col_name]), on=key, how="left")
+            feat = feat.join(
+                fetched.select([key, col_name]),
+                on=key,
+                how="left",
+                maintain_order="left",
+            )
 
         feature_cols = [c for c in feat.columns if c != key]
 

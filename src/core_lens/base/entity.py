@@ -29,7 +29,11 @@ from core_lens.utils.spatial import (
     build_bbox_index,
     exact_spatial_filter,
 )
-from core_lens.utils.polars_utils import cached_read_schema, parquet_scan_path
+from core_lens.utils.polars_utils import (
+    cached_read_schema,
+    cast_filter_values,
+    parquet_scan_path,
+)
 
 if TYPE_CHECKING:
     import shapely
@@ -487,23 +491,25 @@ class BaseEntity(ABC):
                 dtype = schema[col]
                 is_list_col = isinstance(dtype, pl.List) or dtype == pl.List
                 is_val_list = isinstance(val, (list, tuple, set))
+                cast_val = cast_filter_values(val, dtype)
 
                 if is_list_col:
                     if is_val_list:
                         filter_expr = filter_expr & (
-                            pl.col(col).list.set_intersection(list(val)).list.len() > 0
+                            pl.col(col).list.set_intersection(list(cast_val)).list.len()
+                            > 0
                         )
                     else:
-                        filter_expr = filter_expr & pl.col(col).list.contains(val)
+                        filter_expr = filter_expr & pl.col(col).list.contains(cast_val)
                 else:
                     if is_val_list:
-                        filter_expr = filter_expr & pl.col(col).is_in(list(val))
+                        filter_expr = filter_expr & pl.col(col).is_in(list(cast_val))
                     else:
-                        filter_expr = filter_expr & (pl.col(col) == val)
+                        filter_expr = filter_expr & (pl.col(col) == cast_val)
             lf = lf.filter(filter_expr)
 
         if not entity_kwargs:
-            keys = lf.select(self.key_cols).collect()
+            keys = lf.select(self.key_cols).collect(engine="in-memory")
         else:
             import shapely
             import shapely.wkb as swkb
@@ -538,7 +544,7 @@ class BaseEntity(ABC):
                 matched = (
                     other_lf.filter(match_expr)
                     .select([other_profile.geometry_col])
-                    .collect()
+                    .collect(engine="in-memory")
                 )
 
                 if matched.is_empty():
@@ -572,8 +578,9 @@ class BaseEntity(ABC):
                     candidates.select(self.key_cols).lazy(),
                     on=self.key_cols,
                     how="semi",
+                    maintain_order="left",
                 )
-                df = lf.collect()
+                df = lf.collect(engine="in-memory")
 
                 if df.is_empty():
                     keys = df.select(self.key_cols)

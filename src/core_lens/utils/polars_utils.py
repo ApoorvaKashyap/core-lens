@@ -69,7 +69,7 @@ def _gpu_available() -> bool:
     global _GPU_AVAILABLE
     if _GPU_AVAILABLE is None:
         try:
-            import cudf_polars  # noqa: F401  # type: ignore[import-untyped]
+            import cudf_polars  # type: ignore[import-not-found]  # noqa: F401
 
             _GPU_AVAILABLE = True
             gpu = "cudf_polars (RAPIDS)"
@@ -96,7 +96,7 @@ def collect_lf(lf: pl.LazyFrame) -> pl.DataFrame:
 
     Use this function for all *data* scans (materialisation, geometry joins,
     similarity fetches).  Tiny *index* scans that feed into subsequent
-    in-process joins should stay as bare ``.collect()`` calls — the streaming
+    in-process joins should stay as bare ``.collect(engine="in-memory")`` calls — the streaming
     path can occasionally change row ordering in ways that break those joins.
 
     Args:
@@ -121,7 +121,7 @@ def collect_lf(lf: pl.LazyFrame) -> pl.DataFrame:
                 print("=" * 50)
             else:
                 raise
-    return lf.collect(engine="streaming")
+    return lf.collect(engine="in-memory")
 
 
 def scan_with_key_filter(
@@ -163,7 +163,7 @@ def scan_with_key_filter(
             options forwarded to ``pl.scan_parquet``.  ``None`` uses ambient credentials.
 
     Returns:
-        pl.LazyFrame: A ``pl.LazyFrame`` ready to be ``.collect()``-ed.
+        pl.LazyFrame: A ``pl.LazyFrame`` ready to be ``.collect(engine="in-memory")``-ed.
 
     """
     _so = storage_options or {}
@@ -180,7 +180,20 @@ def scan_with_key_filter(
     if time_expr is not None:
         lf = lf.filter(time_expr)
 
-    kv_df = key_values.collect() if isinstance(key_values, pl.LazyFrame) else key_values
+    kv_df = (
+        key_values.collect(engine="in-memory")
+        if isinstance(key_values, pl.LazyFrame)
+        else key_values
+    )
+    lf_schema = lf.collect_schema()
+    cast_exprs = [
+        pl.col(k).cast(lf_schema[k])
+        for k in key_cols
+        if k in lf_schema and kv_df[k].dtype != lf_schema[k]
+    ]
+    if cast_exprs:
+        kv_df = kv_df.with_columns(cast_exprs)
+
     if len(key_cols) == 1 and kv_df.height < 50000:
         # Fast path: `is_in` keeps the plan simple and enables row-group skipping
         # via Parquet Bloom filters when the key column was written with them.
@@ -190,6 +203,33 @@ def scan_with_key_filter(
         lf = lf.filter(pl.col(key).is_in(kv_df[key].to_list()))
     else:
         # Fallback to semi-join for massive key arrays (e.g. state-wide scopes)
-        lf = lf.join(kv_df.lazy(), on=key_cols, how="semi")
+        lf = lf.join(kv_df.lazy(), on=key_cols, how="semi", maintain_order="left")
 
     return lf
+
+
+def cast_filter_values(
+    val: Any,
+    target_dtype: pl.DataType | type[pl.DataType] | None,
+) -> Any:
+    """Explicitly cast query filter value(s) to match the target column dtype.
+
+    In Polars 2.0, filtering expressions (such as ``is_in()``) require strict
+    type matching and no longer perform lossy auto-coercion.
+    """
+    if target_dtype is None or val is None:
+        return val
+
+    # If the column is a List type, extract the inner element type
+    dtype = (
+        target_dtype.inner
+        if isinstance(target_dtype, pl.List) and target_dtype.inner is not None
+        else target_dtype
+    )
+
+    try:
+        if isinstance(val, (list, tuple, set)):
+            return pl.Series(list(val)).cast(dtype).to_list()
+        return pl.Series([val]).cast(dtype)[0]
+    except Exception:
+        return val

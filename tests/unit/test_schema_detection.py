@@ -206,6 +206,32 @@ class TestInferGeometryType:
         with pytest.raises(SchemaDetectionError, match="Cannot infer"):
             _infer_geometry_type(schema, "geom", str(p))
 
+    def test_extension_wkb_returns_wkb(self) -> None:
+        if not hasattr(pl, "Extension"):
+            pytest.skip("pl.Extension not available in this Polars version")
+        ext_wkb = pl.Extension("geoarrow.wkb", pl.Binary)
+        schema = pl.Schema({"geometry": ext_wkb})
+        geo_type, lon = _infer_geometry_type(schema, "geometry", "virtual.parquet")
+        assert geo_type == "wkb"
+        assert lon is None
+
+    def test_extension_wkt_returns_wkt(self) -> None:
+        if not hasattr(pl, "Extension"):
+            pytest.skip("pl.Extension not available in this Polars version")
+        ext_wkt = pl.Extension("geoarrow.wkt", pl.String)
+        schema = pl.Schema({"geometry": ext_wkt})
+        geo_type, lon = _infer_geometry_type(schema, "geometry", "virtual.parquet")
+        assert geo_type == "wkt"
+        assert lon is None
+
+    def test_extension_unsupported_raises(self) -> None:
+        if not hasattr(pl, "Extension"):
+            pytest.skip("pl.Extension not available in this Polars version")
+        ext_other = pl.Extension("custom.unknown", pl.Int64)
+        schema = pl.Schema({"geometry": ext_other})
+        with pytest.raises(SchemaDetectionError, match="Cannot infer"):
+            _infer_geometry_type(schema, "geometry", "virtual.parquet")
+
 
 class TestInferBboxCols:
     def test_known_minx_pattern_detected(self, tmp_path: Any) -> None:

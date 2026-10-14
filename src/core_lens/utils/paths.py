@@ -42,7 +42,14 @@ from __future__ import annotations
 import functools
 import pathlib
 
-import pyarrow.fs as pafs
+try:
+    from pyarrow._fs import FileSystem, FileType, LocalFileSystem
+except ImportError:
+    from pyarrow.fs import (  # type: ignore[attr-defined]
+        FileSystem,
+        FileType,
+        LocalFileSystem,
+    )
 from loguru import logger
 
 # URI scheme prefixes that indicate a cloud / non-local filesystem.
@@ -52,7 +59,7 @@ _CLOUD_SCHEMES = ("s3://", "gs://", "gcs://", "abfs://", "az://", "adl://", "htt
 
 # Singleton LocalFileSystem — avoids re-allocating a C++ object on every call
 # for local paths (measured at ~1–3 µs per construction).
-_LOCAL_FS: pafs.LocalFileSystem = pafs.LocalFileSystem()
+_LOCAL_FS: LocalFileSystem = LocalFileSystem()
 
 # Cached cwd string — pathlib.Path.cwd() makes a getcwd() syscall each time.
 # Only computed once; relative paths are rare in production (data_root is
@@ -74,7 +81,7 @@ def is_cloud_uri(uri: str) -> bool:
 
 
 @functools.lru_cache(maxsize=256)
-def _resolve_fs_and_path_cached(uri: str) -> tuple[pafs.FileSystem, str]:
+def _resolve_fs_and_path_cached(uri: str) -> tuple[FileSystem, str]:
     """Cached inner implementation of :func:`resolve_fs_and_path`.
 
     ``lru_cache`` keyed on the full URI string.  Cloud URIs for the same
@@ -96,7 +103,7 @@ def _resolve_fs_and_path_cached(uri: str) -> tuple[pafs.FileSystem, str]:
         # pyarrow.fs.FileSystem.from_uri: parses scheme + authority, builds the
         # appropriate C++ FileSystem object (S3FileSystem, GcsFileSystem, …).
         # Cost: ~50–200 µs first call; cached result returned in ~50 ns.
-        fs, path = pafs.FileSystem.from_uri(uri)
+        fs, path = FileSystem.from_uri(uri)
         return fs, path
 
     # Local path — normalise to absolute using the cached singleton and cwd.
@@ -106,7 +113,7 @@ def _resolve_fs_and_path_cached(uri: str) -> tuple[pafs.FileSystem, str]:
     return _LOCAL_FS, str(p)
 
 
-def resolve_fs_and_path(uri: str) -> tuple[pafs.FileSystem, str]:
+def resolve_fs_and_path(uri: str) -> tuple[FileSystem, str]:
     """Resolve a URI to a ``(FileSystem, path)`` pair.
 
     Delegates to :func:`pyarrow.fs.FileSystem.from_uri` for cloud URIs and
@@ -143,7 +150,7 @@ def path_exists(uri: str) -> bool:
     try:
         fs, path = resolve_fs_and_path(uri)
         info = fs.get_file_info(path)
-        return bool(info.type != pafs.FileType.NotFound)
+        return bool(info.type != FileType.NotFound)
     except Exception as exc:  # pragma: no cover
         logger.debug("path_exists check failed for {!r}: {}", uri, exc)
         return False

@@ -91,7 +91,7 @@ def _wkb_to_arrow_table(
     )
 
     # --- Fast path: pure Polygon / MultiPolygon rows (no Shapely) ---
-    poly_mask = geom_type_series.is_in([3, 6])
+    poly_mask = geom_type_series.is_in(pl.Series([3, 6], dtype=pl.UInt8).to_list())
     df_poly = df.filter(poly_mask)
 
     # --- Slow path: GeometryCollection rows — extract polygon parts via Shapely ---
@@ -545,7 +545,7 @@ class PlotNamespace:
         def _make_fig(pdf: Any, title: str) -> "BokehFigure":
             hover_cols = [c for c in pdf.columns if c not in ("geometry", "geom")]
             tooltips = [(c, f"@{{{c}}}") for c in hover_cols]
-            fig = figure(  # type: ignore[call-arg]
+            fig = figure(
                 width=900,
                 height=400,
                 x_axis_label=x,
@@ -658,7 +658,10 @@ class PlotNamespace:
         if len(unique_entities) > top_n:
             entities = unique_entities.limit(top_n).to_list()
             entity_df = entity_df.join(
-                pl.DataFrame({key_col: entities}), on=key_col, how="inner"
+                pl.DataFrame({key_col: entities}),
+                on=key_col,
+                how="inner",
+                maintain_order="left",
             )
         entity_pdf = entity_df.to_pandas()
 
@@ -716,12 +719,17 @@ class PlotNamespace:
         unique_entities = df[key_col].unique()
         if len(unique_entities) > top_n:
             entities = unique_entities.limit(top_n).to_list()
-            df = df.join(pl.DataFrame({key_col: entities}), on=key_col, how="inner")
+            df = df.join(
+                pl.DataFrame({key_col: entities}),
+                on=key_col,
+                how="inner",
+                maintain_order="left",
+            )
 
         def _make_scatter(y_col: str) -> "BokehFigure":
             from bokeh.models import ColumnDataSource
 
-            fig = figure(  # type: ignore[call-arg]
+            fig = figure(
                 width=800,
                 height=450,
                 x_axis_label=x,
@@ -815,12 +823,17 @@ class PlotNamespace:
         unique_entities = df[key_col].unique()
         if len(unique_entities) > top_n:
             entities = unique_entities.limit(top_n).to_list()
-            df = df.join(pl.DataFrame({key_col: entities}), on=key_col, how="inner")
+            df = df.join(
+                pl.DataFrame({key_col: entities}),
+                on=key_col,
+                how="inner",
+                maintain_order="left",
+            )
 
         df_pd = df.to_pandas()
 
         def _make_hist(x_col: str) -> "BokehFigure":
-            fig = figure(  # type: ignore[call-arg]
+            fig = figure(
                 width=800,
                 height=400,
                 x_axis_label=x_col,
@@ -902,7 +915,7 @@ class PlotNamespace:
 
         from bokeh.models import FactorRange
 
-        fig = figure(  # type: ignore[call-arg]
+        fig = figure(
             width=600,
             height=550,
             x_range=FactorRange(factors=cols),
@@ -993,7 +1006,7 @@ class PlotNamespace:
 
         mapper = LinearColorMapper(palette="Viridis256", low=low, high=high)
 
-        fig = figure(  # type: ignore[call-arg]
+        fig = figure(
             width=900,
             height=500,
             x_range=FactorRange(factors=x_vals),
@@ -1046,7 +1059,7 @@ class PlotNamespace:
         for row_col in num_cols:
             row: list[Any] = []
             for col_col in num_cols:
-                fig = figure(  # type: ignore[call-arg]
+                fig = figure(
                     width=200,
                     height=200,
                     x_axis_label=col_col if row_col == num_cols[-1] else "",

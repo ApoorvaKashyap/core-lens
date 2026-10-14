@@ -20,7 +20,11 @@ from loguru import logger
 
 from core_lens.base.entity import BaseEntity, EntityValidationError
 from core_lens.utils.paths import is_cloud_uri
-from core_lens.utils.polars_utils import cached_read_schema, parquet_scan_path
+from core_lens.utils.polars_utils import (
+    cached_read_schema,
+    cast_filter_values,
+    parquet_scan_path,
+)
 
 if TYPE_CHECKING:
     from core_lens.base.view import View
@@ -232,22 +236,28 @@ def _cached_resolve_boundary(
     schema_types = cached_read_schema(static_path, storage_options)
     for col, val in entity_kwargs.items():
         if col in schema.key_cols or col in schema.extra_static_cols:
-            is_list_col = isinstance(schema_types.get(col), pl.List)
+            col_dtype = schema_types.get(col)
+            is_list_col = isinstance(col_dtype, pl.List)
+            cast_val = cast_filter_values(val, col_dtype)
             if isinstance(val, list):
                 if is_list_col:
                     filter_expr = (
                         filter_expr
-                        & pl.col(col).list.eval(pl.element().is_in(val)).list.any()
+                        & pl.col(col).list.eval(pl.element().is_in(cast_val)).list.any()
                     )
                 else:
-                    filter_expr = filter_expr & pl.col(col).is_in(val)
+                    filter_expr = filter_expr & pl.col(col).is_in(cast_val)
             else:
                 if is_list_col:
-                    filter_expr = filter_expr & pl.col(col).list.contains(val)
+                    filter_expr = filter_expr & pl.col(col).list.contains(cast_val)
                 else:
-                    filter_expr = filter_expr & (pl.col(col) == val)
+                    filter_expr = filter_expr & (pl.col(col) == cast_val)
 
-    df = lf.filter(filter_expr).select(candidate.key_cols + [geom_col]).collect()
+    df = (
+        lf.filter(filter_expr)
+        .select(candidate.key_cols + [geom_col])
+        .collect(engine="in-memory")
+    )
 
     if df.is_empty():
         raise ValueError(

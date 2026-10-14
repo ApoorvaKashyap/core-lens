@@ -19,12 +19,52 @@ class TestEntityWhere:
         assert isinstance(view, View)
         assert view.entity is entity
         assert view.entity_name == "minimalmws"
-        assert view.keys.collect().height == 2
+        assert view.keys.collect(engine="in-memory").height == 2
+
+    def test_where_list_filter(
+        self, entity_cls: Any, static_parquet: pathlib.Path
+    ) -> None:
+        entity = entity_cls()
+        view = entity.where(district=["TestDistrict"])
+        assert view.keys.collect(engine="in-memory").height == 2
+
+    def test_where_with_type_coercion(self, tmp_path: pathlib.Path) -> None:
+        import polars as pl
+
+        p = tmp_path / "int_entity.parquet"
+        wkb_bytes = b"\x01\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x2e\x40\x00\x00\x00\x00\x00\x00\x30\x40"
+        pl.DataFrame(
+            {
+                "code": [101, 102],
+                "district": ["D1", "D2"],
+                "geometry": [wkb_bytes, wkb_bytes],
+            }
+        ).write_parquet(p)
+
+        class CodeEntity(BaseEntity):
+            @property
+            def key_cols(self) -> list[str]:
+                return ["code"]
+
+            @property
+            def geometry_col(self) -> str:
+                return "geometry"
+
+            @property
+            def static_path(self) -> str:
+                return str(p)
+
+        ent = CodeEntity()
+        # Querying with string list on Int64 column - strict coercion
+        view = ent.where(code=["101"])
+        res = view.keys.collect(engine="in-memory")
+        assert res.height == 1
+        assert res["code"][0] == 101
 
     def test_where_no_args(self, entity_cls: Any) -> None:
         entity = entity_cls()
         view = entity.where()
-        assert view.keys.collect().height == 2
+        assert view.keys.collect(engine="in-memory").height == 2
 
     def test_where_invalid_kwarg(self, entity_cls: Any) -> None:
         entity = entity_cls()
@@ -77,7 +117,7 @@ class TestEntityWhere:
 
         entity = entity_cls()
         view = entity.where(customdistrict="D1")
-        assert view.keys.collect().height >= 0
+        assert view.keys.collect(engine="in-memory").height >= 0
 
         import pytest
 
@@ -102,7 +142,7 @@ class TestEntitySpatialFilter:
         entity = entity_cls()
         view = entity.spatial_filter(bbox=(72.0, 14.0, 75.0, 17.0))
         assert isinstance(view, View)
-        assert view.keys.collect().height == 2
+        assert view.keys.collect(engine="in-memory").height == 2
 
     def test_spatial_filter_geometry(
         self, entity_cls: Any, static_parquet: pathlib.Path
@@ -110,7 +150,7 @@ class TestEntitySpatialFilter:
         entity = entity_cls()
         view = entity.spatial_filter(geometry=sgeom.box(72.0, 14.0, 75.0, 17.0))
         assert isinstance(view, View)
-        assert view.keys.collect().height == 2
+        assert view.keys.collect(engine="in-memory").height == 2
 
 
 class TestEntitySpatialJoin:
@@ -119,7 +159,7 @@ class TestEntitySpatialJoin:
         view = entity.spatial_join(entity_cls(), agg={"district": "first"})
         assert isinstance(view, View)
         # Assuming spatial_join creates an empty view for testing until fully implemented
-        assert "mws_id" in view.keys.collect().columns
+        assert "mws_id" in view.keys.collect(engine="in-memory").columns
 
 
 class TestEntitySchemaProfile:

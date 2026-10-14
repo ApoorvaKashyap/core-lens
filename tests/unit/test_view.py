@@ -29,7 +29,7 @@ class TestViewWhere:
         view = _make_view(entity_cls_full())
         view.keys = pl.LazyFrame({"mws_id": ["13_001"]})
         result = view.where(district="TestDistrict")
-        assert result.keys.collect().height > 0
+        assert result.keys.collect(engine="in-memory").height > 0
         assert result.entity is view.entity
 
 
@@ -597,7 +597,7 @@ class TestViewSpatialFilter:
         # index is already built in entity mock if accessed
         result = view.spatial_filter(bbox=(0.0, 0.0, 1.0, 1.0))
         assert isinstance(result, View)
-        assert result.keys.collect().height >= 0
+        assert result.keys.collect(engine="in-memory").height >= 0
 
     def test_spatial_filter_with_geometry(self, entity_cls_full: Any) -> None:
         import shapely.geometry as sgeom

@@ -216,7 +216,7 @@ t0 = time.perf_counter()
 view_attr = entity.where(state="Bihar")
 t1 = time.perf_counter()
 print(f"where(state)         : {(t1 - t0) * 1000:.2f} ms")
-print(f"Bihar keys           : {view_attr.keys.collect().shape}")
+print(f"Bihar keys           : {view_attr.keys.collect(engine='in-memory').shape}")
 
 
 # ── 9. BaseEntity.where() — composite attribute filter ───────────────────────
@@ -225,7 +225,7 @@ t0 = time.perf_counter()
 view_composite = entity.where(state="Bihar", district="Banka", tehsil="Banka")
 t1 = time.perf_counter()
 print(f"where(3 cols)        : {(t1 - t0) * 1000:.2f} ms")
-print(f"Banka keys           : {view_composite.keys.collect().shape}")
+print(f"Banka keys           : {view_composite.keys.collect(engine='in-memory').shape}")
 
 
 # ── 10. BaseEntity.where() — list value (is_in) ──────────────────────────────
@@ -234,7 +234,7 @@ t0 = time.perf_counter()
 view_list = entity.where(state=["Bihar", "Jharkhand"])
 t1 = time.perf_counter()
 print(f"where(list)          : {(t1 - t0) * 1000:.2f} ms")
-print(f"Bihar+Jharkhand keys : {view_list.keys.collect().shape}")
+print(f"Bihar+Jharkhand keys : {view_list.keys.collect(engine='in-memory').shape}")
 
 
 # ── 11. BaseEntity.where() — unknown kwarg error ─────────────────────────────
@@ -253,7 +253,7 @@ t0 = time.perf_counter()
 view_sf = entity.spatial_filter(bbox=SMALL_BBOX)
 t1 = time.perf_counter()
 print(f"spatial_filter (bbox): {(t1 - t0) * 1000:.2f} ms")
-print(f"Keys                 : {view_sf.keys.collect().shape}")
+print(f"Keys                 : {view_sf.keys.collect(engine='in-memory').shape}")
 
 # geometry mode
 small_poly = sgeom.box(*SMALL_BBOX)
@@ -269,7 +269,7 @@ view_sf_area = entity.spatial_filter(
 )
 t1 = time.perf_counter()
 print(
-    f"spatial_filter (area): {(t1 - t0) * 1000:.2f} ms  keys={view_sf_area.keys.collect().shape}"
+    f"spatial_filter (area): {(t1 - t0) * 1000:.2f} ms  keys={view_sf_area.keys.collect(engine='in-memory').shape}"
 )
 
 
