@@ -50,7 +50,7 @@ class FarmEntity(BaseEntity):
             str: The relative path to the annual data.
 
         """
-        return "farms/annual.parquet"
+        return "farms/annual/"
 
     @property
     def sub_annual_path(self) -> str:
@@ -60,4 +60,4 @@ class FarmEntity(BaseEntity):
             str: The relative path to the monthly data.
 
         """
-        return "farms/sub_annual.parquet"
+        return "farms/sub_annual/"
