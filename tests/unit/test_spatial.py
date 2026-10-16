@@ -94,6 +94,8 @@ def test_execute_spatial_join(tmp_path: Any) -> None:
 
     class DummyOther:
         static_path = str(tmp_path / "other.parquet")
+        annual_path: str | None = None
+        sub_annual_path: str | None = None
         key_cols = ["oid"]
         schema_profile = SchemaProfile(
             key_cols=["oid"],
@@ -202,6 +204,8 @@ def test_execute_spatial_join_no_match_and_agg(tmp_path: Any) -> None:
 
     class DummyOther:
         static_path = str(tmp_path / "other.parquet")
+        annual_path: str | None = None
+        sub_annual_path: str | None = None
         key_cols = ["oid"]
         schema_profile = SchemaProfile(
             key_cols=["oid"],

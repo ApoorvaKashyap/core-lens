@@ -234,7 +234,9 @@ class View:
             season_config=self._season_config,
         )
 
-    def spatial_join(self, other: "BaseEntity | View", agg: dict[str, str]) -> "View":
+    def spatial_join(
+        self, other: "BaseEntity | View", agg: dict[str, "str | tuple[str, str]"]
+    ) -> "View":
         """Return a new View with a cross-entity join pending.
 
         The join is recorded in the View's ``join_spec`` and computed only at
@@ -248,13 +250,43 @@ class View:
             aoi.mws.spatial_join(aoi.waterbody, agg={"kharif": "mean"})
             aoi.mws.spatial_join(aoi.waterbody.entity, agg={"kharif": "mean"})
 
+        Each ``agg`` value is either a plain aggregation string (column read
+        from the **static** file of ``other``) or a
+        ``(aggregation, resolution)`` tuple when the column lives in a
+        temporal file::
+
+            # column from the static file — shorthand
+            aoi.mws.spatial_join(aoi.waterbody, agg={"area_in_ha": "sum"})
+
+            # column from the annual file
+            aoi.mws.spatial_join(
+                aoi.waterbody,
+                agg={"kharif": ("mean", "annual")},
+            )
+
+            # mix static and temporal in one call
+            aoi.mws.spatial_join(
+                aoi.waterbody,
+                agg={
+                    "count": "count",
+                    "area_in_ha": "sum",
+                    "kharif": ("mean", "annual"),
+                    "ndvi": ("mean", "sub_annual"),
+                },
+            )
+
         Args:
             other (BaseEntity | View): The secondary entity whose columns will
                 be joined and aggregated onto ``self``.  Accepts either a
                 :class:`~core_lens.base.entity.BaseEntity` instance or a
                 :class:`View` (the latter is automatically unwrapped).
-            agg (dict[str, str]): Mapping of ``{column: aggregation}`` specifying which columns
-                from ``other`` to bring in and how to aggregate them.
+            agg (dict[str, str | tuple[str, str]]): Mapping of column to
+                aggregation.  Each value is either a plain aggregation string
+                (``"count"``, ``"mean"``, ``"sum"``, ``"min"``, ``"max"``,
+                ``"area"``, ``"first"``) — column assumed to be in the static
+                file — or a ``(aggregation, resolution)`` tuple where
+                resolution is one of ``"static"``, ``"annual"``,
+                ``"sub_annual"``.
 
         Returns:
             View: A new lazy :class:`View` with the join spec recorded.

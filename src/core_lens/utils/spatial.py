@@ -589,7 +589,7 @@ def execute_spatial_join(
     primary_geom_col: str,
     primary_geom_type: str,
     other_entity: Any,
-    agg: dict[str, str],
+    agg: dict[str, str | tuple[str, str]],
     other_entity_name: str,
 ) -> pl.DataFrame:
     """Materialise a cross-entity spatial join and return enriched DataFrame.
@@ -597,6 +597,23 @@ def execute_spatial_join(
     For each entity in ``primary_df``, finds the overlapping entities in
     ``other_entity`` and aggregates the requested columns.  Result columns are
     named ``{other_entity_name}_{column_name}`` to avoid clashes.
+
+    Each entry in ``agg`` can be either:
+
+    * A plain string aggregation (column assumed to be in the static file)::
+
+        agg={"district": "first", "count": "count"}
+
+    * A ``(aggregation, resolution)`` tuple to pull the column from the
+      annual or sub_annual file of the other entity::
+
+        agg={"kharif": ("mean", "annual"), "ndvi": ("mean", "sub_annual")}
+
+      Valid resolution strings: ``"static"``, ``"annual"``, ``"sub_annual"``.
+
+    The geometry match is always performed against the static file (geometry
+    lives there).  For temporal resolutions the matched keys are used to
+    filter the appropriate file before aggregation — no geometry I/O overhead.
 
     Args:
         primary_df (pl.DataFrame): The primary entity DataFrame (must contain
@@ -606,10 +623,11 @@ def execute_spatial_join(
         primary_geom_type (str): Geometry encoding — ``"wkb"`` or ``"wkt"``.
         other_entity (BaseEntity): A :class:`~core_lens.base.entity.BaseEntity` instance
             to join against.
-        agg (dict[str, str]): Mapping ``{column: aggregation}`` — which columns from
-            ``other_entity`` to bring in and how to aggregate them.  Valid
-            aggregations: ``"count"``, ``"mean"``, ``"sum"``, ``"min"``,
-            ``"max"``, ``"area"``.
+        agg (dict[str, str | tuple[str, str]]): Mapping of column to aggregation.
+            Each value is either a plain aggregation string (``"count"``,
+            ``"mean"``, ``"sum"``, ``"min"``, ``"max"``, ``"area"``, ``"first"``)
+            or a ``(aggregation, resolution)`` tuple when the column lives in a
+            temporal file.
         other_entity_name (str): Used to prefix result column names.
 
     Returns:
@@ -666,9 +684,32 @@ def execute_spatial_join(
     other_geom_col = other_profile.geometry_col
     other_geom_type = other_profile.geometry_type
     other_key_cols = other_entity.key_cols
+    other_so = getattr(other_entity, "_storage_options", None) or {}
 
-    agg_col_names = [c for c in agg if c not in ("count", "area")]
-    other_cols = list(dict.fromkeys(other_key_cols + [other_geom_col] + agg_col_names))
+    # Normalise agg values: bare strings are treated as (fn, "static").
+    # Split by resolution so each file is read at most once.
+    _normalised: dict[str, tuple[str, str]] = {
+        col: (val if isinstance(val, tuple) else (val, "static"))
+        for col, val in agg.items()
+    }
+
+    # Columns that need to come from static (geometry + static agg cols).
+    static_agg_col_names = [
+        c
+        for c, (fn, res) in _normalised.items()
+        if res == "static" and c not in ("count", "area")
+    ]
+    # Columns split by temporal resolution.
+    annual_agg_col_names = [
+        c for c, (fn, res) in _normalised.items() if res == "annual"
+    ]
+    sub_annual_agg_col_names = [
+        c for c, (fn, res) in _normalised.items() if res == "sub_annual"
+    ]
+
+    static_cols = list(
+        dict.fromkeys(other_key_cols + [other_geom_col] + static_agg_col_names)
+    )
 
     if (
         primary_total_box is not None
@@ -676,16 +717,15 @@ def execute_spatial_join(
     ):
         # Pre-filter other_entity using its in-memory bounding box index
         candidates = bbox_intersects_geometry(other_entity._index, primary_total_box)
-        other_so = getattr(other_entity, "_storage_options", None) or {}
         if candidates.is_empty():
-            other_df = pl.DataFrame(schema={c: pl.String for c in other_cols})
+            other_df = pl.DataFrame(schema={c: pl.String for c in static_cols})
         else:
             other_df = (
                 pl.scan_parquet(
                     other_static,
                     storage_options=other_so or None,
                 )
-                .select(other_cols)
+                .select(static_cols)
                 .join(
                     candidates.select(other_key_cols).lazy(),
                     on=other_key_cols,
@@ -695,11 +735,81 @@ def execute_spatial_join(
                 .collect(engine="in-memory")
             )
     else:
-        other_so = getattr(other_entity, "_storage_options", None) or {}
         other_df = pl.read_parquet(
             other_static,
-            columns=other_cols,
+            columns=static_cols,
             storage_options=other_so or None,
+        )
+
+    # Load temporal agg columns (annual / sub_annual) keyed on other_key_cols,
+    # then left-join them onto other_df so the aggregation loop sees all values.
+    def _load_temporal_cols(
+        path: str | None, col_names: list[str]
+    ) -> pl.DataFrame | None:
+        """Read *col_names* from a temporal parquet, return None if unavailable."""
+        if not col_names or path is None:
+            return None
+        resolved = other_entity._resolve(path)
+        needed = list(dict.fromkeys(other_key_cols + col_names))
+        try:
+            return pl.read_parquet(
+                resolved,
+                columns=needed,
+                storage_options=other_so or None,
+            )
+        except Exception as exc:
+            logger.warning(
+                "execute_spatial_join: could not load temporal cols {} from {}: {}",
+                col_names,
+                resolved,
+                exc,
+            )
+            return None
+
+    annual_df = _load_temporal_cols(other_entity.annual_path, annual_agg_col_names)
+    sub_annual_df = _load_temporal_cols(
+        other_entity.sub_annual_path, sub_annual_agg_col_names
+    )
+
+    if annual_df is not None and not annual_df.is_empty():
+        # Aggregate temporal rows to one row per key before joining onto geometry.
+        _annual_agg_exprs = [
+            pl.col(c).mean().alias(c)
+            if _normalised[c][0] == "mean"
+            else pl.col(c).sum().alias(c)
+            if _normalised[c][0] == "sum"
+            else pl.col(c).min().alias(c)
+            if _normalised[c][0] == "min"
+            else pl.col(c).max().alias(c)
+            if _normalised[c][0] == "max"
+            else pl.col(c).first().alias(c)
+            for c in annual_agg_col_names
+            if c in annual_df.columns
+        ]
+        if _annual_agg_exprs:
+            annual_df = annual_df.group_by(other_key_cols).agg(_annual_agg_exprs)
+        other_df = other_df.join(
+            annual_df, on=other_key_cols, how="left", maintain_order="left"
+        )
+
+    if sub_annual_df is not None and not sub_annual_df.is_empty():
+        _sub_agg_exprs = [
+            pl.col(c).mean().alias(c)
+            if _normalised[c][0] == "mean"
+            else pl.col(c).sum().alias(c)
+            if _normalised[c][0] == "sum"
+            else pl.col(c).min().alias(c)
+            if _normalised[c][0] == "min"
+            else pl.col(c).max().alias(c)
+            if _normalised[c][0] == "max"
+            else pl.col(c).first().alias(c)
+            for c in sub_annual_agg_col_names
+            if c in sub_annual_df.columns
+        ]
+        if _sub_agg_exprs:
+            sub_annual_df = sub_annual_df.group_by(other_key_cols).agg(_sub_agg_exprs)
+        other_df = other_df.join(
+            sub_annual_df, on=other_key_cols, how="left", maintain_order="left"
         )
 
     if other_df.is_empty():
