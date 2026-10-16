@@ -528,6 +528,13 @@ class View:
             other = self.join_spec["other"]
             agg = self.join_spec["agg"]
 
+            # Defensively unwrap a View to its entity — join_spec["other"] may be a
+            # View when callers pass e.g. aoi.waterbody directly (AoI.__getattr__
+            # returns Views, not bare entities).  spatial_join() already does this
+            # unwrap, but _materialise guards here too for robustness.
+            if isinstance(other, View):
+                other = other.entity
+
             from core_lens.base.entity import _entity_name as _ename
 
             other_entity_name = _ename(type(other))

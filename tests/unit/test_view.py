@@ -297,6 +297,76 @@ class TestViewMaterialisation:
         with pytest.raises(ValueError, match="already has a pending spatial_join"):
             view.spatial_join(entity_cls(), {"district": "count"})
 
+    def test_spatial_join_accepts_view_as_other(self, entity_cls: Any) -> None:
+        """Passing a View as `other` (e.g. aoi.waterbody) should unwrap to the
+        underlying entity so that materialisation can call .schema_profile on it.
+
+        Regression test for: AttributeError: 'View' object has no attribute
+        'schema_profile' raised inside execute_spatial_join when AoI attributes
+        (which return Views) were passed directly to spatial_join.
+        """
+        entity = entity_cls()
+        other_entity = entity_cls()
+        # Wrap the secondary entity in a View, mimicking what AoI.__getattr__ returns.
+        other_view = View(
+            keys=pl.DataFrame({"mws_id": []}, schema={"mws_id": pl.String}),
+            entity=other_entity,
+            entity_name="otherw",
+        )
+
+        view = View(
+            keys=pl.DataFrame({"mws_id": []}, schema={"mws_id": pl.String}),
+            entity=entity,
+            entity_name="minimalmws",
+        )
+        joined = view.spatial_join(other_view, {"district": "count"})
+
+        # The join_spec must store the unwrapped BaseEntity, not the View.
+        assert joined.join_spec is not None
+        assert joined.join_spec["other"] is other_entity
+        assert not isinstance(joined.join_spec["other"], View)
+
+    def test_spatial_join_view_other_materialises(self, entity_cls: Any) -> None:
+        """Materialising a View whose join `other` was supplied as a View should
+        produce the same prefixed columns as passing a bare entity directly.
+        """
+        import pathlib
+        import tempfile
+        import sys
+        import os
+
+        conftest_dir = os.path.dirname(__file__)
+        if conftest_dir not in sys.path:
+            sys.path.insert(0, conftest_dir)
+        from conftest import _make_static_parquet, _make_entity_cls
+
+        with tempfile.TemporaryDirectory() as td:
+            sp = pathlib.Path(td) / "static.parquet"
+            _make_static_parquet(sp)
+            full_cls = _make_entity_cls(sp)
+            full_entity = full_cls()
+            keys = full_entity._index.select(full_entity.key_cols)
+
+            # Build the secondary entity wrapped in a View — the pattern from aoi.X
+            other_view = View(
+                keys=keys,
+                entity=full_entity,
+                entity_name="minimalmws",
+            )
+
+            view = View(
+                keys=keys,
+                entity=full_entity,
+                entity_name="minimalmws",
+                join_spec={"other": other_view, "agg": {"district": "count"}},
+            )
+            result = view.static
+
+        joined_cols = [c for c in result.df().columns if c.startswith("minimalmws_")]
+        assert joined_cols, (
+            f"Expected prefixed join columns but got: {result.df().columns}"
+        )
+
     def test_spatial_join_fetches_geometry_if_missing(
         self, entity_cls_full: Any
     ) -> None:
