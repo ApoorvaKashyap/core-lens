@@ -234,15 +234,25 @@ class View:
             season_config=self._season_config,
         )
 
-    def spatial_join(self, other: "BaseEntity", agg: dict[str, str]) -> "View":
+    def spatial_join(self, other: "BaseEntity | View", agg: dict[str, str]) -> "View":
         """Return a new View with a cross-entity join pending.
 
         The join is recorded in the View's ``join_spec`` and computed only at
         materialisation time (``.static``, ``.annual``, or ``.sub_annual``).
 
+        ``other`` may be either a :class:`~core_lens.base.entity.BaseEntity`
+        **or** a :class:`View` (e.g. ``aoi.waterbody``).  When a ``View`` is
+        supplied its underlying ``.entity`` is extracted automatically, so
+        both of the following are equivalent::
+
+            aoi.mws.spatial_join(aoi.waterbody, agg={"kharif": "mean"})
+            aoi.mws.spatial_join(aoi.waterbody.entity, agg={"kharif": "mean"})
+
         Args:
-            other (BaseEntity): The secondary :class:`BaseEntity` whose columns will be
-                joined and aggregated onto ``self``.
+            other (BaseEntity | View): The secondary entity whose columns will
+                be joined and aggregated onto ``self``.  Accepts either a
+                :class:`~core_lens.base.entity.BaseEntity` instance or a
+                :class:`View` (the latter is automatically unwrapped).
             agg (dict[str, str]): Mapping of ``{column: aggregation}`` specifying which columns
                 from ``other`` to bring in and how to aggregate them.
 
@@ -256,12 +266,17 @@ class View:
             )
             raise ValueError("View already has a pending spatial_join.")
 
+        # Accept a View as `other` (e.g. aoi.waterbody) by unwrapping it.
+        # AoI attributes return scoped Views, not bare BaseEntity instances,
+        # so this is the natural way to reference a secondary entity.
+        other_entity = other.entity if isinstance(other, View) else other
+
         return View(
             keys=self.keys,
             entity=self.entity,
             entity_name=self.entity_name,
             time_filter=self.time_filter,
-            join_spec={"other": other, "agg": agg},
+            join_spec={"other": other_entity, "agg": agg},
             season_config=self._season_config,
         )
 
